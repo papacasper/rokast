@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=rokast
+GenericName=Screen Mirroring
+Comment=Mirror this screen to a Roku TV over Miracast
+Exec=@BIN@
+Icon=video-display
+Terminal=false
+Categories=AudioVideo;Video;
+Keywords=miracast;roku;cast;mirror;tv;screen;
+StartupWMClass=io.github.papacasper.rokast

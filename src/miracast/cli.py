@@ -1,7 +1,9 @@
-"""rokast CLI: list | start [name] | doctor.  Foreground; Ctrl+C stops and tears the link down."""
+"""rokast CLI: list [--json] | start [name] | doctor | ui.  Foreground; Ctrl+C stops and tears the link down."""
 import asyncio
+import json
 import os
 import signal
+import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -26,8 +28,17 @@ def load_conf():
     return conf
 
 
-def cmd_list():
-    for r in p2p.lan_rokus():
+def status(state, detail=""):
+    """Machine-readable progress line (the UI keys off these): scanning, joining, waiting, streaming, stopped, error."""
+    print(f"status: {state}" + (f" {detail}" if detail else ""), flush=True)
+
+
+def cmd_list(fmt=None):
+    rokus = p2p.lan_rokus()
+    if fmt == "--json":
+        print(json.dumps(rokus))
+        return
+    for r in rokus:
         print(f"{r['name']:<24} {r['ip']:<15} {r['model']}  p2p={r['p2p_mac']}")
 
 
@@ -39,6 +50,7 @@ async def stream(conf, iface):
                                 conf["AUDIO"] == "1" and n.audio == "AAC", capture.default_monitor())
         print("ffmpeg:", " ".join(cmd), flush=True)
         proc["p"] = capture.start(cmd, conf["DISPLAY"])
+        status("streaming", f"{n.width}x{n.height}@{n.fps} {n.audio if conf['AUDIO'] == '1' else 'no audio'}")
 
     async def on_stop():
         if proc["p"] and proc["p"].poll() is None:
@@ -50,6 +62,7 @@ async def stream(conf, iface):
     await src.listening.wait()
     local_ip = await asyncio.to_thread(p2p.dhcp, iface)
     print(f"link up: {iface} {local_ip}, waiting for the TV to connect", flush=True)
+    status("waiting")
     try:
         await asyncio.wait_for(asyncio.shield(src.playing.wait()), 20)
     except asyncio.TimeoutError:
@@ -62,23 +75,30 @@ def cmd_start(name=None):
     conf = load_conf()
     name = name or conf["TARGET"]
     if not name:
+        status("error", "no TV selected")
         sys.exit("no target: `rokast start \"<name>\"` or set TARGET in config/rokast.conf (see `rokast list`)")
-    target = p2p.pick(p2p.lan_rokus(), name)
-    print(f"target: {target['name']} ({target['ip']}, p2p {target['p2p_mac']})", flush=True)
-    conf["ENCODER"] = capture.pick_encoder(conf["ENCODER"])   # probe before joining: the TV's RTSP window is short
-    print(f"encoder: {conf['ENCODER']}", flush=True)
-    dev = p2p.p2p_dev_iface()
     signal.signal(signal.SIGTERM, lambda *_: (_ for _ in ()).throw(KeyboardInterrupt()))
+    dev = None
     try:
+        status("scanning", name)
+        target = p2p.pick(p2p.lan_rokus(), name)
+        print(f"target: {target['name']} ({target['ip']}, p2p {target['p2p_mac']})", flush=True)
+        conf["ENCODER"] = capture.pick_encoder(conf["ENCODER"])   # probe before joining: the TV's RTSP window is short
+        print(f"encoder: {conf['ENCODER']}", flush=True)
+        dev = p2p.p2p_dev_iface()
+        status("joining", target["name"])
         print("joining the TV's Wi-Fi Direct group...", flush=True)
         iface = p2p.connect(dev, target, conf["NAME"])
         asyncio.run(stream(conf, iface))
     except KeyboardInterrupt:
         print("stopping", flush=True)
-    except RuntimeError as e:
+    except (RuntimeError, OSError, subprocess.SubprocessError) as e:
+        status("error", str(e))
         sys.exit(f"error: {e}")
     finally:
-        p2p.disconnect(dev)
+        if dev:
+            p2p.disconnect(dev)
+    status("stopped")
 
 
 def cmd_doctor():
@@ -109,7 +129,16 @@ def cmd_doctor():
     sys.exit(0 if ok else 1)
 
 
+def cmd_ui():
+    exe = os.path.join(ROOT, "ui", "target", "release", "rokast-ui")
+    if not os.access(exe, os.X_OK):
+        sys.exit("desktop UI not built: run scripts/install-ui (needs cargo and GTK 4 dev files)")
+    os.execv(exe, [exe])
+
+
 if __name__ == "__main__":
     a = sys.argv[1:] or ["help"]
-    {"list": cmd_list, "doctor": cmd_doctor, "start": lambda: cmd_start(a[1] if len(a) > 1 else None)}.get(
-        a[0], lambda: sys.exit("usage: rokast {list|start [name]|doctor}"))()
+    arg = a[1] if len(a) > 1 else None
+    {"list": lambda: cmd_list(arg), "doctor": cmd_doctor, "start": lambda: cmd_start(arg),
+     "ui": cmd_ui}.get(
+        a[0], lambda: sys.exit("usage: rokast {list [--json]|start [name]|doctor|ui}"))()

@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
-# rokast {list|start [name]|doctor}  -- native Miracast to a Roku TV, no app on the TV.
+# rokast {list [--json]|start [name]|doctor|ui}  -- native Miracast to a Roku TV, no app on the TV.
 exec python3 -I "$(dirname "$(readlink -f "$0")")/../src/miracast/cli.py" "$@"

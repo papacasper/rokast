@@ -30,7 +30,10 @@ EXTRA_IES = "dd0b0000f022000104000000eddd0b506f9a23000104010f010f"
 
 
 def sh(*argv, check=True, timeout=30):
-    r = subprocess.run(list(argv), capture_output=True, text=True, timeout=timeout)
+    argv = list(argv)
+    if argv[0] == "sudo" and os.environ.get("SUDO_ASKPASS"):   # GUI: no terminal to type a password into
+        argv.insert(1, "-A")
+    r = subprocess.run(argv, capture_output=True, text=True, timeout=timeout)
     if check and r.returncode != 0:
         raise RuntimeError(f"{' '.join(argv)} -> {r.returncode}: {r.stderr.strip() or r.stdout.strip()}")
     return r.stdout.strip()

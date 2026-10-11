@@ -87,10 +87,28 @@ Limitations:
    ln -s "$PWD/scripts/rokast" ~/.local/bin/rokast
    ```
 
+## Desktop app
+
+A small GTK 4 window (written in Rust) for people who'd rather click: pick the TV, quality,
+bitrate and audio, then press **Start mirroring**. It shows live progress (finding the TV,
+connecting, waiting for the TV, mirroring), has a Details pane with the full log, and cleans the
+connection up when you press Stop or close the window. It drives the same `rokast` command
+underneath, so it behaves exactly like the CLI.
+
+```bash
+# needs Rust (cargo) and GTK 4 development files:
+#   Arch/Manjaro: sudo pacman -S --needed rust gtk4    Debian/Ubuntu: sudo apt install cargo libgtk-4-dev    Fedora: sudo dnf install cargo gtk4-devel
+scripts/install-ui     # builds it and adds "rokast" to your applications menu
+rokast ui              # or launch from the menu
+```
+
+Without passwordless sudo, it asks for your password in a dialog (`zenity` or `kdialog`).
+Your last choices are remembered in `~/.config/rokast/ui.json`.
+
 ## Usage
 
 ```bash
-scripts/rokast list                  # Rokus on your LAN (name, IP, model)
+scripts/rokast list                  # Rokus on your LAN (name, IP, model); --json for scripts
 scripts/rokast start "Living Room"   # or just `scripts/rokast start` with TARGET set in config
 # Ctrl+C to stop
 ```
@@ -153,8 +171,11 @@ The full write-up, including what did *not* work and why, is in
 python3 -I -m unittest discover -s tests   # RTSP handshake vs a fake Roku sink, IE bytes, command builders, allowlist
 ```
 
-Layout: `src/miracast/{p2p,wfd,capture,cli}.py`, `patches/` (wpa_supplicant patch + build config),
-`scripts/` (entry points), `playbooks/` (operational runbook).
+Layout: `src/miracast/{p2p,wfd,capture,cli}.py`, `ui/` (Rust GTK 4 desktop app),
+`patches/` (wpa_supplicant patch + build config), `scripts/` (entry points), `playbooks/` (operational runbook).
+
+`rokast start` prints machine-readable progress lines, `status: scanning|joining|waiting|streaming|stopped|error [detail]`,
+which the desktop app follows; other front ends can use them too.
 
 ## License
 

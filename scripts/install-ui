@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Build the rokast desktop UI and add it to the applications menu (per user, no root).
+set -euo pipefail
+root="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+cargo build --release --manifest-path "$root/ui/Cargo.toml"
+apps="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+mkdir -p "$apps"
+sed "s|@BIN@|$root/ui/target/release/rokast-ui|" "$root/assets/rokast.desktop" > "$apps/io.github.papacasper.rokast.desktop"
+command -v update-desktop-database >/dev/null && update-desktop-database "$apps" || true
+echo "installed: $apps/io.github.papacasper.rokast.desktop (run: rokast ui, or 'rokast' in the app menu)"

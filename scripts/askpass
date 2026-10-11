@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# SUDO_ASKPASS helper for the desktop UI (no terminal to type into). Prints the password on stdout.
+if command -v zenity >/dev/null; then exec zenity --password --title="rokast needs administrator access"
+elif command -v kdialog >/dev/null; then exec kdialog --password "rokast needs administrator access to set up Wi-Fi Direct"
+elif command -v ssh-askpass >/dev/null; then exec ssh-askpass "rokast: sudo password"
+fi
+echo "rokast: install zenity or kdialog for the password prompt" >&2; exit 1

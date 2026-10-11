@@ -1,7 +1,7 @@
 # mirror-laptop-to-roku
 
 when: user wants the laptop screen (and audio) on a Roku TV with nothing installed on the TV, or the mirror is broken
-tools: scripts/rokast (src/miracast/{p2p,wfd,capture,cli}.py), scripts/build-supplicant (patches/)
+tools: scripts/rokast (src/miracast/{p2p,wfd,capture,cli}.py), scripts/build-supplicant (patches/), ui/ (GTK4 Rust app, scripts/install-ui)
 cost: free
 
 ## How it works
@@ -26,6 +26,10 @@ Native Miracast (Wi-Fi Display), same as Windows/Android "Cast":
 2. `scripts/rokast start` (TARGET from config/rokast.conf, or `start "<name>"`). Accept the prompt on the TV if shown. ~20 s to picture.
 3. Ctrl+C (or SIGTERM) stops mirroring, stops our supplicant, removes the group iface.
 
+Desktop app: `scripts/install-ui` once (cargo build + menu entry), then `rokast ui`. It runs `rokast list --json` and
+`rokast start <tv>` (settings passed as RES/BITRATE/AUDIO env), follows the `status: <state>` lines, and stops with SIGTERM
+(also on window close, waiting for teardown). Keep the status line names stable: the UI keys off them.
+
 ## Verify
 
 - `python3 -I -m unittest discover -s tests` (handshake vs fake Roku sink, IE bytes vs the working phone, command builders, allowlist).
@@ -47,6 +51,8 @@ Native Miracast (Wi-Fi Display), same as Windows/Android "Cast":
 - dhcpcd `--nogateway --nohook resolv.conf`: LAN default route and DNS stay on wlo1.
 
 ## Notes
+
+- UI test without clicking by hand: launch with DISPLAY=:0, `xdotool search --name '^rokast$'`, `import -window` for screenshots, `xdotool mousemove --window W x y click 1`.
 
 - Do not derive the LAN from the default route (a VPN may own it). Use the Wi-Fi interface address.
 - P2P address of a Roku = its wifi MAC with first octet |= 0x02 (4c: -> 4e:). The allowlist relies on this. Group BSSID comes from `p2p_peer` `interface_addr`.

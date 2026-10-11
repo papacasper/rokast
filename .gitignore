@@ -6,3 +6,4 @@ config/airplay.cred
 .venv-lan/
 vendor/
 src/lancast/
+/ui/target/
