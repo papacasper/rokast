@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Build the patched wpa_supplicant mirror needs (vendor/hostap-src/wpa_supplicant/wpa_supplicant).
+# Stock wpa_supplicant cannot join a Roku's P2P group as a P2P *client* from a standalone instance; see patches/.
+set -euo pipefail
+cd "$(dirname "$(readlink -f "$0")")/.."
+SRC=vendor/hostap-src
+if [ ! -d "$SRC/.git" ]; then
+    git clone --depth 1 --branch hostap_2_11 https://w1.fi/hostap.git "$SRC"
+fi
+git -C "$SRC" checkout -- .
+git -C "$SRC" apply "$PWD/patches/hostap-2.11-roku.patch"
+cp patches/hostap.config "$SRC/wpa_supplicant/.config"
+make -C "$SRC/wpa_supplicant" -j"$(nproc)" wpa_supplicant
+echo "built $SRC/wpa_supplicant/wpa_supplicant"

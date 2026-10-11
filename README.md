@@ -1,0 +1,160 @@
+# roku-mirror
+
+Mirror a Linux desktop to a Roku TV over **native Miracast** (Wi-Fi Display), the same way Android
+"Smart View"/"Cast" and Windows "Connect" (Win+K) do it. Nothing is installed on the TV and no
+app or account is needed. The video goes from the laptop to the TV directly over Wi-Fi Direct.
+
+- 1080p30 H.264 video + AAC audio, hardware encoding (NVENC / VAAPI) with software fallback
+- ~20 s from `mirror start` to picture, Ctrl+C to stop and fully clean up
+- Your normal Wi-Fi connection stays up the whole time (routes and DNS untouched)
+- Pure Python standard library plus `ffmpeg`, `iw`, `dhcpcd` and a patched `wpa_supplicant`
+
+```
+$ scripts/mirror start "Living Room"
+target: Living Room (192.168.1.50, p2p 4e:xx:xx:xx:xx:xx)
+joining the TV's Wi-Fi Direct group...
+wfd: listening on p2p-wlo1-mir:7236 for the sink
+wfd: sink 172.29.243.225 connected
+link up: p2p-wlo1-mir 172.29.243.238, waiting for the TV to connect
+wfd: negotiated 1920x1080@30 high L4.0 AAC
+encoder: h264_nvenc
+```
+
+> **Why does this exist?** The standard Linux way to join a Wi-Fi Direct group
+> (`wpa_supplicant`'s `p2p_connect ... join`, which NetworkManager-based tools use) gets a link to a
+> Roku, but the Roku never starts the stream, at least on the hardware tested here. [docs/how-it-works.md](docs/how-it-works.md) explains what the Roku actually
+> requires and why a small patch to `wpa_supplicant` is needed.
+
+## Status / compatibility
+
+| Tested | |
+|---|---|
+| TV | Roku TV G512X (Roku OS, screen mirroring = Prompt) |
+| Laptop | Manjaro, XFCE on X11, Intel AX211 Wi-Fi, NVIDIA (NVENC) |
+
+It should work on any Roku device that accepts screen mirroring from Android phones, and on any
+Linux machine whose Wi-Fi chip supports P2P-client mode (`iw list` shows `P2P-client` under
+"Supported interface modes"; most Intel AX2xx/AX1xx/9xxx cards do). Reports for other hardware
+are welcome. Please open an issue with `scripts/mirror doctor` output.
+
+Limitations:
+- **X11 only** for now (screen capture uses `x11grab`). Wayland sessions are not supported yet.
+- Needs **NetworkManager** with Wi-Fi P2P available (`sudo ls /run/wpa_supplicant` shows `p2p-dev-<wifi>`).
+- Uses `sudo` for the network setup (interface creation, wpa_supplicant, dhcpcd).
+- VAAPI encoding (Intel/AMD GPUs) is implemented but has not been tested on real hardware yet;
+  `ENCODER=auto` only picks it if a test encode succeeds, otherwise falls back to libx264.
+- Non-Roku Miracast sinks (Samsung/LG TVs, dongles) may work but are untested.
+
+## Install
+
+1. Dependencies:
+
+   ```bash
+   # Arch / Manjaro
+   sudo pacman -S --needed git base-devel ffmpeg iw dhcpcd wpa_supplicant libnl openssl python
+   # Debian / Ubuntu
+   sudo apt install git build-essential pkg-config ffmpeg iw dhcpcd wpasupplicant libnl-3-dev libnl-genl-3-dev libssl-dev python3
+   # (older releases: dhcpcd5; newer: dhcpcd-base)
+   # Fedora
+   sudo dnf install git gcc make pkgconf ffmpeg iw dhcpcd wpa_supplicant libnl3-devel openssl-devel python3
+   ```
+
+2. Clone and build the patched `wpa_supplicant` (it is only used by this tool, in its own
+   control directory; your system `wpa_supplicant` is not replaced):
+
+   ```bash
+   git clone https://github.com/<you>/roku-mirror && cd roku-mirror
+   scripts/build-supplicant
+   ```
+
+3. Configure (optional):
+
+   ```bash
+   cp config/mirror.conf.example config/mirror.conf   # set TARGET to your TV's name
+   ```
+
+4. On the TV: **Settings > System > Screen mirroring > Screen mirroring mode = Prompt** (or Always allow).
+
+5. Check everything:
+
+   ```bash
+   scripts/mirror doctor
+   ```
+
+## Usage
+
+```bash
+scripts/mirror list                  # Rokus on your LAN (name, IP, model)
+scripts/mirror start "Living Room"   # or just `scripts/mirror start` with TARGET set in config
+# Ctrl+C to stop
+```
+
+On first use the TV may ask whether to allow the device ("Laptop" by default, see `NAME`).
+Choose **Always allow** so it does not ask again.
+
+The laptop must be on the same LAN as the TV **once per run** so the tool can verify which TV is
+yours (see Safety). The mirror itself runs over Wi-Fi Direct.
+
+### Configuration (`config/mirror.conf`)
+
+| Key | Default | Meaning |
+|---|---|---|
+| `TARGET` | | TV name exactly as `mirror list` prints it |
+| `NAME` | `Laptop` | Name the TV shows for this computer |
+| `RES` | `1080p30,720p60,720p30` | Preference order; the best mode the TV supports is used |
+| `BITRATE` | `8M` | Video bitrate |
+| `ENCODER` | `auto` | `auto`, `h264_nvenc`, `h264_vaapi` or `libx264` |
+| `AUDIO` | `1` | Send desktop audio (default PulseAudio/PipeWire sink monitor) |
+| `DISPLAY` | `:0` | X display to capture |
+
+Every key can also be set as an environment variable, e.g. `BITRATE=12M scripts/mirror start`.
+
+## Safety
+
+- **Only your own TV can be selected.** A Wi-Fi Direct peer is only connectable if a Roku on your
+  own LAN (answering Roku ECP on port 8060) reports the same name *and* a Wi-Fi MAC matching the
+  peer's P2P address. Neighbours' TVs that are merely in radio range are never used.
+- The RTSP listener is bound to the Wi-Fi Direct interface only (`SO_BINDTODEVICE`), never the LAN.
+- DHCP on the TV link installs no default route and no DNS servers.
+- Everything is removed on exit: the patched supplicant, the P2P interface and the DHCP client.
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| `no p2p-dev-* interface` | NetworkManager's Wi-Fi P2P is unavailable; check `sudo ls /run/wpa_supplicant` and `iw list` for P2P support |
+| `patched wpa_supplicant missing` | run `scripts/build-supplicant` |
+| `could not join the TV's Wi-Fi Direct group` | TV screen mirroring mode must be Prompt/Always allow; stand closer; retry |
+| `the TV joined but never opened RTSP` | the TV's prompt was declined or timed out, or the device is in the TV's blocked list (Settings > System > Screen mirroring > Screen mirroring devices) |
+| Black screen with Wayland | X11 session required |
+| Debug the link | `sudo cat /run/roku-mirror/supplicant.log` while running |
+
+## How it works (short)
+
+1. NetworkManager's `wpa_supplicant` discovers the TV over Wi-Fi Direct and sends a push-button
+   *provision discovery*, which opens a WPS window on the TV's always-on P2P group.
+2. A second, patched `wpa_supplicant` on a dedicated P2P-client interface joins that group via
+   WPS, sending the same P2P and Wi-Fi Display information elements an Android phone sends.
+3. DHCP from the TV; the TV then opens RTSP to us on port 7236 (the Miracast M1–M7 handshake).
+4. `ffmpeg` captures the screen and audio, encodes H.264/AAC and sends RTP/MPEG-TS to the TV.
+
+The full write-up, including what did *not* work and why, is in
+[docs/how-it-works.md](docs/how-it-works.md).
+
+## Development
+
+```bash
+python3 -I -m unittest discover -s tests   # RTSP handshake vs a fake Roku sink, IE bytes, command builders, allowlist
+```
+
+Layout: `src/miracast/{p2p,wfd,capture,cli}.py`, `patches/` (wpa_supplicant patch + build config),
+`scripts/` (entry points), `playbooks/` (operational runbook).
+
+## License
+
+MIT for this project's code (see [LICENSE](LICENSE)). `patches/hostap-2.11-roku.patch` modifies
+[hostap](https://w1.fi/) and is distributed under hostap's BSD license; `scripts/build-supplicant`
+downloads hostap from its upstream repository at build time.
+
+Not affiliated with Roku, Inc. "Roku" is a trademark of Roku, Inc.; "Miracast" and "Wi-Fi Direct"
+are trademarks of the Wi-Fi Alliance.

@@ -1,0 +1,42 @@
+diff --git a/src/drivers/driver_nl80211.c b/src/drivers/driver_nl80211.c
+index e6fbad9..423e546 100644
+--- a/src/drivers/driver_nl80211.c
++++ b/src/drivers/driver_nl80211.c
+@@ -3015,7 +3015,8 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv,
+ 	if (drv->hostapd || bss->static_ap)
+ 		nlmode = NL80211_IFTYPE_AP;
+ 	else if (bss->if_dynamic ||
+-		 nl80211_get_ifmode(bss) == NL80211_IFTYPE_MESH_POINT)
++		 nl80211_get_ifmode(bss) == NL80211_IFTYPE_MESH_POINT ||
++		 nl80211_get_ifmode(bss) == NL80211_IFTYPE_P2P_CLIENT)
+ 		nlmode = nl80211_get_ifmode(bss);
+ 	else
+ 		nlmode = NL80211_IFTYPE_STATION;
+diff --git a/wpa_supplicant/wpa_supplicant.c b/wpa_supplicant/wpa_supplicant.c
+index 037bfa3..02930aa 100644
+--- a/wpa_supplicant/wpa_supplicant.c
++++ b/wpa_supplicant/wpa_supplicant.c
+@@ -2593,6 +2593,9 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
+ 	struct wpa_connect_work *cwork;
+ 	enum wpas_mac_addr_style rand_style;
+ 
++	if (ssid && getenv("WPA_FORCE_P2P_GROUP"))
++		ssid->p2p_group = 1;
++
+ 	wpa_s->own_disconnect_req = 0;
+ 	wpa_s->own_reconnect_req = 0;
+ 
+diff --git a/wpa_supplicant/wps_supplicant.c b/wpa_supplicant/wps_supplicant.c
+index 8cd355f..e1a92ee 100644
+--- a/wpa_supplicant/wps_supplicant.c
++++ b/wpa_supplicant/wps_supplicant.c
+@@ -545,7 +545,8 @@ static int wpa_supplicant_wps_cred(void *ctx,
+ 		ssid->key_mgmt = WPA_KEY_MGMT_PSK;
+ 		add_sae = wpa_s->conf->wps_cred_add_sae;
+ #ifdef CONFIG_P2P
+-		if (ssid->p2p_group && is_p2p_6ghz_capable(wpa_s->global->p2p))
++		if (ssid->p2p_group && wpa_s->global->p2p &&
++		    is_p2p_6ghz_capable(wpa_s->global->p2p))
+ 			add_sae = true;
+ #endif /* CONFIG_P2P */
+ 		if (add_sae && cred->key_len != 2 * PMK_LEN) {

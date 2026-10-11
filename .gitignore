@@ -1,0 +1,8 @@
+config/mirror.conf
+build/
+__pycache__/
+*.zip
+config/airplay.cred
+.venv-lan/
+vendor/
+src/lancast/

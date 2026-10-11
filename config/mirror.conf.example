@@ -1,0 +1,8 @@
+# Copy to config/mirror.conf (gitignored).
+TARGET=                     # exact TV name from `scripts/mirror list`, e.g. 43" onn. Roku TV
+RES=1080p30,720p60,720p30   # preference order; falls back to whatever the TV supports
+BITRATE=8M
+ENCODER=auto                # auto = first that works of h264_nvenc, h264_vaapi, libx264; or name one
+AUDIO=1
+DISPLAY=:0
+NAME=Laptop                 # name the TV shows for this source (screen-mirroring prompt / allowed devices)
