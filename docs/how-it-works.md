@@ -107,6 +107,12 @@ the phone-style IEs in the association request on a P2P-client interface, and th
 6. **RTSP + media.** The TV connects within about 0.5 s. The M1–M7 exchange negotiates (for a
    G512X) 1920x1080p30 H.264 High@4.0 with AAC, and `ffmpeg` streams `x11grab` + PulseAudio
    monitor → H.264 (NVENC/VAAPI/x264) + AAC → RTP/MPEG-TS to the TV's RTP port (1028 on Roku).
+   On Wayland, `src/miracast/wayland.py` opens an xdg-desktop-portal ScreenCast session before
+   joining (the user may have to pick a screen, and the TV's RTSP window is too short to wait for
+   that). It passes the PipeWire fd to GStreamer (`pipewiresrc ! videoconvert ! videoscale ! videorate`),
+   which writes raw I420 frames at exactly the negotiated size and rate into ffmpeg's stdin. The
+   encode and RTP side is unchanged. `keepalive-time` makes PipeWire repeat the last frame on a static
+   screen, so the TV keeps getting a steady stream.
 
 Stopping removes everything: the supplicant gets `terminate`, the DHCP client is released and the
 interface is deleted.
@@ -144,7 +150,7 @@ It doesn't replace or touch the system `wpa_supplicant`.
 
 ## 8. Known gaps / ideas
 
-- Wayland capture (PipeWire portal) instead of `x11grab`.
+- Wayland: tested on sway; GNOME/KDE portals untested.
 - Test VAAPI on real Intel/AMD hardware; test non-Roku sinks.
 - UIBC (remote input from the TV) is not implemented.
 - If a future Roku OS rejects these IEs, re-capture a working phone and update `assoc_ies()`.

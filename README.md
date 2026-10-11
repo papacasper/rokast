@@ -5,9 +5,10 @@ Mirror a Linux desktop to a Roku TV over **native Miracast** (Wi-Fi Display), th
 app or account is needed. The video goes from the laptop to the TV directly over Wi-Fi Direct.
 
 - 1080p30 H.264 video + AAC audio, hardware encoding (NVENC / VAAPI) with software fallback
+- X11 and Wayland (GNOME, KDE, sway, Hyprland... through the standard screen-sharing portal)
 - ~20 s from `rokast start` to picture, Ctrl+C to stop and fully clean up
 - Your normal Wi-Fi connection stays up the whole time (routes and DNS untouched)
-- Pure Python standard library plus `ffmpeg`, `iw`, `dhcpcd` and a patched `wpa_supplicant`
+- Python plus `ffmpeg`, `iw`, `dhcpcd` and a patched `wpa_supplicant` (and GStreamer on Wayland)
 
 ```
 $ scripts/rokast start "Living Room"
@@ -31,6 +32,7 @@ encoder: h264_nvenc
 |---|---|
 | TV | Roku TV G512X (Roku OS, screen mirroring = Prompt) |
 | Laptop | Manjaro, XFCE on X11, Intel AX211 Wi-Fi, NVIDIA (NVENC) |
+| Wayland | sway 1.12 + xdg-desktop-portal-wlr (headless session, same laptop) |
 
 It should work on any Roku device that accepts screen mirroring from Android phones, and on any
 Linux machine whose Wi-Fi chip supports P2P-client mode (`iw list` shows `P2P-client` under
@@ -38,7 +40,8 @@ Linux machine whose Wi-Fi chip supports P2P-client mode (`iw list` shows `P2P-cl
 are welcome. Please open an issue with `scripts/rokast doctor` output.
 
 Limitations:
-- **X11 only** for now (screen capture uses `x11grab`). Wayland sessions are not supported yet.
+- Wayland capture has been tested on sway (wlroots portal). GNOME and KDE use the same portal API
+  but haven't been tried yet; reports welcome.
 - Needs **NetworkManager** with Wi-Fi P2P available (`sudo ls /run/wpa_supplicant` shows `p2p-dev-<wifi>`).
 - Uses `sudo` for the network setup (interface creation, wpa_supplicant, dhcpcd).
 - VAAPI encoding (Intel/AMD GPUs) is implemented but has not been tested on real hardware yet;
@@ -57,6 +60,11 @@ Limitations:
    # (older releases: dhcpcd5; newer: dhcpcd-base)
    # Fedora
    sudo dnf install git gcc make pkgconf ffmpeg iw dhcpcd wpa_supplicant libnl3-devel openssl-devel python3
+   # Wayland sessions additionally need GStreamer with PipeWire and PyGObject:
+   #   Arch/Manjaro:  sudo pacman -S --needed gstreamer gst-plugins-base gst-plugin-pipewire python-gobject
+   #   Debian/Ubuntu: sudo apt install gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-pipewire python3-gi
+   #   Fedora:        sudo dnf install gstreamer1 gstreamer1-plugins-base pipewire-gstreamer python3-gobject
+   # plus your desktop's portal backend (usually already installed: xdg-desktop-portal-gnome / -kde / -wlr / -hyprland)
    ```
 
 2. Clone and build the patched `wpa_supplicant` (it is only used by this tool, in its own
@@ -91,7 +99,7 @@ Limitations:
 
 A small GTK 4 window (written in Rust) for people who'd rather click: pick the TV, quality,
 bitrate and audio, then press **Start mirroring**. It shows live progress (finding the TV,
-connecting, waiting for the TV, mirroring), has a Details pane with the full log, and cleans the
+connecting, waiting for the TV, mirroring), lets you set the **Name on TV**, has a Details pane with the full log, and cleans the
 connection up when you press Stop or close the window. It drives the same `rokast` command
 underneath, so it behaves exactly like the CLI.
 
@@ -113,8 +121,13 @@ scripts/rokast start "Living Room"   # or just `scripts/rokast start` with TARGE
 # Ctrl+C to stop
 ```
 
-On first use the TV may ask whether to allow the device ("Laptop" by default, see `NAME`).
-Choose **Always allow** so it does not ask again.
+On first use the TV may ask whether to allow the device. It shows this computer's name (the pretty
+hostname, else the hostname; set `NAME` or use the desktop app's **Name on TV** field to change it).
+Choose **Always allow** so it does not ask again. `rokast name` prints the name that will be used.
+
+On **Wayland** the desktop's screen-sharing dialog asks which screen to mirror on the first run.
+The choice is remembered (portal restore token in `~/.config/rokast/portal-token`), so later runs
+don't ask again on desktops that support it.
 
 The laptop must be on the same LAN as the TV **once per run** so the tool can verify which TV is
 yours (see Safety). The mirror itself runs over Wi-Fi Direct.
@@ -124,12 +137,13 @@ yours (see Safety). The mirror itself runs over Wi-Fi Direct.
 | Key | Default | Meaning |
 |---|---|---|
 | `TARGET` | | TV name exactly as `rokast list` prints it |
-| `NAME` | `Laptop` | Name the TV shows for this computer |
+| `NAME` | this computer's name | Name the TV shows for this computer (max 32 bytes) |
 | `RES` | `1080p30,720p60,720p30` | Preference order; the best mode the TV supports is used |
 | `BITRATE` | `8M` | Video bitrate |
 | `ENCODER` | `auto` | `auto`, `h264_nvenc`, `h264_vaapi` or `libx264` |
 | `AUDIO` | `1` | Send desktop audio (default PulseAudio/PipeWire sink monitor) |
-| `DISPLAY` | `:0` | X display to capture |
+| `CAPTURE` | `auto` | `auto` (Wayland session → `wayland`, else `x11`), `x11` or `wayland` |
+| `DISPLAY` | `:0` | X display to capture (X11 only) |
 
 Every key can also be set as an environment variable, e.g. `BITRATE=12M scripts/rokast start`.
 
@@ -150,7 +164,10 @@ Every key can also be set as an environment variable, e.g. `BITRATE=12M scripts/
 | `patched wpa_supplicant missing` | run `scripts/build-supplicant` |
 | `could not join the TV's Wi-Fi Direct group` | TV screen mirroring mode must be Prompt/Always allow; stand closer; retry |
 | `the TV joined but never opened RTSP` | the TV's prompt was declined or timed out, or the device is in the TV's blocked list (Settings > System > Screen mirroring > Screen mirroring devices) |
-| Black screen with Wayland | X11 session required |
+| `no screen-sharing portal` | install `xdg-desktop-portal` and your desktop's backend; `rokast doctor` checks it |
+| `screen sharing was cancelled` | the screen picker was closed; start again and pick a screen |
+| Black picture on Wayland | force the portal path with `CAPTURE=wayland` (x11grab under XWayland sees only X11 windows) |
+| Wrong screen on Wayland | delete `~/.config/rokast/portal-token` to get the picker again |
 | Debug the link | `sudo cat /run/rokast/supplicant.log` while running |
 
 ## How it works (short)
@@ -160,7 +177,8 @@ Every key can also be set as an environment variable, e.g. `BITRATE=12M scripts/
 2. A second, patched `wpa_supplicant` on a dedicated P2P-client interface joins that group via
    WPS, sending the same P2P and Wi-Fi Display information elements an Android phone sends.
 3. DHCP from the TV; the TV then opens RTSP to us on port 7236 (the Miracast M1–M7 handshake).
-4. `ffmpeg` captures the screen and audio, encodes H.264/AAC and sends RTP/MPEG-TS to the TV.
+4. `ffmpeg` captures the screen (X11: `x11grab`; Wayland: portal + PipeWire via GStreamer) and
+   audio, encodes H.264/AAC and sends RTP/MPEG-TS to the TV.
 
 The full write-up, including what did *not* work and why, is in
 [docs/how-it-works.md](docs/how-it-works.md).
@@ -171,10 +189,10 @@ The full write-up, including what did *not* work and why, is in
 python3 -I -m unittest discover -s tests   # RTSP handshake vs a fake Roku sink, IE bytes, command builders, allowlist
 ```
 
-Layout: `src/miracast/{p2p,wfd,capture,cli}.py`, `ui/` (Rust GTK 4 desktop app),
+Layout: `src/miracast/{p2p,wfd,capture,wayland,cli}.py`, `ui/` (Rust GTK 4 desktop app),
 `patches/` (wpa_supplicant patch + build config), `scripts/` (entry points), `playbooks/` (operational runbook).
 
-`rokast start` prints machine-readable progress lines, `status: scanning|joining|waiting|streaming|stopped|error [detail]`,
+`rokast start` prints machine-readable progress lines, `status: scanning|sharing|joining|waiting|streaming|stopped|error [detail]`,
 which the desktop app follows; other front ends can use them too.
 
 ## License

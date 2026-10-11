@@ -3,12 +3,14 @@ import asyncio
 import json
 import os
 import signal
+import socket
 import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import capture  # noqa: E402
 import p2p  # noqa: E402
+import wayland  # noqa: E402
 import wfd  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -16,7 +18,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 
 def load_conf():
     conf = {"TARGET": "", "BITRATE": "8M", "ENCODER": "auto", "AUDIO": "1",
-            "DISPLAY": ":0", "RES": "1080p30,720p60,720p30", "NAME": "Laptop"}
+            "DISPLAY": ":0", "RES": "1080p30,720p60,720p30", "NAME": "", "CAPTURE": "auto"}
     path = os.path.join(ROOT, "config", "rokast.conf")
     if os.path.exists(path):
         for ln in open(path):
@@ -25,11 +27,39 @@ def load_conf():
                 k, v = ln.split("=", 1)
                 conf[k.strip()] = v.strip()
     conf.update({k: os.environ[k] for k in conf if k in os.environ})
+    conf["NAME"] = clean_name(conf["NAME"]) or default_name()
     return conf
 
 
+def clean_name(name):
+    """The name the TV shows: printable, at most 32 bytes (the Wi-Fi Direct device-name limit)."""
+    name = "".join(c for c in name if c.isprintable()).strip()
+    while len(name.encode()) > 32:
+        name = name[:-1]
+    return name.strip()
+
+
+def default_name():
+    """This computer's name: the pretty hostname (e.g. "Casper's ThinkPad"), else the hostname."""
+    try:
+        pretty = subprocess.run(["hostnamectl", "--pretty"], capture_output=True, text=True, timeout=5).stdout
+    except (OSError, subprocess.SubprocessError):
+        pretty = ""
+    return clean_name(pretty) or clean_name(socket.gethostname()) or "Linux"
+
+
+def capture_mode(conf):
+    mode = conf["CAPTURE"]
+    if mode == "auto":
+        return "wayland" if wayland.is_wayland() else "x11"
+    if mode not in ("x11", "wayland"):
+        raise RuntimeError(f"CAPTURE must be auto, x11 or wayland (got {mode!r})")
+    return mode
+
+
 def status(state, detail=""):
-    """Machine-readable progress line (the UI keys off these): scanning, joining, waiting, streaming, stopped, error."""
+    """Machine-readable progress line (the UI keys off these):
+    scanning, sharing (Wayland screen picker), joining, waiting, streaming, stopped, error."""
     print(f"status: {state}" + (f" {detail}" if detail else ""), flush=True)
 
 
@@ -42,14 +72,18 @@ def cmd_list(fmt=None):
         print(f"{r['name']:<24} {r['ip']:<15} {r['model']}  p2p={r['p2p_mac']}")
 
 
-async def stream(conf, iface):
+async def stream(conf, iface, cast=None):
     proc = {"p": None}
 
     async def on_play(n, ip, server_port):
         cmd = capture.build_cmd(n, ip, server_port, conf["DISPLAY"], conf["ENCODER"], conf["BITRATE"],
-                                conf["AUDIO"] == "1" and n.audio == "AAC", capture.default_monitor())
+                                conf["AUDIO"] == "1" and n.audio == "AAC", capture.default_monitor(),
+                                source="raw" if cast else "x11")
+        feeder = wayland.gst_cmd(cast.fd, cast.node, n.width, n.height, n.fps) if cast else None
+        if feeder:
+            print("gst:", " ".join(feeder), flush=True)
         print("ffmpeg:", " ".join(cmd), flush=True)
-        proc["p"] = capture.start(cmd, conf["DISPLAY"])
+        proc["p"] = capture.start(cmd, conf["DISPLAY"], feeder=feeder, fd=cast.fd if cast else None)
         status("streaming", f"{n.width}x{n.height}@{n.fps} {n.audio if conf['AUDIO'] == '1' else 'no audio'}")
 
     async def on_stop():
@@ -78,18 +112,25 @@ def cmd_start(name=None):
         status("error", "no TV selected")
         sys.exit("no target: `rokast start \"<name>\"` or set TARGET in config/rokast.conf (see `rokast list`)")
     signal.signal(signal.SIGTERM, lambda *_: (_ for _ in ()).throw(KeyboardInterrupt()))
-    dev = None
+    dev = cast = None
     try:
         status("scanning", name)
         target = p2p.pick(p2p.lan_rokus(), name)
         print(f"target: {target['name']} ({target['ip']}, p2p {target['p2p_mac']})", flush=True)
         conf["ENCODER"] = capture.pick_encoder(conf["ENCODER"])   # probe before joining: the TV's RTSP window is short
         print(f"encoder: {conf['ENCODER']}", flush=True)
+        mode = capture_mode(conf)
+        print(f"capture: {mode}, name on TV: {conf['NAME']}", flush=True)
+        if mode == "wayland":   # the portal may ask the user to pick a screen: do it before joining
+            status("sharing")
+            cast = wayland.ScreenCast()
+            cast.open()
+            print(f"pipewire: node {cast.node}", flush=True)
         dev = p2p.p2p_dev_iface()
         status("joining", target["name"])
         print("joining the TV's Wi-Fi Direct group...", flush=True)
         iface = p2p.connect(dev, target, conf["NAME"])
-        asyncio.run(stream(conf, iface))
+        asyncio.run(stream(conf, iface, cast))
     except KeyboardInterrupt:
         print("stopping", flush=True)
     except (RuntimeError, OSError, subprocess.SubprocessError) as e:
@@ -98,6 +139,8 @@ def cmd_start(name=None):
     finally:
         if dev:
             p2p.disconnect(dev)
+        if cast:
+            cast.close()
     status("stopped")
 
 
@@ -113,6 +156,17 @@ def cmd_doctor():
 
     for t in ("ffmpeg", "wpa_cli", "dhcpcd", "iw"):
         chk(f"{t} installed", shutil.which(t))
+    mode = capture_mode(conf)
+    chk(f"capture: {mode}", True)
+    if mode == "wayland":
+        chk("gst-launch-1.0 installed", shutil.which("gst-launch-1.0"), "install gstreamer")
+        chk("GStreamer pipewiresrc", subprocess.run(["gst-inspect-1.0", "pipewiresrc"], capture_output=True).returncode == 0,
+            "install gst-plugin-pipewire / gstreamer1.0-pipewire")
+        try:
+            chk(f"screen-sharing portal v{wayland.ScreenCast()._prop('version')}", True)
+        except Exception as e:  # noqa: BLE001 - any failure here means "no portal"
+            chk("screen-sharing portal", False, str(e))
+    print(f"name on TV: {conf['NAME']}")
     chk("patched wpa_supplicant built", os.access(p2p.SUPPLICANT, os.X_OK), "run scripts/build-supplicant")
     try:
         chk(f"encoder {capture.pick_encoder(conf['ENCODER'])} (ENCODER={conf['ENCODER']})", True)
@@ -140,5 +194,6 @@ if __name__ == "__main__":
     a = sys.argv[1:] or ["help"]
     arg = a[1] if len(a) > 1 else None
     {"list": lambda: cmd_list(arg), "doctor": cmd_doctor, "start": lambda: cmd_start(arg),
+     "name": lambda: print(load_conf()["NAME"]),
      "ui": cmd_ui}.get(
-        a[0], lambda: sys.exit("usage: rokast {list [--json]|start [name]|doctor|ui}"))()
+        a[0], lambda: sys.exit("usage: rokast {list [--json]|start [name]|name|doctor|ui}"))()

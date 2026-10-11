@@ -10,11 +10,11 @@ Native Miracast (Wi-Fi Display), same as Windows/Android "Cast":
 1. NetworkManager's wpa_supplicant (`p2p-dev-wlo1`) finds the TV and sends a PBC provision discovery -> the TV opens a WPS push-button window on its always-on P2P group.
 2. A **patched** wpa_supplicant (ours, `/run/rokast`) on our own P2P-client iface `p2p-wlo1-mir` joins that group by WPS, with a phone-style P2P IE + WFD IE in the assoc request (p2p.py).
 3. dhcpcd on the group iface (no gateway, no DNS). The TV connects to OUR :7236 ~0.5 s after its lease; RTSP M1..M7 (wfd.py).
-4. x11grab + NVENC -> RTP/MPEG-TS to the TV (capture.py).
+4. x11grab (X11) or portal ScreenCast + PipeWire via gst-launch pipewiresrc -> raw I420 on ffmpeg stdin (Wayland, wayland.py) + NVENC -> RTP/MPEG-TS to the TV (capture.py).
 
 ## Preconditions
 
-- X11 session (XFCE here). Wi-Fi chip with P2P (Intel AX211: yes; `iw list | rg P2P`).
+- X11 session (XFCE here), or Wayland with xdg-desktop-portal + backend, gst-plugin-pipewire, python-gobject. Wi-Fi chip with P2P (Intel AX211: yes; `iw list | rg P2P`).
 - NetworkManager's wpa_supplicant exposes `p2p-dev-<wifi>` (check: `sudo ls /run/wpa_supplicant`).
 - Patched supplicant built: `scripts/build-supplicant` (once; clones hostap_2_11 into gitignored `vendor/`, applies `patches/hostap-2.11-roku.patch`).
 - Roku: Settings > System > Screen mirroring = "Prompt" or "Always allow".
@@ -52,6 +52,10 @@ Desktop app: `scripts/install-ui` once (cargo build + menu entry), then `rokast 
 
 ## Notes
 
+- NAME default = pretty hostname/hostname (`rokast name`); the TV accepted a renamed source without blocking (tested "BlackBox").
+- Wayland test without a Wayland desktop: headless sway (WLR_BACKENDS=headless WLR_RENDERER=pixman) in `dbus-run-session`, own XDG_CONFIG_HOME with
+  xdg-desktop-portal-wlr `chooser_type=none output_name=HEADLESS-1`, start xdg-desktop-portal-wlr + xdg-desktop-portal, put a Wayland window up
+  (swaybg is not a dependency: an empty output captures black), then `rokast start`. Portal open happens BEFORE the join (status `sharing`).
 - UI test without clicking by hand: launch with DISPLAY=:0, `xdotool search --name '^rokast$'`, `import -window` for screenshots, `xdotool mousemove --window W x y click 1`.
 
 - Do not derive the LAN from the default route (a VPN may own it). Use the Wi-Fi interface address.

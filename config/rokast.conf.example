@@ -4,5 +4,6 @@ RES=1080p30,720p60,720p30   # preference order; falls back to whatever the TV su
 BITRATE=8M
 ENCODER=auto                # auto = first that works of h264_nvenc, h264_vaapi, libx264; or name one
 AUDIO=1
+CAPTURE=auto                # auto = wayland (screen-sharing portal + PipeWire) in a Wayland session, else x11
 DISPLAY=:0
-NAME=Laptop                 # name the TV shows for this source (screen-mirroring prompt / allowed devices)
+NAME=                       # name the TV shows for this computer; empty = its hostname (`hostnamectl --pretty`, else `hostname`)

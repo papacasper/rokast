@@ -37,15 +37,23 @@ def pick_encoder(wanted="auto"):
     raise RuntimeError("no working H.264 encoder (install ffmpeg with libx264)")
 
 
-def build_cmd(n, sink_ip, server_port, display=":0", encoder="h264_nvenc", bitrate="8M", audio=True, monitor=None):
-    """Pure function: Negotiated + target -> ffmpeg argv. Unit-tested."""
+def build_cmd(n, sink_ip, server_port, display=":0", encoder="h264_nvenc", bitrate="8M", audio=True, monitor=None,
+              source="x11"):
+    """Pure function: Negotiated + target -> ffmpeg argv. Unit-tested.
+
+    source "x11": x11grab of `display`; "raw": I420 frames of exactly n.width x n.height @ n.fps on stdin
+    (the Wayland path, see wayland.gst_cmd)."""
     gop = n.fps  # 1s GOP: sink can resync/IDR-request cheaply
     display = display.split(".")[0]  # ":0.0" (inherited $DISPLAY) -> ":0"; the screen suffix is appended below
     cmd = ["ffmpeg", "-hide_banner", "-loglevel", "warning", "-nostdin",
            "-fflags", "nobuffer", "-flags", "low_delay"]
     if encoder == "h264_vaapi":
         cmd += ["-vaapi_device", VAAPI_DEVICE]
-    cmd += ["-f", "x11grab", "-framerate", str(n.fps), "-draw_mouse", "1", "-i", f"{display}.0+0,0"]
+    if source == "raw":
+        cmd += ["-f", "rawvideo", "-pix_fmt", "yuv420p", "-video_size", f"{n.width}x{n.height}",
+                "-framerate", str(n.fps), "-i", "pipe:0"]
+    else:
+        cmd += ["-f", "x11grab", "-framerate", str(n.fps), "-draw_mouse", "1", "-i", f"{display}.0+0,0"]
     use_audio = audio and monitor
     if use_audio:
         cmd += ["-thread_queue_size", "512", "-f", "pulse", "-i", monitor]
@@ -73,6 +81,28 @@ def build_cmd(n, sink_ip, server_port, display=":0", encoder="h264_nvenc", bitra
     return cmd
 
 
-def start(cmd, display=":0", xauth=None):
+class Pipeline:
+    """ffmpeg, optionally fed by a GStreamer PipeWire capture; poll()/terminate() like a Popen."""
+
+    def __init__(self, procs):
+        self.procs = procs
+
+    def poll(self):
+        codes = [p.poll() for p in self.procs]
+        return next((c for c in codes if c is not None), None)
+
+    def terminate(self):
+        for p in reversed(self.procs):
+            if p.poll() is None:
+                p.terminate()
+
+
+def start(cmd, display=":0", xauth=None, feeder=None, fd=None):
+    """Start ffmpeg; with `feeder` (gst argv) its stdout becomes ffmpeg's stdin and `fd` is passed to it."""
     env = dict(os.environ, DISPLAY=display, XAUTHORITY=xauth or os.path.expanduser("~/.Xauthority"))
-    return subprocess.Popen(cmd, env=env)
+    if not feeder:
+        return Pipeline([subprocess.Popen(cmd, env=env)])
+    gst = subprocess.Popen(feeder, stdout=subprocess.PIPE, pass_fds=(fd,))
+    ff = subprocess.Popen(cmd, env=env, stdin=gst.stdout)
+    gst.stdout.close()   # ffmpeg owns the read end; gst gets SIGPIPE if ffmpeg dies
+    return Pipeline([gst, ff])

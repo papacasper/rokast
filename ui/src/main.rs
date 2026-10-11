@@ -40,10 +40,13 @@ struct Prefs {
     res: u32,
     bitrate: u32,
     audio: bool,
+    #[serde(default)]
+    name: String,
 }
 
 enum Ev {
     Tvs(Result<Vec<Tv>, String>),
+    DefaultName(String),
     Line(String),
     Exit(i32),
 }
@@ -56,6 +59,7 @@ struct Ui {
     res_drop: gtk::DropDown,
     rate_drop: gtk::DropDown,
     audio: gtk::Switch,
+    name: gtk::Entry,
     title: gtk::Label,
     detail: gtk::Label,
     spinner: gtk::Spinner,
@@ -183,6 +187,10 @@ fn build(app: &gtk::Application) {
     }));
     let audio = gtk::Switch::new();
     audio.set_valign(gtk::Align::Center);
+    let name = gtk::Entry::new();
+    name.set_max_length(32); // Wi-Fi Direct device-name limit (bytes; the CLI trims multi-byte names further)
+    name.set_width_chars(18);
+    name.set_tooltip_text(Some("What the TV calls this computer in its screen-mirroring prompt and device list"));
 
     let frame = gtk::Frame::new(None);
     let form = gtk::Box::new(gtk::Orientation::Vertical, 10);
@@ -191,6 +199,7 @@ fn build(app: &gtk::Application) {
     form.set_margin_start(12);
     form.set_margin_end(12);
     form.append(&row("TV", &tv_drop));
+    form.append(&row("Name on TV", &name));
     form.append(&row("Quality", &res_drop));
     form.append(&row("Bitrate", &rate_drop));
     form.append(&row("Send audio", &audio));
@@ -219,9 +228,10 @@ fn build(app: &gtk::Application) {
     res_drop.set_selected(prefs.res.min(RES.len() as u32 - 1));
     rate_drop.set_selected(prefs.bitrate.min(BITRATES.len() as u32 - 1));
     audio.set_active(prefs.audio);
+    name.set_text(&prefs.name);
 
     let ui = Rc::new(Ui {
-        window, tv_model, tv_drop, refresh, res_drop, rate_drop, audio, title, detail, spinner, button, log,
+        window, tv_model, tv_drop, refresh, res_drop, rate_drop, audio, name, title, detail, spinner, button, log,
     });
     let st = Rc::new(RefCell::new(State::default()));
     let (tx, rx) = async_channel::unbounded::<Ev>();
@@ -265,6 +275,15 @@ fn build(app: &gtk::Application) {
         });
     }
 
+    if prefs.name.is_empty() {
+        // Show the name the CLI would use (config NAME, else this computer's name) instead of a blank box.
+        let tx = tx.clone();
+        std::thread::spawn(move || {
+            if let Ok(o) = rokast_cmd(&["name"]).output() {
+                let _ = tx.send_blocking(Ev::DefaultName(String::from_utf8_lossy(&o.stdout).trim().to_string()));
+            }
+        });
+    }
     scan(&ui, &st, &tx);
     ui.window.present();
 }
@@ -297,7 +316,7 @@ fn set_status(ui: &Ui, title: &str, detail: &str, busy: bool) {
 
 fn set_running(ui: &Ui, running: bool) {
     for w in [ui.tv_drop.upcast_ref::<gtk::Widget>(), ui.res_drop.upcast_ref(), ui.rate_drop.upcast_ref(),
-              ui.audio.upcast_ref(), ui.refresh.upcast_ref()] {
+              ui.audio.upcast_ref(), ui.name.upcast_ref(), ui.refresh.upcast_ref()] {
         w.set_sensitive(!running);
     }
     ui.button.set_label(if running { "Stop mirroring" } else { "Start mirroring" });
@@ -337,6 +356,7 @@ fn start(ui: &Ui, st: &Rc<RefCell<State>>, tx: &async_channel::Sender<Ev>) {
         res: ui.res_drop.selected(),
         bitrate: ui.rate_drop.selected(),
         audio: ui.audio.is_active(),
+        name: ui.name.text().trim().to_string(),
     };
     save_prefs(&prefs);
 
@@ -344,6 +364,9 @@ fn start(ui: &Ui, st: &Rc<RefCell<State>>, tx: &async_channel::Sender<Ev>) {
     cmd.env("BITRATE", BITRATES[prefs.bitrate as usize]).env("AUDIO", if prefs.audio { "1" } else { "0" });
     if let Some(res) = RES[prefs.res as usize].1 {
         cmd.env("RES", res);
+    }
+    if !prefs.name.is_empty() {
+        cmd.env("NAME", &prefs.name);
     }
     let mut child = match cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn() {
         Ok(c) => c,
@@ -406,6 +429,11 @@ fn handle(ui: &Ui, st: &Rc<RefCell<State>>, ev: Ev, preferred: &str) {
             }
             st.borrow_mut().tvs = tvs;
         }
+        Ev::DefaultName(n) => {
+            if ui.name.text().is_empty() {
+                ui.name.set_text(&n);
+            }
+        }
         Ev::Tvs(Err(e)) => {
             ui.refresh.set_sensitive(true);
             set_status(ui, "Couldn't search for TVs", &e, false);
@@ -419,6 +447,7 @@ fn handle(ui: &Ui, st: &Rc<RefCell<State>>, ev: Ev, preferred: &str) {
                 let (state, detail) = rest.split_once(' ').unwrap_or((rest, ""));
                 match state {
                     "scanning" => set_status(ui, "Finding the TV", &format!("Checking {detail} is on your network…"), true),
+                    "sharing" => set_status(ui, "Choose a screen", "Pick the screen to mirror in the screen-sharing dialog.", true),
                     "joining" => set_status(ui, "Connecting", &format!("Joining {detail} over Wi-Fi Direct. Accept the prompt on the TV if it asks."), true),
                     "waiting" => set_status(ui, "Almost there", "Connected. Waiting for the TV to start the stream…", true),
                     "streaming" => {

@@ -6,7 +6,9 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src", "miracast"))
 import capture  # noqa: E402
+import cli  # noqa: E402
 import p2p  # noqa: E402
+import wayland  # noqa: E402
 import wfd  # noqa: E402
 
 CAPS = ("wfd_video_formats: 00 00 03 10 0001ffff 1fffffff 00000fff 00 0000 0000 11 none none\r\n"
@@ -143,6 +145,35 @@ class Capture(unittest.TestCase):
         cmd = capture.build_cmd(n, "192.168.49.2", 22222, encoder="h264_vaapi")
         self.assertLess(cmd.index("-vaapi_device"), cmd.index("-i"))
         self.assertTrue(cmd[cmd.index("-vf") + 1].endswith("format=nv12,hwupload"))
+
+    def test_raw_stdin_input_for_wayland(self):
+        n = wfd.Negotiated(1280, 720, 60, "high", "4.0", "AAC", 19000)
+        cmd = capture.build_cmd(n, "192.168.49.2", 22222, source="raw")
+        self.assertNotIn("x11grab", cmd)
+        i = cmd.index("rawvideo")
+        self.assertEqual(cmd[i:i + 9], ["rawvideo", "-pix_fmt", "yuv420p", "-video_size", "1280x720",
+                                        "-framerate", "60", "-i", "pipe:0"])
+
+
+class Wayland(unittest.TestCase):
+    def test_gst_delivers_exact_negotiated_frames(self):
+        cmd = wayland.gst_cmd(7, 42, 1920, 1080, 30)
+        self.assertEqual(cmd[:4], ["gst-launch-1.0", "-q", "pipewiresrc", "fd=7"])
+        self.assertIn("path=42", cmd)
+        self.assertIn("video/x-raw,format=I420,width=1920,height=1080,framerate=30/1,pixel-aspect-ratio=1/1", cmd)
+        self.assertEqual(cmd[-3:], ["fdsink", "fd=1", "sync=false"])
+
+    def test_session_detection(self):
+        self.assertTrue(wayland.is_wayland({"WAYLAND_DISPLAY": "wayland-0", "DISPLAY": ":0"}))   # XWayland present
+        self.assertTrue(wayland.is_wayland({"XDG_SESSION_TYPE": "wayland"}))
+        self.assertFalse(wayland.is_wayland({"DISPLAY": ":0", "XDG_SESSION_TYPE": "x11"}))
+
+
+class Name(unittest.TestCase):
+    def test_clean_name_limits_to_32_bytes(self):
+        self.assertEqual(cli.clean_name("  Casper's Laptop\n"), "Casper's Laptop")
+        self.assertEqual(len(cli.clean_name("é" * 40).encode()), 32)   # never splits a UTF-8 character
+        self.assertEqual(cli.clean_name("\x00\x07"), "")
 
 
 if __name__ == "__main__":
