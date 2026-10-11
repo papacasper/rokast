@@ -1,4 +1,4 @@
-"""mirror CLI: list | start [name] | doctor.  Foreground; Ctrl+C stops and tears the link down."""
+"""rokast CLI: list | start [name] | doctor.  Foreground; Ctrl+C stops and tears the link down."""
 import asyncio
 import os
 import signal
@@ -15,7 +15,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 def load_conf():
     conf = {"TARGET": "", "BITRATE": "8M", "ENCODER": "auto", "AUDIO": "1",
             "DISPLAY": ":0", "RES": "1080p30,720p60,720p30", "NAME": "Laptop"}
-    path = os.path.join(ROOT, "config", "mirror.conf")
+    path = os.path.join(ROOT, "config", "rokast.conf")
     if os.path.exists(path):
         for ln in open(path):
             ln = ln.split("#")[0].strip()
@@ -62,7 +62,7 @@ def cmd_start(name=None):
     conf = load_conf()
     name = name or conf["TARGET"]
     if not name:
-        sys.exit("no target: `mirror start \"<name>\"` or set TARGET in config/mirror.conf (see `mirror list`)")
+        sys.exit("no target: `rokast start \"<name>\"` or set TARGET in config/rokast.conf (see `rokast list`)")
     target = p2p.pick(p2p.lan_rokus(), name)
     print(f"target: {target['name']} ({target['ip']}, p2p {target['p2p_mac']})", flush=True)
     conf["ENCODER"] = capture.pick_encoder(conf["ENCODER"])   # probe before joining: the TV's RTSP window is short
@@ -112,4 +112,4 @@ def cmd_doctor():
 if __name__ == "__main__":
     a = sys.argv[1:] or ["help"]
     {"list": cmd_list, "doctor": cmd_doctor, "start": lambda: cmd_start(a[1] if len(a) > 1 else None)}.get(
-        a[0], lambda: sys.exit("usage: mirror {list|start [name]|doctor}"))()
+        a[0], lambda: sys.exit("usage: rokast {list|start [name]|doctor}"))()

@@ -1,4 +1,4 @@
-config/mirror.conf
+config/rokast.conf
 build/
 __pycache__/
 *.zip

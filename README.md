@@ -1,16 +1,16 @@
-# roku-mirror
+# rokast
 
 Mirror a Linux desktop to a Roku TV over **native Miracast** (Wi-Fi Display), the same way Android
 "Smart View"/"Cast" and Windows "Connect" (Win+K) do it. Nothing is installed on the TV and no
 app or account is needed. The video goes from the laptop to the TV directly over Wi-Fi Direct.
 
 - 1080p30 H.264 video + AAC audio, hardware encoding (NVENC / VAAPI) with software fallback
-- ~20 s from `mirror start` to picture, Ctrl+C to stop and fully clean up
+- ~20 s from `rokast start` to picture, Ctrl+C to stop and fully clean up
 - Your normal Wi-Fi connection stays up the whole time (routes and DNS untouched)
 - Pure Python standard library plus `ffmpeg`, `iw`, `dhcpcd` and a patched `wpa_supplicant`
 
 ```
-$ scripts/mirror start "Living Room"
+$ scripts/rokast start "Living Room"
 target: Living Room (192.168.1.50, p2p 4e:xx:xx:xx:xx:xx)
 joining the TV's Wi-Fi Direct group...
 wfd: listening on p2p-wlo1-mir:7236 for the sink
@@ -35,7 +35,7 @@ encoder: h264_nvenc
 It should work on any Roku device that accepts screen mirroring from Android phones, and on any
 Linux machine whose Wi-Fi chip supports P2P-client mode (`iw list` shows `P2P-client` under
 "Supported interface modes"; most Intel AX2xx/AX1xx/9xxx cards do). Reports for other hardware
-are welcome. Please open an issue with `scripts/mirror doctor` output.
+are welcome. Please open an issue with `scripts/rokast doctor` output.
 
 Limitations:
 - **X11 only** for now (screen capture uses `x11grab`). Wayland sessions are not supported yet.
@@ -63,14 +63,14 @@ Limitations:
    control directory; your system `wpa_supplicant` is not replaced):
 
    ```bash
-   git clone https://github.com/<you>/roku-mirror && cd roku-mirror
+   git clone https://github.com/papacasper/rokast && cd rokast
    scripts/build-supplicant
    ```
 
 3. Configure (optional):
 
    ```bash
-   cp config/mirror.conf.example config/mirror.conf   # set TARGET to your TV's name
+   cp config/rokast.conf.example config/rokast.conf   # set TARGET to your TV's name
    ```
 
 4. On the TV: **Settings > System > Screen mirroring > Screen mirroring mode = Prompt** (or Always allow).
@@ -78,14 +78,20 @@ Limitations:
 5. Check everything:
 
    ```bash
-   scripts/mirror doctor
+   scripts/rokast doctor
+   ```
+
+6. Optional: put it on your PATH so you can just type `rokast`:
+
+   ```bash
+   ln -s "$PWD/scripts/rokast" ~/.local/bin/rokast
    ```
 
 ## Usage
 
 ```bash
-scripts/mirror list                  # Rokus on your LAN (name, IP, model)
-scripts/mirror start "Living Room"   # or just `scripts/mirror start` with TARGET set in config
+scripts/rokast list                  # Rokus on your LAN (name, IP, model)
+scripts/rokast start "Living Room"   # or just `scripts/rokast start` with TARGET set in config
 # Ctrl+C to stop
 ```
 
@@ -95,11 +101,11 @@ Choose **Always allow** so it does not ask again.
 The laptop must be on the same LAN as the TV **once per run** so the tool can verify which TV is
 yours (see Safety). The mirror itself runs over Wi-Fi Direct.
 
-### Configuration (`config/mirror.conf`)
+### Configuration (`config/rokast.conf`)
 
 | Key | Default | Meaning |
 |---|---|---|
-| `TARGET` | | TV name exactly as `mirror list` prints it |
+| `TARGET` | | TV name exactly as `rokast list` prints it |
 | `NAME` | `Laptop` | Name the TV shows for this computer |
 | `RES` | `1080p30,720p60,720p30` | Preference order; the best mode the TV supports is used |
 | `BITRATE` | `8M` | Video bitrate |
@@ -107,7 +113,7 @@ yours (see Safety). The mirror itself runs over Wi-Fi Direct.
 | `AUDIO` | `1` | Send desktop audio (default PulseAudio/PipeWire sink monitor) |
 | `DISPLAY` | `:0` | X display to capture |
 
-Every key can also be set as an environment variable, e.g. `BITRATE=12M scripts/mirror start`.
+Every key can also be set as an environment variable, e.g. `BITRATE=12M scripts/rokast start`.
 
 ## Safety
 
@@ -127,7 +133,7 @@ Every key can also be set as an environment variable, e.g. `BITRATE=12M scripts/
 | `could not join the TV's Wi-Fi Direct group` | TV screen mirroring mode must be Prompt/Always allow; stand closer; retry |
 | `the TV joined but never opened RTSP` | the TV's prompt was declined or timed out, or the device is in the TV's blocked list (Settings > System > Screen mirroring > Screen mirroring devices) |
 | Black screen with Wayland | X11 session required |
-| Debug the link | `sudo cat /run/roku-mirror/supplicant.log` while running |
+| Debug the link | `sudo cat /run/rokast/supplicant.log` while running |
 
 ## How it works (short)
 

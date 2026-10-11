@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the patched wpa_supplicant mirror needs (vendor/hostap-src/wpa_supplicant/wpa_supplicant).
+# Build the patched wpa_supplicant rokast needs (vendor/hostap-src/wpa_supplicant/wpa_supplicant).
 # Stock wpa_supplicant cannot join a Roku's P2P group as a P2P *client* from a standalone instance; see patches/.
 set -euo pipefail
 cd "$(dirname "$(readlink -f "$0")")/.."

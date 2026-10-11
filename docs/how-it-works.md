@@ -1,4 +1,4 @@
-# How roku-mirror works (and why it took a patched wpa_supplicant)
+# How rokast works (and why it took a patched wpa_supplicant)
 
 This explains how a Linux machine becomes a Miracast *source* that a Roku TV accepts, and the
 dead ends along the way. The short version: a Roku only starts a Miracast session for a source
@@ -96,7 +96,7 @@ the phone-style IEs in the association request on a P2P-client interface, and th
    stable locally-administered MAC and is marked unmanaged in NetworkManager. The chip allows only
    one P2P-client/GO interface, so any leftover `p2p-wlan0-*` interfaces are removed first.
 4. **Patched standalone `wpa_supplicant`** on that interface (`p2p_disabled=1`, control socket in
-   `/run/roku-mirror`). Before connecting, the P2P IE, WFD IE and extra vendor IEs are installed
+   `/run/rokast`). Before connecting, the P2P IE, WFD IE and extra vendor IEs are installed
    with `vendor_elem_add 13` (frame type 13 = P2P association request), so they are in the very
    first association. Then `wps_pbc <group-bssid>`. WPS hands over the current passphrase, the
    supplicant reassociates with it, and the state reaches `COMPLETED`.
@@ -121,12 +121,12 @@ interface is deleted.
 2. **`wpa_supplicant.c`, `wpa_supplicant_associate()`.** When `WPA_FORCE_P2P_GROUP` is set in the
    environment, every network is treated as a P2P group (`ssid->p2p_group = 1`). The association
    parameters then carry `p2p=1` and the nl80211 driver keeps the interface in P2P-client mode
-   instead of reverting to station mode. Only roku-mirror's instance sets this variable.
+   instead of reverting to station mode. Only rokast's instance sets this variable.
 3. **`wps_supplicant.c`, credential handling.** Fixes a crash: with a P2P group network and P2P
    disabled, `is_p2p_6ghz_capable(wpa_s->global->p2p)` dereferences NULL right after
    `WPS-CRED-RECEIVED`. A NULL check is added. This is arguably an upstream bug.
 
-The patched binary is only ever run by roku-mirror, with its own config and control directory.
+The patched binary is only ever run by rokast, with its own config and control directory.
 It doesn't replace or touch the system `wpa_supplicant`.
 
 ## 7. Debugging techniques that paid off

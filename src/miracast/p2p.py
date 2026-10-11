@@ -20,7 +20,7 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
 CTRL = "/run/wpa_supplicant"          # NetworkManager's wpa_supplicant
-OWN = "/run/roku-mirror"              # our patched instance (root-owned)
+OWN = "/run/rokast"              # our patched instance (root-owned)
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SUPPLICANT = os.path.join(ROOT, "vendor", "hostap-src", "wpa_supplicant", "wpa_supplicant")
 DEVICE_TYPE = "10-0050F204-5"         # WPS primary device type: smartphone, what the Roku accepts as a source
