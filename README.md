@@ -1,5 +1,7 @@
 # rokast
 
+[![ci](https://github.com/papacasper/rokast/actions/workflows/ci.yml/badge.svg)](https://github.com/papacasper/rokast/actions/workflows/ci.yml)
+
 Mirror a Linux desktop to a Roku TV over **native Miracast** (Wi-Fi Display), the same way Android
 "Smart View"/"Cast" and Windows "Connect" (Win+K) do it. Nothing is installed on the TV and no
 app or account is needed. The video goes from the laptop to the TV directly over Wi-Fi Direct.
