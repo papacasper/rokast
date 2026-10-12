@@ -1,6 +1,6 @@
-# Plan: v0.2.0 and v0.3.0
+# Plan: v0.2.0 to v0.4.0
 
-Status: proposed 2026-10-12; phases 0, 1 and 2 done 2026-10-12. Each task has a **Done when** check that must pass by running it, not by eye.
+Status: proposed 2026-10-12; phases 0-5 done (v0.2.0 and v0.3.0 released 2026-10-12); phase 6 proposed 2026-10-12. Each task has a **Done when** check that must pass by running it, not by eye.
 Order matters: each phase relies on the one before it. Tick tasks off here as they land; move the
 finished work into `CHANGELOG.md` at release time (`playbooks/release.md`).
 
@@ -12,6 +12,7 @@ finished work into `CHANGELOG.md` at release time (`playbooks/release.md`).
 | 3 | Small features (autostart, monitor choice) | v0.2.0 | Claude |
 | 4 | Release v0.2.0 + upgrade test from v0.1.0 | v0.2.0 | Claude, user confirms TV |
 | 5 | Packaging (AUR, then .deb) + update notice | v0.3.0 | Claude, user owns AUR account |
+| 6 | Join reliability, Wayland on GNOME/KDE, Fedora package | v0.4.0 | Claude + TV time, user for login check |
 
 ## Rules for every phase
 
@@ -152,7 +153,7 @@ tarball, live mirror RokuCast 3/3 (one earlier transient join failure, see playb
       `CHECK_UPDATES=0` no request is made (checked by pointing it at a local server that records hits).
 - [x] App icon: a real `rokast.svg` instead of the theme's `video-display`.
 
-**Status (2026-10-12):** done in the tree, not yet released. AUR: `packaging/aur/{rokast,rokast-git}/PKGBUILD`, shared
+**Status (2026-10-12):** released as v0.3.0 (release workflow green, assets + SHA256SUMS + .deb verified; AUR PKGBUILD has the release sha256, `makepkg --verifysource` passes). AUR push waits for the user. AUR: `packaging/aur/{rokast,rokast-git}/PKGBUILD`, shared
 layout in `packaging/stage`; `tests/test_pkg_arch.sh` (clean archlinux:base-devel container stands in for
 `extra-x86_64-build`): makepkg + check(), namcap clean apart from documented false positives, `rokast doctor` from
 `/usr/bin` all ok, both packages. On this laptop the package passed doctor and mirrored to the Living Room TV
@@ -162,9 +163,52 @@ workflows, `tests/test_pkg_deb.sh` all ok on ubuntu:22.04, 24.04, debian:12. Upd
 `tests/test_update.py` (local server counts hits: fake newer tag -> notice, `CHECK_UPDATES=0` -> 0 hits), UI banner +
 tray line checked against a fake 0.3.0. Icon: `assets/rokast.svg`. Next: release v0.3.0, then the AUR push.
 
+## Phase 6 (v0.4.0): Join reliability + more desktops
+
+Why: the first `rokast start` after the TV has sat idle has failed to join in three sessions (2026-10-12 twice, once
+during the phase 5 package test), with all 4 attempts in `p2p.connect` failing; starting again joined first try every
+time. Users will hit this and think rokast is broken. Each attempt already restarts our supplicant, so what differs
+between a failed run and the next good one is unknown, and the evidence is lost: `_start_own` wipes `/run/rokast`
+(and its `supplicant.log`) on the next start.
+
+- [ ] **Keep join-failure evidence.** When `connect` gives up, copy `/run/rokast/supplicant.log`, the TV's peer entry
+      (`p2p_peer`), the main supplicant's P2P status and per-attempt timings to
+      `~/.cache/rokast/join-failures/<timestamp>/` (keep the last 5, readable by the user). `rokast doctor --report`
+      includes the newest one; the error line says where it is.
+      **Done when:** a unit test with a fake `connect` failure writes the folder and prunes to 5; a live run with the TV
+      off writes one with a non-empty supplicant log.
+- [ ] **Reproduce it on purpose.** `tests/live_join_soak.sh N IDLE_MIN`: N cold starts, each after the TV has sat on
+      its home screen IDLE_MIN minutes; records which attempt joined (or failed) per run. Not in CI (needs the TV).
+      **Done when:** it reproduces at least one failure, or 10 runs at 15 min idle pass (then the failure is rarer than
+      1 in 10 and the next task falls back to the outer retry only).
+- [ ] **Fix from the evidence.** Hypotheses to check against the logs, in order: (a) the peer entry is stale after idle
+      (TV changed channel/group), so each attempt reuses a cached peer: `p2p_flush` + a fresh `p2p_find` before
+      attempt 2+; (b) the TV's P2P radio is in power save and misses the first provision discovery: wake it first
+      (a LAN `query/device-info` or longer first wait), without pressing keys; (c) the PBC window opens before our
+      supplicant is scanning: reorder or wait for `SCAN_RESULTS`. Whatever the cause, add an outer retry: if all
+      attempts fail, tear everything down (as `stop` does), wait 3 s and run the whole scan + join once more, with
+      `status: retrying` (new status name; the UI shows it like `joining`).
+      **Done when:** the soak passes 10/10 runs at the idle time that reproduced it, with no user retry; the live check
+      (rules) passes; the playbook note "retry once before debugging" is replaced with the cause and fix.
+- [ ] **Wayland on GNOME and KDE.** Only sway (wlroots portal) is tested. Run `rokast selftest` with
+      `CAPTURE=wayland` in a headless `gnome-shell --headless` (xdg-desktop-portal-gnome) and `kwin_wayland --virtual`
+      (xdg-desktop-portal-kde) session on this laptop, answering the share dialog by D-Bus/`ydotool` if needed; fix
+      what breaks; add both rows to the README matrix. If a portal cannot be driven headless, mark it "needs a report"
+      and leave the issue template to collect it.
+      **Done when:** selftest passes on both, or the README says exactly which one is untested and why.
+- [ ] **Fedora package (.rpm)**, built and container-tested in CI like the .deb (`packaging/rpm/`, `fedora:41`),
+      attached to releases. Fedora's `ffmpeg-free` has no libx264 or NVENC; Requires `ffmpeg-free or ffmpeg`
+      (RPM Fusion), and `rokast doctor` names the encoder it will use and says how to get a better one.
+      **Done when:** `dnf install ./rokast-*.rpm` in `fedora:41` and `rokast doctor` passes up to the Wi-Fi checks.
+- [ ] **Autostart at a real login** (user): log out and back in with "Start with my computer" on.
+      **Done when:** the tray icon is there, no window opened, and `busctl --user list | grep StatusNotifierItem`
+      shows rokast's item. (Never tested at a real login; the switch itself was tested with `gio launch`.)
+- [ ] Release v0.4.0 (`playbooks/release.md`), then the AUR push (user approves).
+
 ## Not planned (and why)
 
-- Shipping a prebuilt patched `wpa_supplicant` in tarballs: it links the system's libnl/OpenSSL; building locally is safer.
-  Packages (phase 5) build it on the user's machine anyway.
+- Shipping a prebuilt patched `wpa_supplicant` in the tarball: it links the system's libnl/OpenSSL, which varies by
+  distro; building locally is safer. The packages ship it prebuilt because each is built against its distro's libraries
+  (AUR builds on the user's machine; the .deb on Ubuntu 22.04, tested on 22.04, 24.04 and Debian 12).
 - Non-Roku sinks as a supported target: welcome as reports, but no hardware here to keep them working.
 - Flatpak: needs raw netlink, `iw`, `dhcpcd` and sudo on the host; the sandbox gets in the way of exactly what rokast does.
