@@ -48,8 +48,13 @@ left click toggles the window; menu = status, Start/Stop, Show/Hide, Quit. With 
 - Live: `link up: p2p-wlo1-mir ...`, `wfd: sink ... connected`, `wfd: negotiated 1920x1080@30 ...`, ffmpeg line; TV shows the screen;
   `curl -s <tv-ip>:8060/query/active-app` -> RokuCast.
 - After stop: `iw dev` shows only wlo1; no `~/.local/share/rokast/supplicant` process; wlo1 keeps its LAN IP.
-- A single `could not join` (all 4 attempts failed) with the TV idle on its home screen happened once (2026-10-12);
-  the next run and 3 more all joined first try with no change. Retry once before debugging; two in a row is a real fault.
+- Join stuck in SCANNING, then `could not join` (fixed 2026-10-12, Phase 6): the Roku's group beacons carry an empty
+  SSID, and wpa_supplicant skips those ("skip - SSID not known" in the supplicant log); it joins only once a probe
+  response names the group, and the TV does not always answer wildcard probes (most often after sitting idle).
+  `p2p._probe_for` puts the peer's `oper_ssid` on the WPS network with `scan_ssid=1`, so every scan probes for it by
+  name; the CLI also starts over once (`status: retrying`) if the join or RTSP fails before streaming. If it fails
+  again, read `~/.cache/rokast/join-failures/<newest>/` (`rokast doctor --report` prints the summary): each attempt's
+  supplicant log, the peer entry and the TV's power mode. Check cold starts with `tests/live_join_soak.sh 10 15`.
 
 ## Why each piece exists (do not "simplify" these away)
 

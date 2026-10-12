@@ -41,8 +41,8 @@ a TV, so capture and encoding can be tested on any machine. `rokast doctor --rep
 | X11 capture + libx264 | works (selftest) | same laptop |
 | Wayland, wlroots portal | works (live) | sway 1.12 + xdg-desktop-portal-wlr (headless session, same laptop) |
 | Desktop app without a tray host | works | same laptop, app on a D-Bus session with no StatusNotifierWatcher |
-| Wayland, GNOME portal | untested | |
-| Wayland, KDE portal | untested | |
+| Wayland, GNOME portal | works (CI) | GNOME Shell 49 headless + xdg-desktop-portal-gnome, Fedora 43 (`wayland` workflow: selftest through the real share dialog) |
+| Wayland, KDE portal | needs a report | Plasma 6 share dialog opens and is answered in CI, but KWin screencasts only with OpenGL compositing, which needs a GPU the CI runners lack; please [report](https://github.com/papacasper/rokast/issues/new/choose) how it goes |
 | VAAPI (AMD) | untested | |
 | Full mirror on another Wi-Fi chip | untested | |
 
@@ -67,8 +67,12 @@ Limitations:
 - Arch / Manjaro: from the AUR, `yay -S rokast` (or `rokast-git` for main).
 - Debian 12+ / Ubuntu 22.04+: download `rokast_X.Y.Z_amd64.deb` from the
   [latest release](https://github.com/papacasper/rokast/releases/latest), then `sudo apt install ./rokast_*_amd64.deb`.
+- Fedora 43+ (from v0.4.0): download `rokast-X.Y.Z-1.x86_64.rpm` from the latest release, then
+  `sudo dnf install ./rokast-*.x86_64.rpm`. Fedora's own `ffmpeg-free` has no libx264, so rokast encodes with
+  libopenh264 unless you have a GPU encoder; RPM Fusion's `ffmpeg` gives a sharper picture (`rokast doctor` says
+  which encoder it uses).
 
-Then run `rokast doctor`. Update with your package manager (or a newer .deb).
+Then run `rokast doctor`. Update with your package manager (or a newer package).
 
 **From source / release tarball:**
 
@@ -186,7 +190,7 @@ Environment variables with the same names override the file.
 | `NAME` | this computer's name | Name the TV shows for this computer (max 32 bytes) |
 | `RES` | `1080p30,720p60,720p30` | Preference order; the best mode the TV supports is used |
 | `BITRATE` | `8M` | Video bitrate |
-| `ENCODER` | `auto` | `auto`, `h264_nvenc`, `h264_vaapi` or `libx264` |
+| `ENCODER` | `auto` | `auto`, `h264_nvenc`, `h264_vaapi`, `libx264` or `libopenh264` (Fedora's `ffmpeg-free`) |
 | `AUDIO` | `1` | Send desktop audio (default PulseAudio/PipeWire sink monitor) |
 | `CAPTURE` | `auto` | `auto` (Wayland session → `wayland`, else `x11`), `x11` or `wayland` |
 | `MONITOR` | primary monitor | Monitor to mirror, as `rokast monitors` names it (X11 only; on Wayland the screen-sharing dialog asks) |
@@ -239,6 +243,8 @@ The full write-up, including what did *not* work and why, is in
 python3 -I -m unittest discover -s tests   # RTSP handshake vs a fake Roku sink, IE bytes, command builders, allowlist, paths, selftest checks
 bash tests/test_install.sh                 # installer: upgrade, rollback, uninstall in a throwaway HOME
 bash tests/test_monitor_capture.sh         # MONITOR= captures the right monitor (Xvfb + ffmpeg + ImageMagick; not in CI)
+bash tests/test_pkg_deb.sh <deb>; bash tests/test_pkg_rpm.sh <rpm>   # packages in clean containers (docker; CI runs both)
+bash tests/live_join_soak.sh 10 15         # 10 cold-start joins with the real TV idle 15 min between (not in CI)
 ```
 
 Releases: add a `## X.Y.Z` section to `CHANGELOG.md`, then `scripts/release X.Y.Z`; GitHub Actions builds and publishes

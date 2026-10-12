@@ -52,7 +52,9 @@ def x11_monitors(display=":0", xauth=None):
         return ""
 
 
-ENCODERS = ("h264_nvenc", "h264_vaapi", "libx264")   # auto-detect order: NVIDIA, Intel/AMD (VAAPI), software
+# auto-detect order: NVIDIA, Intel/AMD (VAAPI), software; libopenh264 is the software encoder Fedora's ffmpeg-free has
+ENCODERS = ("h264_nvenc", "h264_vaapi", "libx264", "libopenh264")
+BETTER_ENCODER = "full ffmpeg (Fedora: RPM Fusion's ffmpeg) has libx264, sharper at the same bitrate"
 VAAPI_DEVICE = "/dev/dri/renderD128"
 
 
@@ -73,7 +75,7 @@ def pick_encoder(wanted="auto"):
                            capture_output=True, timeout=30)
         if r.returncode == 0:
             return enc
-    raise RuntimeError("no working H.264 encoder (install ffmpeg with libx264)")
+    raise RuntimeError("no working H.264 encoder (install ffmpeg with libx264; Fedora: ffmpeg from RPM Fusion)")
 
 
 def build_cmd(n, sink_ip, server_port, display=":0", encoder="h264_nvenc", bitrate="8M", audio=True, monitor=None,
@@ -109,6 +111,8 @@ def build_cmd(n, sink_ip, server_port, display=":0", encoder="h264_nvenc", bitra
                 "-rc-lookahead", "0", "-forced-idr", "1"]
     elif encoder == "h264_vaapi":
         cmd += ["-c:v", "h264_vaapi", "-rc_mode", "CBR", "-b:v", bitrate, "-maxrate", bitrate, "-bf", "0"]
+    elif encoder == "libopenh264":   # no presets/tune; no B-frames by design; skipping frames would stall the TV
+        cmd += ["-c:v", "libopenh264", "-b:v", bitrate, "-maxrate", bitrate, "-allow_skip_frames", "0"]
     else:
         cmd += ["-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency",
                 "-b:v", bitrate, "-maxrate", bitrate, "-bufsize", "1M", "-bf", "0"]
@@ -116,6 +120,8 @@ def build_cmd(n, sink_ip, server_port, display=":0", encoder="h264_nvenc", bitra
     if encoder == "h264_vaapi":   # its names differ: "constrained_baseline", and level as level_idc ("4.0" breaks encoding)
         cmd += ["-profile:v", "constrained_baseline" if n.profile == "baseline" else "high",
                 "-level", str(round(float(level) * 10))]
+    elif encoder == "libopenh264":   # constrained baseline only (a High decoder plays it); its -level is an int, so
+        cmd += ["-profile:v", "constrained_baseline"]   # leave the level to it
     else:
         cmd += ["-profile:v", "baseline" if n.profile == "baseline" else "high", "-level", level]
     cmd += ["-g", str(gop), "-keyint_min", str(gop)]

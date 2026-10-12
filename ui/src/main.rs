@@ -452,6 +452,7 @@ fn handle(ui: &Ui, st: &Rc<RefCell<State>>, ev: Ev, preferred: &str) {
                     "scanning" => set_status(ui, "Finding the TV", &format!("Checking {detail} is on your network…"), true),
                     "sharing" => set_status(ui, "Choose a screen", "Pick the screen to mirror in the screen-sharing dialog.", true),
                     "joining" => set_status(ui, "Connecting", &format!("Joining {detail} over Wi-Fi Direct. Accept the prompt on the TV if it asks."), true),
+                    "retrying" => set_status(ui, "Connecting", "That didn't work, starting over once more…", true),
                     "waiting" => set_status(ui, "Almost there", "Connected. Waiting for the TV to start the stream…", true),
                     "streaming" => {
                         ui.button.set_sensitive(true);

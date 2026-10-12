@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# packaging/supplicant <dir>
+# Download wpa_supplicant 2.11 (checksum-pinned, same as packaging/aur/*/PKGBUILD), build the patched supplicant
+# with scripts/build-supplicant into <dir> (wpa_supplicant + patch.sha256), ready for packaging/stage.
+# Used by packaging/deb/build-deb and packaging/rpm/build-rpm. Needs: a C toolchain, pkg-config, libnl-3/genl and
+# OpenSSL dev files, curl.
+set -euo pipefail
+root="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+out="$(mkdir -p "${1:?usage: packaging/supplicant <dir>}" && cd "$1" && pwd)"
+hostap=wpa_supplicant-2.11
+hostap_sha256=912ea06f74e30a8e36fbb68064d6cdff218d8d591db0fc5d75dee6c81ac7fc0a
+t="$(mktemp -d)"; trap 'rm -rf "$t"' EXIT
+curl -fsSL "https://w1.fi/releases/$hostap.tar.gz" -o "$t/$hostap.tar.gz"
+echo "$hostap_sha256  $t/$hostap.tar.gz" | sha256sum -c --quiet
+tar -C "$t" -xzf "$t/$hostap.tar.gz"
+ROKAST_HOSTAP_SRC="$t/$hostap" ROKAST_SUPPLICANT_DIR="$out" "$root/scripts/build-supplicant" > "$t/build.log" 2>&1 \
+    || { tail -30 "$t/build.log"; exit 1; }

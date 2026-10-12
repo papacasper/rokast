@@ -30,7 +30,7 @@ jobs:
         run: python3 -I -m unittest discover -s tests
 
       - name: build deps (GTK 4, supplicant for the .deb)
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-4-dev libnl-3-dev libnl-genl-3-dev libssl-dev
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-4-dev libnl-3-dev libnl-genl-3-dev libssl-dev rpm
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -45,6 +45,11 @@ jobs:
           packaging/deb/build-deb .
           bash tests/test_pkg_deb.sh "rokast_${GITHUB_REF_NAME#v}_amd64.deb"
 
+      - name: .rpm (built and installed in a clean fedora:43 container)
+        run: |
+          packaging/rpm/build-rpm .
+          bash tests/test_pkg_rpm.sh "rokast-${GITHUB_REF_NAME#v}-1.x86_64.rpm"
+
       - name: Package
         run: |
           v="${GITHUB_REF_NAME#v}"; name="rokast-$v"
@@ -53,7 +58,8 @@ jobs:
           install -Dm755 ui/target/release/rokast-ui "dist/$name/ui/target/release/rokast-ui"
           tar -C dist -czf "$name-x86_64-linux.tar.gz" "$name"
           cp ui/target/release/rokast-ui rokast-ui-x86_64-linux
-          sha256sum "$name-x86_64-linux.tar.gz" rokast-ui-x86_64-linux "rokast_${v}_amd64.deb" > SHA256SUMS
+          sha256sum "$name-x86_64-linux.tar.gz" rokast-ui-x86_64-linux "rokast_${v}_amd64.deb" \
+            "rokast-$v-1.x86_64.rpm" > SHA256SUMS
           # release notes = this version's CHANGELOG section
           awk -v h="## $v" '$0==h{on=1;next} on&&/^## /{exit} on' CHANGELOG.md > notes.md
           cat SHA256SUMS notes.md
@@ -64,4 +70,4 @@ jobs:
         run: |
           v="${GITHUB_REF_NAME#v}"
           gh release create "$GITHUB_REF_NAME" --title "rokast $v" --notes-file notes.md \
-            "rokast-$v-x86_64-linux.tar.gz" rokast-ui-x86_64-linux "rokast_${v}_amd64.deb" SHA256SUMS
+            "rokast-$v-x86_64-linux.tar.gz" rokast-ui-x86_64-linux "rokast_${v}_amd64.deb" "rokast-$v-1.x86_64.rpm" SHA256SUMS

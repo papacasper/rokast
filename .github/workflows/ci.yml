@@ -1,5 +1,5 @@
 # Every push and pull request: Python tests on the oldest and newest supported Python, shell checks, desktop app build,
-# and the .deb built and installed in a clean ubuntu:22.04 container.
+# and the .deb / .rpm built and installed in clean ubuntu:22.04 / fedora:43 containers.
 name: ci
 
 on:
@@ -26,8 +26,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: bash -n + shellcheck
         run: |
-          for f in scripts/* packaging/stage packaging/deb/build-deb packaging/aur/update; do bash -n "$f"; done
-          shellcheck scripts/* tests/*.sh packaging/stage packaging/deb/build-deb packaging/aur/update
+          for f in scripts/* packaging/stage packaging/supplicant packaging/deb/build-deb packaging/rpm/build-rpm packaging/aur/update; do bash -n "$f"; done
+          shellcheck scripts/* tests/*.sh packaging/stage packaging/supplicant packaging/deb/build-deb packaging/rpm/build-rpm packaging/aur/update
       - name: install script test
         run: if [ -f tests/test_install.sh ]; then bash tests/test_install.sh; fi
 
@@ -51,8 +51,8 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      - name: build deps (GTK 4, supplicant)
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-4-dev libnl-3-dev libnl-genl-3-dev libssl-dev
+      - name: build deps (GTK 4, supplicant, rpmbuild)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-4-dev libnl-3-dev libnl-genl-3-dev libssl-dev rpm
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
@@ -60,3 +60,5 @@ jobs:
       - run: cargo build --release --locked --manifest-path ui/Cargo.toml
       - run: packaging/deb/build-deb dist
       - run: bash tests/test_pkg_deb.sh dist/*.deb
+      - run: packaging/rpm/build-rpm dist
+      - run: bash tests/test_pkg_rpm.sh dist/*.rpm

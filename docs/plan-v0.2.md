@@ -171,17 +171,24 @@ time. Users will hit this and think rokast is broken. Each attempt already resta
 between a failed run and the next good one is unknown, and the evidence is lost: `_start_own` wipes `/run/rokast`
 (and its `supplicant.log`) on the next start.
 
-- [ ] **Keep join-failure evidence.** When `connect` gives up, copy `/run/rokast/supplicant.log`, the TV's peer entry
+- [x] **Keep join-failure evidence.** When `connect` gives up, copy `/run/rokast/supplicant.log`, the TV's peer entry
       (`p2p_peer`), the main supplicant's P2P status and per-attempt timings to
       `~/.cache/rokast/join-failures/<timestamp>/` (keep the last 5, readable by the user). `rokast doctor --report`
       includes the newest one; the error line says where it is.
       **Done when:** a unit test with a fake `connect` failure writes the folder and prunes to 5; a live run with the TV
       off writes one with a non-empty supplicant log.
+      Status: done (`src/miracast/joinlog.py`, `tests/test_joinlog.py`). Saved whenever any attempt failed, also when
+      a later one joined (that attempt's log is kept to compare). The live run used a forced 1 s join timeout
+      instead of the TV off; a real idle failure was also caught (2 failed attempts, then a join).
 - [ ] **Reproduce it on purpose.** `tests/live_join_soak.sh N IDLE_MIN`: N cold starts, each after the TV has sat on
       its home screen IDLE_MIN minutes; records which attempt joined (or failed) per run. Not in CI (needs the TV).
       **Done when:** it reproduces at least one failure, or 10 runs at 15 min idle pass (then the failure is rarer than
       1 in 10 and the next task falls back to the outer retry only).
-- [ ] **Fix from the evidence.** Hypotheses to check against the logs, in order: (a) the peer entry is stale after idle
+      Status: partial. 2026-10-12, with the `_probe_for` fix: 4/4 runs (1 cold, 3 after 15 min idle) joined on attempt
+      1, streamed, and tore down cleanly. Stopped at 4 runs on the user's call, so the 10-run bar is not met yet: run
+      `tests/live_join_soak.sh 10 15` to close this. (Before the fix, idle failures were frequent, e.g. 4/4 attempts
+      failed on the first v0.2.0 run.)
+- [x] **Fix from the evidence.** Hypotheses to check against the logs, in order: (a) the peer entry is stale after idle
       (TV changed channel/group), so each attempt reuses a cached peer: `p2p_flush` + a fresh `p2p_find` before
       attempt 2+; (b) the TV's P2P radio is in power save and misses the first provision discovery: wake it first
       (a LAN `query/device-info` or longer first wait), without pressing keys; (c) the PBC window opens before our
@@ -190,16 +197,30 @@ between a failed run and the next good one is unknown, and the evidence is lost:
       `status: retrying` (new status name; the UI shows it like `joining`).
       **Done when:** the soak passes 10/10 runs at the idle time that reproduced it, with no user retry; the live check
       (rules) passes; the playbook note "retry once before debugging" is replaced with the cause and fix.
-- [ ] **Wayland on GNOME and KDE.** Only sway (wlroots portal) is tested. Run `rokast selftest` with
+      Status: cause found, none of (a)-(c): the TV's beacons have an empty SSID, which wpa_supplicant skips, and the
+      TV does not always answer wildcard probes. Fix: `p2p._probe_for` probes for the group by name (`oper_ssid`,
+      `scan_ssid=1`). Outer retry: `cli.join_and_stream` (`tests/test_retry.py`), no wait needed (connect already
+      tears down). Playbook updated. Soak result: see the task above.
+- [x] **Wayland on GNOME and KDE.** Only sway (wlroots portal) is tested. Run `rokast selftest` with
       `CAPTURE=wayland` in a headless `gnome-shell --headless` (xdg-desktop-portal-gnome) and `kwin_wayland --virtual`
       (xdg-desktop-portal-kde) session on this laptop, answering the share dialog by D-Bus/`ydotool` if needed; fix
       what breaks; add both rows to the README matrix. If a portal cannot be driven headless, mark it "needs a report"
       and leave the issue template to collect it.
       **Done when:** selftest passes on both, or the README says exactly which one is untested and why.
-- [ ] **Fedora package (.rpm)**, built and container-tested in CI like the .deb (`packaging/rpm/`, `fedora:41`),
+      Status: done, in CI rather than on this laptop (no desktop installs here): `.github/workflows/wayland.yml` runs
+      `tests/wayland_desktop.sh` in fedora:43 with a mock logind, answering the dialog over AT-SPI
+      (`tests/portal_click.py`). GNOME 49: selftest passes (h264 1280x720, 89 frames, libopenh264). KDE (Plasma 6):
+      the dialog opens and is answered, but KWin's virtual backend has no OpenGL without a GPU render node and KWin
+      screencasts only with OpenGL compositing ("Unsupported compositing type"), so the job is allowed to fail and
+      the README marks KDE "needs a report". No rokast bug found on either.
+- [x] **Fedora package (.rpm)**, built and container-tested in CI like the .deb (`packaging/rpm/`, `fedora:41`),
       attached to releases. Fedora's `ffmpeg-free` has no libx264 or NVENC; Requires `ffmpeg-free or ffmpeg`
       (RPM Fusion), and `rokast doctor` names the encoder it will use and says how to get a better one.
       **Done when:** `dnf install ./rokast-*.rpm` in `fedora:41` and `rokast doctor` passes up to the Wi-Fi checks.
+      Status: done (`packaging/rpm/build-rpm`, `tests/test_pkg_rpm.sh`, in ci and release). fedora:43, not 41 (41 is
+      end of life). Built on Ubuntu 22.04 like the .deb; rpmbuild generates the library Requires. ffmpeg-free does
+      have `libopenh264`: it is now the last auto-detect fallback (constrained baseline), doctor notes RPM Fusion's
+      ffmpeg is better, and the container test runs `rokast selftest` on Xvfb with it. Not yet seen on a real TV.
 - [ ] **Autostart at a real login** (user): log out and back in with "Start with my computer" on.
       **Done when:** the tray icon is there, no window opened, and `busctl --user list | grep StatusNotifierItem`
       shows rokast's item. (Never tested at a real login; the switch itself was tested with `gio launch`.)

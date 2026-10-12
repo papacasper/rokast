@@ -75,7 +75,7 @@ def capture_geometry(conf, mode):
 
 def status(state, detail=""):
     """Machine-readable progress line (the UI keys off these):
-    scanning, sharing (Wayland screen picker), joining, waiting, streaming, stopped, error."""
+    scanning, sharing (Wayland screen picker), joining, retrying, waiting, streaming, stopped, error."""
     print(f"status: {state}" + (f" {detail}" if detail else ""), flush=True)
 
 
@@ -88,7 +88,7 @@ def cmd_list(fmt=None):
         print(f"{r['name']:<24} {r['ip']:<15} {r['model']}  p2p={r['p2p_mac']}")
 
 
-async def stream(conf, iface, cast=None):
+async def stream(conf, iface, cast=None, played=None):
     proc = {"p": None}
 
     async def on_play(n, ip, server_port):
@@ -99,6 +99,8 @@ async def stream(conf, iface, cast=None):
         if feeder:
             print("gst:", " ".join(feeder), flush=True)
         print("ffmpeg:", " ".join(cmd), flush=True)
+        if played is not None:
+            played.append(True)
         proc["p"] = capture.start(cmd, conf["DISPLAY"], feeder=feeder, fd=cast.fd if cast else None)
         status("streaming", f"{n.width}x{n.height}@{n.fps} {n.audio if conf['AUDIO'] == '1' else 'no audio'}")
 
@@ -146,10 +148,7 @@ def cmd_start(name=None):
             cast.open()
             print(f"pipewire: node {cast.node}", flush=True)
         dev = p2p.p2p_dev_iface()
-        status("joining", target["name"])
-        print("joining the TV's Wi-Fi Direct group...", flush=True)
-        iface = p2p.connect(dev, target, conf["NAME"])
-        asyncio.run(stream(conf, iface, cast))
+        join_and_stream(conf, dev, target, cast)
     except KeyboardInterrupt:
         print("stopping", flush=True)
     except (RuntimeError, OSError, subprocess.SubprocessError) as e:
@@ -161,6 +160,24 @@ def cmd_start(name=None):
         if cast:
             cast.close()
     status("stopped")
+
+
+def join_and_stream(conf, dev, target, cast, rounds=2):
+    """Join and stream; if that fails before the stream ever started, tear the link down and do it all once more
+    (status: retrying). A failure after streaming began is not retried: the TV or the user ended it."""
+    for r in range(1, rounds + 1):
+        status("joining", target["name"])
+        print("joining the TV's Wi-Fi Direct group...", flush=True)
+        played = []
+        try:
+            iface = p2p.connect(dev, target, conf["NAME"])
+            asyncio.run(stream(conf, iface, cast, played))
+            return
+        except RuntimeError as e:
+            if played or r == rounds:
+                raise
+            status("retrying", str(e))
+            p2p.disconnect(dev)
 
 
 def cmd_doctor(report=False):
@@ -205,7 +222,10 @@ def cmd_doctor(report=False):
     if state == "legacy":
         print("note  patched wpa_supplicant is in the old in-tree location; run scripts/build-supplicant to move it")
     try:
-        chk(f"encoder {capture.pick_encoder(conf['ENCODER'])} (ENCODER={conf['ENCODER']})", True)
+        enc = capture.pick_encoder(conf["ENCODER"])
+        chk(f"encoder {enc} (ENCODER={conf['ENCODER']})", True)
+        if enc == "libopenh264":
+            print(f"note  {capture.BETTER_ENCODER}")
     except RuntimeError as e:
         chk("H.264 encoder", False, str(e))
     try:

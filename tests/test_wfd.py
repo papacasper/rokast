@@ -155,6 +155,16 @@ class Capture(unittest.TestCase):
         n.level = "4.2"
         self.assertEqual(capture.build_cmd(n, "x", 1, encoder="h264_vaapi")[cmd.index("-level") + 1], "42")
 
+    def test_openh264_for_fedora_ffmpeg_free(self):
+        n = wfd.Negotiated(1920, 1080, 30, "high", "4.0", "AAC", 19000)
+        cmd = capture.build_cmd(n, "192.168.49.2", 22222, encoder="libopenh264", bitrate="6M")
+        self.assertEqual(cmd[cmd.index("-c:v") + 1], "libopenh264")
+        self.assertEqual(cmd[cmd.index("-profile:v") + 1], "constrained_baseline")
+        self.assertNotIn("-level", cmd)
+        self.assertNotIn("-preset", cmd)
+        self.assertEqual(cmd[cmd.index("-b:v") + 1], "6M")
+        self.assertEqual(capture.ENCODERS[-1], "libopenh264")   # last resort: libx264 is better when present
+
     def test_file_output_for_selftest(self):
         n = wfd.Negotiated(1280, 720, 30, "high", "4.0", "AAC", 19000)
         cmd = capture.build_cmd(n, None, None, out="/tmp/x.ts", seconds=5)

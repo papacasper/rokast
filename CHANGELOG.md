@@ -2,6 +2,20 @@
 
 Each `## <version>` section becomes the GitHub release notes for that tag (see `playbooks/release.md`).
 
+## Unreleased
+
+- **Join reliability:** fixed the first connection after the TV sat idle often failing (stuck "Connecting", then
+  "could not join"). The TV hides its group's name in its beacons and does not always answer a general search;
+  rokast now asks for the group by name. If a start still fails before the picture appears, it starts over once
+  by itself ("starting over once more").
+- **Fedora package:** `rokast-X.Y.Z-1.x86_64.rpm` for Fedora 43+, attached to each release (`sudo dnf install
+  ./rokast-*.rpm`). With Fedora's own ffmpeg (no libx264) rokast now falls back to the libopenh264 encoder.
+- **Evidence for join problems:** a failed join attempt's details are kept in `~/.cache/rokast/join-failures/`
+  (newest 5), and `rokast doctor --report` includes the latest, so a bug report can show what went wrong.
+- **Wayland on GNOME tested:** a new CI job runs the Wayland capture through GNOME's real screen-sharing dialog
+  (headless GNOME Shell 49, Fedora 43) and it works. KDE's dialog is exercised too, but its screen capture needs a GPU
+  the CI machines lack, so KDE is still marked "needs a report".
+
 ## 0.3.0
 
 - **Packages:** an Arch/Manjaro AUR package (`rokast`, and `rokast-git` for main) and a `.deb` for Debian 12+ /
