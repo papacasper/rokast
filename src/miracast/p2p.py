@@ -19,6 +19,7 @@ import time
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
+import joinlog
 import paths
 
 CTRL = "/run/wpa_supplicant"          # NetworkManager's wpa_supplicant
@@ -71,6 +72,19 @@ def _ecp(ip):
         return None
     return {"ip": ip, "name": g("user-device-name") or g("friendly-device-name"),
             "model": g("model-name"), "wifi_mac": mac, "p2p_mac": p2p_mac_of(mac)}
+
+
+def tv_state(ip):
+    """The TV's power mode and foreground app over ECP, for join-failure evidence ({} if it does not answer)."""
+    st = {}
+    for key, path, pat in (("power_mode", "device-info", r"<power-mode>(.*?)</power-mode>"),
+                           ("app", "active-app", r"<app[^>]*>(.*?)</app>")):
+        try:
+            t = urllib.request.urlopen(f"http://{ip}:8060/query/{path}", timeout=1.5).read().decode()
+            st[key] = (re.search(pat, t) or [None, "?"])[1]
+        except OSError:
+            pass
+    return st
 
 
 def wifi_iface():
@@ -177,7 +191,7 @@ def _start_own(iface, mac):
     subprocess.run(["sudo", "tee", conf], input=f"ctrl_interface={OWN}/ctrl\nupdate_config=0\np2p_disabled=1\n",
                    text=True, capture_output=True, check=True)
     # WPA_FORCE_P2P_GROUP: patched behaviour, keep the iface in P2P-client mode at association
-    sh("sudo", "env", "WPA_FORCE_P2P_GROUP=1", supplicant, "-B", "-K", "-d", "-D", "nl80211", "-i", iface,
+    sh("sudo", "env", "WPA_FORCE_P2P_GROUP=1", supplicant, "-B", "-K", "-d", "-t", "-D", "nl80211", "-i", iface,
        "-c", conf, "-f", f"{OWN}/supplicant.log", "-P", f"{OWN}/pid")
     t0 = time.time()
     while "wpa_state" not in own(iface, "status", check=False):
@@ -194,23 +208,67 @@ def _stop_own(iface):
     sh("sudo", "dhcpcd", "-x", iface, check=False, timeout=10)
 
 
-def connect(dev, target, name="Laptop", tries=4, timeout=15):
-    """Join the TV's Wi-Fi Direct group with the patched supplicant. Returns the group iface (no IP yet)."""
+def _probe_for(iface, ssid):
+    """Make the WPS scan probe for the TV's group by name. Its beacons carry an empty SSID, which wpa_supplicant
+    skips ("SSID not known"); only a probe response names it, and a wildcard probe is not always answered (the cause
+    of the first-join-after-idle failures: tests/test_joinlog.py, playbooks/mirror-laptop-to-roku.md)."""
+    nid = own(iface, "list_networks").splitlines()[-1].split("\t")[0]   # the network wps_pbc just added
+    own(iface, "set_network", nid, "ssid", ssid.encode().hex())
+    own(iface, "set_network", nid, "scan_ssid", "1")
+
+
+def _evidence(dev, iface, target, a):
+    """What a failed attempt left behind, read before the next attempt wipes it (see joinlog.py)."""
+    a["own_status"] = parse_peer(own(iface, "status", check=False))
+    a["dev_status"] = parse_peer(wpa(dev, "status", check=False))
+    a["peer_after"] = parse_peer(wpa(dev, "p2p_peer", target["p2p_mac"], check=False))
+    return sh("sudo", "cat", f"{OWN}/supplicant.log", check=False)
+
+
+def connect(dev, target, name="Laptop", tries=4, timeout=15, log=None):
+    """Join the TV's Wi-Fi Direct group with the patched supplicant. Returns the group iface (no IP yet).
+
+    Prints "p2p: joined on attempt N/T" (tests/live_join_soak.sh reads it). Any failed attempt is kept as evidence
+    in joinlog.failures_dir(); the error or the join line says where."""
     iface = group_iface()
+    log = log or joinlog.JoinLog(target)
+    log.tv["before"] = tv_state(target["ip"])
     for attempt in range(1, tries + 1):
-        disconnect(dev, iface)
-        _set_wfd(dev, name)
-        peer = find_peer(dev, target)
-        dev_addr = parse_peer(wpa(dev, "status"))["p2p_device_address"]
-        _start_own(iface, iface_mac(dev_addr))
-        own(iface, "vendor_elem_add", "13", assoc_ies(dev_addr, name))   # 13 = P2P assoc request
-        wpa(dev, "p2p_prov_disc", target["p2p_mac"], "pbc", "join", check=False)   # opens the TV's PBC window
-        own(iface, "wps_pbc", peer["interface_addr"])
-        if _wait_state(iface, "COMPLETED", timeout):
-            return iface
+        a = {"start": log.t()}
+        try:
+            disconnect(dev, iface)
+            _set_wfd(dev, name)
+            a["peer"] = peer = find_peer(dev, target)
+            a["peer_found"] = log.t()
+            dev_addr = parse_peer(wpa(dev, "status"))["p2p_device_address"]
+            _start_own(iface, iface_mac(dev_addr))
+            own(iface, "vendor_elem_add", "13", assoc_ies(dev_addr, name))   # 13 = P2P assoc request
+            wpa(dev, "p2p_prov_disc", target["p2p_mac"], "pbc", "join", check=False)   # opens the TV's PBC window
+            own(iface, "wps_pbc", peer["interface_addr"])
+            if peer.get("oper_ssid"):
+                _probe_for(iface, peer["oper_ssid"])
+            a["pbc"] = log.t()
+            if _wait_state(iface, "COMPLETED", timeout):
+                if attempt > 1:
+                    log.joined(a, sh("sudo", "cat", f"{OWN}/supplicant.log", check=False))
+                where = log.save(f"joined on attempt {attempt}")
+                print(f"p2p: joined on attempt {attempt}/{tries}" + (f" (failed attempts: {where})" if where else ""),
+                      flush=True)
+                return iface
+        except RuntimeError as e:
+            a["error"] = str(e)
+            log.failed(a, _evidence(dev, iface, target, a))
+            disconnect(dev, iface)
+            log.tv["after"] = tv_state(target["ip"])
+            where = log.save(f"error on attempt {attempt}: {e}")
+            raise RuntimeError(f"{e}" + (f" (details: {where})" if where else "")) from None
+        log.failed(a, _evidence(dev, iface, target, a))
         print(f"p2p: join attempt {attempt}/{tries} failed, retrying", flush=True)
     disconnect(dev, iface)
-    raise RuntimeError("could not join the TV's Wi-Fi Direct group (Settings>System>Screen mirroring = Prompt/Always allow?)")
+    log.tv["after"] = tv_state(target["ip"])
+    where = log.save("failed")
+    raise RuntimeError("could not join the TV's Wi-Fi Direct group (Settings>System>Screen mirroring = Prompt/Always allow?)"
+                       + (f" (details: {where})" if where else ""))
 
 
 def dhcp(iface, timeout=15):

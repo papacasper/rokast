@@ -53,7 +53,7 @@ check "makepkg ran check() (python + cargo tests)" 'grep -q "Starting check()" "
 # namcap false positives: our sibling modules (cli.py puts src/miracast on sys.path), the optional gi (Wayland, in
 # optdepends), tools run as subprocesses (it only sees linked libraries), the dynamic loader itself, and bash (in
 # base, so not listed; namcap warns whether or not it is).
-grep -E " (E|W): " "$t/namcap.log" | grep -vE "Referenced python module '(wfd|wayland|paths|capture|selftest|p2p|update|gi(\.repository\.(GLib|Gio))?)'|Dependency included, but may not be needed \('(ffmpeg|iw|dhcpcd|wpa_supplicant|sudo)'\)|Unused shared library '/usr/lib64/ld-linux-x86-64.so.2'|Referenced library 'bash' is an uninstalled dependency" > "$t/namcap.real" || true
+grep -E " (E|W): " "$t/namcap.log" | grep -vE "Referenced python module '(wfd|wayland|paths|capture|selftest|p2p|update|joinlog|gi(\.repository\.(GLib|Gio))?)'|Dependency included, but may not be needed \('(ffmpeg|iw|dhcpcd|wpa_supplicant|sudo)'\)|Unused shared library '/usr/lib64/ld-linux-x86-64.so.2'|Referenced library 'bash' is an uninstalled dependency" > "$t/namcap.real" || true
 check "namcap: no errors, no warnings beyond the known false positives" '[ ! -s "$t/namcap.real" ]'
 check "rokast on PATH is the packaged one" 'grep -qx "which=/usr/lib/rokast/scripts/rokast" "$t/run.log"'
 check "version $v" 'grep -qx "version=$v" "$t/run.log"'

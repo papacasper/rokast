@@ -10,6 +10,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import capture  # noqa: E402
+import joinlog  # noqa: E402
 import p2p  # noqa: E402
 import paths  # noqa: E402
 import selftest  # noqa: E402
@@ -220,6 +221,10 @@ def cmd_doctor(report=False):
     if conf["TARGET"]:
         chk(f"target {conf['TARGET']!r} on LAN", any(r["name"].lower() == conf["TARGET"].lower() for r in rokus))
     if report:
+        last = joinlog.latest()
+        print(f"last join failure: {last or 'none kept'}")
+        if last:
+            print(open(os.path.join(last, "summary.json")).read())
         try:
             chk("selftest", selftest.run(conf, capture_mode(conf)))
         except (RuntimeError, OSError, subprocess.SubprocessError) as e:
