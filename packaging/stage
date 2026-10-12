@@ -2,7 +2,7 @@
 # packaging/stage <destdir> <supplicant-dir>
 # Lay out a system-wide rokast under <destdir> (PKGBUILD package(), the .deb). Same tree as a release tarball, so the
 # CLI, the app and autostart find each other with no packaging-specific code:
-#   /usr/lib/rokast/{VERSION,src,scripts,patches,ui/target/release/rokast-ui}
+#   /usr/lib/rokast/{VERSION,src,scripts,patches,config/release-signers,ui/target/release/rokast-ui}
 #   /usr/lib/rokast/wpa_supplicant + patch.sha256   (paths.py PACKAGED_SUPPLICANT; the stamp makes doctor say "ok")
 #   /usr/bin/rokast -> ../lib/rokast/scripts/rokast, desktop entry, hicolor icon, license
 # Needs: ui/target/release/rokast-ui built, and <supplicant-dir> from
@@ -21,6 +21,7 @@ install -Dm644 -t "$lib" "$root/VERSION"
 install -Dm644 -t "$lib/src/miracast" "$root"/src/miracast/*.py
 install -Dm755 -t "$lib/scripts" "$root/scripts/rokast" "$root/scripts/askpass"
 install -Dm644 -t "$lib/patches" "$root/patches/hostap-2.11-roku.patch" "$root/patches/hostap.config"
+install -Dm644 -t "$lib/config" "$root/config/release-signers"   # rokast update checks release signatures with it
 install -Dm755 "$root/$ui" "$lib/$ui"
 install -Dm755 "$sup/wpa_supplicant" "$lib/wpa_supplicant"
 install -Dm644 "$sup/patch.sha256" "$lib/patch.sha256"

@@ -103,5 +103,45 @@ class UpdateTest(unittest.TestCase):
         self.assertEqual(update.message({**res, "newer": False}, "/x"), "")
 
 
+class KindAndLockTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.home = self.tmp.name
+        self.env = {"HOME": self.home, "XDG_RUNTIME_DIR": os.path.join(self.home, "run")}
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_kind(self):
+        user = os.path.join(self.home, ".local/share/rokast/versions/0.5.0")
+        clone = os.path.join(self.home, "src/rokast")
+        os.makedirs(user)
+        os.makedirs(os.path.join(clone, ".git"))
+        link = os.path.join(self.home, ".local/share/rokast/current")
+        os.symlink(user, link)
+        never = lambda cmd, path: False  # noqa: E731
+        self.assertEqual(update.kind(user, self.env, never), "user")
+        self.assertEqual(update.kind(link, self.env, never), "user")   # through the current/ link
+        self.assertEqual(update.kind(clone, self.env, never), "git")
+        self.assertEqual(update.kind("/usr/lib/rokast", self.env, never), "other")
+        for name, tool in (("deb", "dpkg"), ("rpm", "rpm"), ("arch", "pacman")):
+            self.assertEqual(update.kind("/usr/lib/rokast", self.env, lambda cmd, path, t=tool: cmd[0] == t), name)
+
+    def test_session_lock(self):
+        self.assertFalse(update.mirroring(self.env))                  # no lock file yet
+        code = "import sys, time; sys.path.insert(0, sys.argv[1]); import update; f = update.hold_session(); " \
+               "print('held', flush=True); time.sleep(30)"
+        child = subprocess.Popen([sys.executable, "-I", "-c", code, os.path.join(REPO, "src", "miracast")],
+                                 env={**os.environ, **self.env}, stdout=subprocess.PIPE, text=True)
+        try:
+            self.assertEqual(child.stdout.readline().strip(), "held")
+            self.assertTrue(update.mirroring(self.env))
+        finally:
+            child.kill()
+            child.wait()
+            child.stdout.close()
+        self.assertFalse(update.mirroring(self.env))                  # the lock dies with the process
+
+
 if __name__ == "__main__":
     unittest.main()

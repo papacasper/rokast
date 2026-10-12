@@ -64,10 +64,15 @@ jobs:
           awk -v h="## $v" '$0==h{on=1;next} on&&/^## /{exit} on' CHANGELOG.md > notes.md
           cat SHA256SUMS notes.md
 
+      - name: Sign SHA256SUMS (rokast update refuses releases without a valid SHA256SUMS.sig)
+        env:
+          ROKAST_SIGNING_KEY: ${{ secrets.ROKAST_SIGNING_KEY }}
+        run: scripts/sign-release SHA256SUMS
+
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           v="${GITHUB_REF_NAME#v}"
           gh release create "$GITHUB_REF_NAME" --title "rokast $v" --notes-file notes.md \
-            "rokast-$v-x86_64-linux.tar.gz" rokast-ui-x86_64-linux "rokast_${v}_amd64.deb" "rokast-$v-1.x86_64.rpm" SHA256SUMS
+            "rokast-$v-x86_64-linux.tar.gz" rokast-ui-x86_64-linux "rokast_${v}_amd64.deb" "rokast-$v-1.x86_64.rpm" SHA256SUMS SHA256SUMS.sig

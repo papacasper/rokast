@@ -30,6 +30,14 @@ jobs:
           shellcheck scripts/* tests/*.sh packaging/stage packaging/supplicant packaging/deb/build-deb packaging/rpm/build-rpm packaging/aur/update
       - name: install script test
         run: if [ -f tests/test_install.sh ]; then bash tests/test_install.sh; fi
+      # The real release key (repo secret) must match config/release-signers, or the next release fails to sign.
+      # Secrets are not given to pull requests from forks; skip there.
+      - name: release key matches config/release-signers
+        env:
+          ROKAST_SIGNING_KEY: ${{ secrets.ROKAST_SIGNING_KEY }}
+        run: |
+          if [ -z "$ROKAST_SIGNING_KEY" ]; then echo "no secret (fork PR): skipped"; exit 0; fi
+          echo "dry run $GITHUB_SHA" > dry-run.txt && scripts/sign-release dry-run.txt
 
   ui:
     runs-on: ubuntu-22.04

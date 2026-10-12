@@ -1,7 +1,8 @@
 # Release rokast
 
 Goal: a GitHub Release `vX.Y.Z` with `rokast-X.Y.Z-x86_64-linux.tar.gz` (source + prebuilt desktop app),
-`rokast-ui-x86_64-linux`, `rokast_X.Y.Z_amd64.deb` and `SHA256SUMS`; then the AUR packages updated.
+`rokast-ui-x86_64-linux`, `rokast_X.Y.Z_amd64.deb`, `rokast-X.Y.Z-1.x86_64.rpm`, `SHA256SUMS` and `SHA256SUMS.sig`;
+then the AUR packages updated.
 
 ## Steps
 
@@ -11,14 +12,18 @@ Goal: a GitHub Release `vX.Y.Z` with `rokast-X.Y.Z-x86_64-linux.tar.gz` (source 
    runs the Python + Rust tests; writes `VERSION` and `ui/Cargo.toml`; commits "Release vX.Y.Z" if anything changed; tags; pushes.
 3. The tag push runs `.github/workflows/release.yml` (Ubuntu 22.04): re-checks tag == VERSION == Cargo.toml and the
    CHANGELOG section, tests, builds the UI, builds the .deb and install-tests it in a clean ubuntu:22.04 container
-   (`tests/test_pkg_deb.sh`), packages, publishes with that CHANGELOG section as notes.
+   (`tests/test_pkg_deb.sh`), the same for the .rpm in fedora:43, packages, signs `SHA256SUMS` with the release key
+   (repo secret `ROKAST_SIGNING_KEY`, `scripts/sign-release`), publishes with that CHANGELOG section as notes.
+   The key and how to rotate it: vault note "rokast release signing key"; the public keys are `config/release-signers`.
 4. AUR (below), once the release is verified.
 
 ## Verify (all must pass)
 
 - `gh run list -w release -L1` -> `completed success`.
-- `gh release view vX.Y.Z --json assets -q '.assets[].name'` lists the tarball, `rokast-ui-x86_64-linux`, the `.deb`, `SHA256SUMS`.
-- Download into an empty scratch dir, `sha256sum -c SHA256SUMS`, extract, `rokast-X.Y.Z/scripts/rokast version` prints X.Y.Z,
+- `gh release view vX.Y.Z --json assets -q '.assets[].name'` lists the tarball, `rokast-ui-x86_64-linux`, the `.deb`, the `.rpm`,
+  `SHA256SUMS`, `SHA256SUMS.sig`.
+- Download into an empty scratch dir; `ssh-keygen -Y verify -f config/release-signers -I rokast-release -n rokast-release
+  -s SHA256SUMS.sig < SHA256SUMS` prints `Good "rokast-release" signature`; `sha256sum -c SHA256SUMS`; extract, `rokast-X.Y.Z/scripts/rokast version` prints X.Y.Z,
   and `ldd rokast-X.Y.Z/ui/target/release/rokast-ui | grep 'not found'` prints nothing on this laptop.
 
 ## AUR (`rokast` and `rokast-git`)

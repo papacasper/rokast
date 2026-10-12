@@ -130,6 +130,7 @@ def cmd_start(name=None):
         status("error", "no TV selected")
         sys.exit(f"no target: `rokast start \"<name>\"` or set TARGET in {conf['_file']} (see `rokast list`)")
     signal.signal(signal.SIGTERM, lambda *_: (_ for _ in ()).throw(KeyboardInterrupt()))
+    session = update.hold_session()   # `rokast update` refuses while this is held
     dev = cast = None
     try:
         status("scanning", name)
@@ -159,6 +160,7 @@ def cmd_start(name=None):
             p2p.disconnect(dev)
         if cast:
             cast.close()
+        session.close()
     status("stopped")
 
 
@@ -292,7 +294,8 @@ def cmd_version(args=()):
     res = update.check(v, load_conf()["CHECK_UPDATES"] != "0")
     msg = update.message(res, ROOT)
     if "--json" in args:
-        return print(json.dumps({**res, "message": msg, "packaged": update.packaged(ROOT)}))
+        return print(json.dumps({**res, "message": msg, "packaged": update.packaged(ROOT),
+                                       "kind": update.kind(ROOT)}))
     print(v)
     print(msg or ("update check is off (CHECK_UPDATES=0)" if not res["enabled"] else
                   "up to date" if res["latest"] else "could not reach GitHub; will try again tomorrow"))

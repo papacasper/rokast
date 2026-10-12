@@ -1,6 +1,6 @@
 # Plan: v0.5.0, self-updater
 
-Status: proposed 2026-10-12. Follows `docs/plan-v0.2.md` (phases 0-6). Same rules as there (compatibility, tests,
+Status: decisions approved 2026-10-12; phase 8 done (key created, CI checks it). Follows `docs/plan-v0.2.md` (phases 0-6). Same rules as there (compatibility, tests,
 files under 500 lines, live check after `p2p`/`wfd`/`capture`/`cli` changes, no AI attribution). Each task has a
 **Done when** check that must pass by running it, not by eye. Tick tasks off here as they land.
 
@@ -34,11 +34,12 @@ does the work comes from the **new** version, so installer fixes ship with the u
 Limit: the updater can only update from a version that has it. Everyone on v0.4.0 or older updates by hand one last
 time (CHANGELOG "Upgrading" note). The first real self-update is v0.5.0 -> the next release.
 
-## Decisions (recommended defaults; change before work starts)
+## Decisions (approved by the user 2026-10-12)
 
 1. **Signing:** an `ssh-keygen -Y sign` key (OpenSSH is on every target distro, so no new dependency). The private
    key goes in the repo secret `ROKAST_SIGNING_KEY` and a backup in the vault; the public key ships in the repo as
-   `config/release-signers` (allowed_signers format). Creating the key and the secret needs the user's go-ahead.
+   `config/release-signers` (allowed_signers format). Created 2026-10-12, fingerprint
+   `SHA256:JIwe7G1Gp6TgOqCR6achVy0q5JPaRC/yEaVopRCYbFg`; vault note "rokast release signing key".
 2. **When updates install:** only when the user clicks **Update** (app) or runs `rokast update`. A setting
    `AUTO_UPDATE=1` (default **off**) installs in the background at app start when not mirroring.
 3. **.deb/.rpm through `pkexec`:** yes, as in the table above. If polkit is missing, print the exact command instead.
@@ -58,17 +59,20 @@ starting a feature that changes the release pipeline.
 
 ## Phase 8: signed releases + install-kind detection
 
-- [ ] **Sign every release.** `release.yml` signs `SHA256SUMS` with `ssh-keygen -Y sign -n rokast-release` and
+- [x] **Sign every release.** `release.yml` signs `SHA256SUMS` with `ssh-keygen -Y sign -n rokast-release` and
       publishes `SHA256SUMS.sig`; it fails if the secret is missing. The public key is in `config/release-signers`.
       Key rotation: a release may list two keys in `config/release-signers`; the new key starts signing only after a
       release that ships it, signed by the old key. `playbooks/release.md` gets a "check the signature" step.
       **Done when:** a test signs a file with a throwaway key and `ssh-keygen -Y verify` accepts it and rejects a
       one-byte change; the release workflow's sign step runs on a test tag in a fork or a dry-run job.
-- [ ] **Install kind.** `update.kind(root)` -> `user` (under `$XDG_DATA_HOME/rokast/versions/`), `deb`/`rpm`/`arch`
+      Done: `scripts/sign-release`, `tests/test_signing.py`; ci.yml signs a dry-run file with the real secret on every
+      push. Lands before v0.4.0, so v0.4.0 is already signed. `packaging/stage` ships the signers file; the .deb/.rpm
+      tests check it and the install kind.
+- [x] **Install kind.** `update.kind(root)` -> `user` (under `$XDG_DATA_HOME/rokast/versions/`), `deb`/`rpm`/`arch`
       (`dpkg -S`, `rpm -qf`, `pacman -Qo` on `/usr/lib/rokast`), `git` (has `.git`), `other`. Replaces `packaged()`;
       `rokast version --check --json` reports `kind` (keep `packaged` for the v0.4 app until v0.6).
       **Done when:** unit tests cover each kind with stubbed commands and paths.
-- [ ] **Session lock.** `rokast start` holds `flock` on `$XDG_RUNTIME_DIR/rokast/session.lock` while it runs;
+- [x] **Session lock.** `rokast start` holds `flock` on `$XDG_RUNTIME_DIR/rokast/session.lock` while it runs;
       `update.mirroring()` checks it. Needed so nothing updates under a live mirror.
       **Done when:** a unit test holds the lock in a child process and `mirroring()` is true, false after it exits.
 

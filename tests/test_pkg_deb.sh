@@ -15,6 +15,8 @@ docker run --rm -v "$deb:/rokast.deb:ro" "$image" bash -c '
     apt-get update -qq && apt-get install -y -qq /rokast.deb > /tmp/apt.log 2>&1 || { tail -20 /tmp/apt.log; exit 1; }
     echo "which=$(readlink -f "$(command -v rokast)")"
     echo "version=$(rokast version)"
+    echo "kind=$(CHECK_UPDATES=0 rokast version --check --json | python3 -I -c "import json,sys; print(json.load(sys.stdin)[\"kind\"])")"
+    test -s /usr/lib/rokast/config/release-signers && echo signers=ok
     rokast doctor 2>&1
     echo "doctor_exit=$?"
     echo "missing=$(ldd /usr/lib/rokast/wpa_supplicant /usr/lib/rokast/ui/target/release/rokast-ui | grep -c "not found")"
@@ -25,6 +27,8 @@ check() { if eval "$2"; then echo "ok    $1"; else echo "FAIL  $1   [$2]"; fails
 check "apt installs it with its Depends" 'grep -q "^which=" "$t/run.log"'
 check "rokast on PATH is the packaged one" 'grep -qx "which=/usr/lib/rokast/scripts/rokast" "$t/run.log"'
 check "version $v" 'grep -qx "version=$v" "$t/run.log"'
+check "install kind is deb (rokast update hands it to the package manager)" 'grep -qx "kind=deb" "$t/run.log"'
+check "release signers shipped" 'grep -qx "signers=ok" "$t/run.log"'
 check "doctor runs to the end (no traceback)" 'grep -q "^doctor_exit=" "$t/run.log" && ! grep -q Traceback "$t/run.log"'
 check "doctor: tools from Depends" '[ "$(grep -cxE "ok    (ffmpeg|wpa_cli|dhcpcd|iw) installed" "$t/run.log")" = 4 ]'
 check "doctor: packaged supplicant found, stamp ok" 'grep -qx "ok    patched wpa_supplicant ok: /usr/lib/rokast/wpa_supplicant" "$t/run.log"'
