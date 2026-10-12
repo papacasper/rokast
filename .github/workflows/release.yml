@@ -1,0 +1,62 @@
+# Push a tag vX.Y.Z (scripts/release does it) -> tests, build the desktop app, publish a GitHub Release.
+# Built on Ubuntu 22.04 (GTK 4.6, glibc 2.35) so the prebuilt UI runs on most current distros.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tag matches VERSION and Cargo.toml
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          test "$(cat VERSION)" = "$v" || { echo "VERSION=$(cat VERSION) but tag is $GITHUB_REF_NAME"; exit 1; }
+          grep -qx "version = \"$v\"" ui/Cargo.toml || { echo "ui/Cargo.toml version != $v"; exit 1; }
+          grep -qx "## $v" CHANGELOG.md || { echo "CHANGELOG.md has no '## $v' section"; exit 1; }
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Python tests
+        run: python3 -I -m unittest discover -s tests
+
+      - name: GTK 4 dev files
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-4-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Build and test the desktop app
+        working-directory: ui
+        run: |
+          cargo build --release --locked
+          cargo test --release --locked
+
+      - name: Package
+        run: |
+          v="${GITHUB_REF_NAME#v}"; name="rokast-$v"
+          mkdir -p dist
+          git archive --prefix="$name/" HEAD | tar -x -C dist
+          install -Dm755 ui/target/release/rokast-ui "dist/$name/ui/target/release/rokast-ui"
+          tar -C dist -czf "$name-x86_64-linux.tar.gz" "$name"
+          cp ui/target/release/rokast-ui rokast-ui-x86_64-linux
+          sha256sum "$name-x86_64-linux.tar.gz" rokast-ui-x86_64-linux > SHA256SUMS
+          # release notes = this version's CHANGELOG section
+          awk -v h="## $v" '$0==h{on=1;next} on&&/^## /{exit} on' CHANGELOG.md > notes.md
+          cat SHA256SUMS notes.md
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" --title "rokast $v" --notes-file notes.md \
+            "rokast-$v-x86_64-linux.tar.gz" rokast-ui-x86_64-linux SHA256SUMS

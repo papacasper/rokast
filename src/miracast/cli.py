@@ -1,4 +1,4 @@
-"""rokast CLI: list [--json] | start [name] | doctor | ui.  Foreground; Ctrl+C stops and tears the link down."""
+"""rokast CLI: list [--json] | start [name] | name | doctor | ui [--tray] | version.  Foreground; Ctrl+C stops and tears the link down."""
 import asyncio
 import json
 import os
@@ -195,5 +195,6 @@ if __name__ == "__main__":
     arg = a[1] if len(a) > 1 else None
     {"list": lambda: cmd_list(arg), "doctor": cmd_doctor, "start": lambda: cmd_start(arg),
      "name": lambda: print(load_conf()["NAME"]),
+     "version": lambda: print(open(os.path.join(ROOT, "VERSION")).read().strip()),
      "ui": lambda: cmd_ui(a[1:])}.get(
-        a[0], lambda: sys.exit("usage: rokast {list [--json]|start [name]|name|doctor|ui [--tray]}"))()
+        a[0], lambda: sys.exit("usage: rokast {list [--json]|start [name]|name|doctor|ui [--tray]|version}"))()

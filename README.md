@@ -67,7 +67,9 @@ Limitations:
    # plus your desktop's portal backend (usually already installed: xdg-desktop-portal-gnome / -kde / -wlr / -hyprland)
    ```
 
-2. Clone and build the patched `wpa_supplicant` (it is only used by this tool, in its own
+2. Get rokast, either the latest [release](https://github.com/papacasper/rokast/releases) tarball
+   (`tar xzf rokast-*-x86_64-linux.tar.gz && cd rokast-*`; it includes a prebuilt desktop app, so no Rust needed)
+   or a git clone as below. Then build the patched `wpa_supplicant` (it is only used by this tool, in its own
    control directory; your system `wpa_supplicant` is not replaced):
 
    ```bash
@@ -114,7 +116,7 @@ Without a tray, closing the window stops mirroring and quits.
 ```bash
 # needs Rust (cargo) and GTK 4 development files:
 #   Arch/Manjaro: sudo pacman -S --needed rust gtk4    Debian/Ubuntu: sudo apt install cargo libgtk-4-dev    Fedora: sudo dnf install cargo gtk4-devel
-scripts/install-ui     # builds it and adds "rokast" to your applications menu
+scripts/install-ui     # builds it (or uses the release tarball's prebuilt binary) and adds "rokast" to the app menu
 rokast ui              # or launch from the menu; `rokast ui --tray` to start in the tray
 ```
 
@@ -196,6 +198,9 @@ The full write-up, including what did *not* work and why, is in
 ```bash
 python3 -I -m unittest discover -s tests   # RTSP handshake vs a fake Roku sink, IE bytes, command builders, allowlist
 ```
+
+Releases: add a `## X.Y.Z` section to `CHANGELOG.md`, then `scripts/release X.Y.Z`; GitHub Actions builds and publishes
+the release (see `playbooks/release.md`).
 
 Layout: `src/miracast/{p2p,wfd,capture,wayland,cli}.py`, `ui/` (Rust GTK 4 desktop app),
 `patches/` (wpa_supplicant patch + build config), `scripts/` (entry points), `playbooks/` (operational runbook).

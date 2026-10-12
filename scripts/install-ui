@@ -2,9 +2,16 @@
 # Build the rokast desktop UI and add it to the applications menu (per user, no root).
 set -euo pipefail
 root="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
-cargo build --release --manifest-path "$root/ui/Cargo.toml"
+bin="$root/ui/target/release/rokast-ui"
+if command -v cargo >/dev/null; then
+  cargo build --release --manifest-path "$root/ui/Cargo.toml"
+elif [ -x "$bin" ]; then
+  echo "cargo not found: using the prebuilt $bin (release tarball)"
+else
+  echo "need cargo (Rust) to build the UI, or a release tarball that includes ui/target/release/rokast-ui" >&2; exit 1
+fi
 apps="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 mkdir -p "$apps"
-sed "s|@BIN@|$root/ui/target/release/rokast-ui|" "$root/assets/rokast.desktop" > "$apps/io.github.papacasper.rokast.desktop"
+sed "s|@BIN@|$bin|" "$root/assets/rokast.desktop" > "$apps/io.github.papacasper.rokast.desktop"
 command -v update-desktop-database >/dev/null && update-desktop-database "$apps" || true
 echo "installed: $apps/io.github.papacasper.rokast.desktop (run: rokast ui, or 'rokast' in the app menu)"
