@@ -48,6 +48,8 @@ left click toggles the window; menu = status, Start/Stop, Show/Hide, Quit. With 
 - Live: `link up: p2p-wlo1-mir ...`, `wfd: sink ... connected`, `wfd: negotiated 1920x1080@30 ...`, ffmpeg line; TV shows the screen;
   `curl -s <tv-ip>:8060/query/active-app` -> RokuCast.
 - After stop: `iw dev` shows only wlo1; no `~/.local/share/rokast/supplicant` process; wlo1 keeps its LAN IP.
+- A single `could not join` (all 4 attempts failed) with the TV idle on its home screen happened once (2026-10-12);
+  the next run and 3 more all joined first try with no change. Retry once before debugging; two in a row is a real fault.
 
 ## Why each piece exists (do not "simplify" these away)
 

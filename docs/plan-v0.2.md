@@ -116,18 +116,25 @@ which makes these testable on any machine, VM or live USB.
 
 Phase 3 status: done. Autostart file on/off, monitor dropdown and remembered size/Details checked in the app
 (isolated config, `dbus-run-session`); `tests/test_monitor_capture.sh` checks that each monitor's own content is captured;
-live mirror to the Living Room TV with the new monitor capture works. Not yet checked: an actual logout/login with
-autostart on.
+live mirror to the Living Room TV with the new monitor capture works. Autostart on BlackBox (v0.2.0 install): the
+switch wrote Exec=".../rokast/current/..." --tray; `gio launch` of that entry gave a tray item and no window. Not done:
+a literal logout/login (it would end the working session).
 
 ## Phase 4: Release v0.2.0
 
-- [ ] CHANGELOG `## 0.2.0` with an **Upgrading from 0.1.0** section: config moves automatically; run
+- [x] CHANGELOG `## 0.2.0` with an **Upgrading from 0.1.0** section: config moves automatically; run
       `scripts/install` from the new tarball; run `scripts/build-supplicant` once more (new location); old folder can be deleted.
-- [ ] Upgrade test on this laptop, the way a user would: v0.1.0 tarball installed and configured -> v0.2.0 tarball ->
+- [x] Upgrade test on this laptop, the way a user would: v0.1.0 tarball installed and configured -> v0.2.0 tarball ->
       `scripts/install` -> `rokast doctor` all ok, TARGET kept, menu entry opens v0.2.0, live mirror works.
-- [ ] `scripts/release 0.2.0`, then the checks in `playbooks/release.md`.
+- [x] `scripts/release 0.2.0`, then the checks in `playbooks/release.md`.
 
 **Done when:** release workflow green, assets verified per playbook, upgrade test passed, TV shows RokuCast from v0.2.0.
+
+Phase 4 status: done 2026-10-12. Upgrade rehearsal in a scratch HOME before tagging: the real v0.1.0 tarball set up
+per its README (in-tree supplicant, TARGET, PATH link, menu entry) -> 0.2.0 package from HEAD -> `scripts/install`:
+version 0.2.0, TARGET kept, hostap checkout reused (fix `6d23459`), doctor 11 ok, menu entry opens 0.2.0.
+v0.2.0 released (workflow green, assets + SHA256SUMS + ldd verified), installed on BlackBox from the published
+tarball, live mirror RokuCast 3/3 (one earlier transient join failure, see playbook).
 
 ## Phase 5 (v0.3.0): Packaging + update notice
 
