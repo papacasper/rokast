@@ -2,7 +2,7 @@
 
 Each `## <version>` section becomes the GitHub release notes for that tag (see `playbooks/release.md`).
 
-## Unreleased
+## 0.3.0
 
 - **Packages:** an Arch/Manjaro AUR package (`rokast`, and `rokast-git` for main) and a `.deb` for Debian 12+ /
   Ubuntu 22.04+, attached to each release. Both install to `/usr/lib/rokast` with the patched `wpa_supplicant`
