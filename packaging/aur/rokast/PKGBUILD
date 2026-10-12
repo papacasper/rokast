@@ -19,7 +19,7 @@ optdepends=('xorg-xrandr: mirror one monitor on X11 instead of the whole X scree
             'xdg-desktop-portal: Wayland capture')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/papacasper/rokast/archive/v$pkgver.tar.gz"
         'https://w1.fi/releases/wpa_supplicant-2.11.tar.gz')
-sha256sums=('SKIP'
+sha256sums=('f74eabc1fff2640f33ad83f3bd7d50f05a580348648e0d96a1b0d0877c773942'
             '912ea06f74e30a8e36fbb68064d6cdff218d8d591db0fc5d75dee6c81ac7fc0a')
 
 prepare() {

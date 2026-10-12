@@ -18,7 +18,7 @@ if [ "$pkg" = rokast ]; then
     echo "$v" > "$t/a/rokast-$v/VERSION"   # as the tagged release will have it
     tar -C "$t/a" -czf "$t/pkg/rokast-$v.tar.gz" "rokast-$v"   # same name as the source entry: makepkg uses it as is
     sum="$(sha256sum "$t/pkg/rokast-$v.tar.gz" | cut -d' ' -f1)"
-    sed -i "0,/'SKIP'/s//'$sum'/" "$t/pkg/PKGBUILD"
+    sed -i "0,/^sha256sums=('[^']*'/s//sha256sums=('$sum'/" "$t/pkg/PKGBUILD"   # SKIP or the release's sum
 else
     sed -i 's|git+https://github.com/papacasper/rokast.git|git+file:///repo|' "$t/pkg/PKGBUILD"
     v="$(cat "$repo/VERSION")"

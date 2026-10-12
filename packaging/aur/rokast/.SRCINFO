@@ -28,7 +28,7 @@ pkgbase = rokast
 	optdepends = xdg-desktop-portal: Wayland capture
 	source = rokast-0.3.0.tar.gz::https://github.com/papacasper/rokast/archive/v0.3.0.tar.gz
 	source = https://w1.fi/releases/wpa_supplicant-2.11.tar.gz
-	sha256sums = SKIP
+	sha256sums = f74eabc1fff2640f33ad83f3bd7d50f05a580348648e0d96a1b0d0877c773942
 	sha256sums = 912ea06f74e30a8e36fbb68064d6cdff218d8d591db0fc5d75dee6c81ac7fc0a
 
 pkgname = rokast
