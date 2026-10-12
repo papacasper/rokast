@@ -37,7 +37,7 @@ pub fn entry(exe: &Path) -> String {
     }
     format!(
         "[Desktop Entry]\nType=Application\nName=rokast\nComment=Mirror this screen to a Roku TV (starts in the tray)\n\
-         Exec=\"{q}\" --tray\nIcon=video-display\nTerminal=false\nX-GNOME-Autostart-enabled=true\n"
+         Exec=\"{q}\" --tray\nIcon=io.github.papacasper.rokast\nTerminal=false\nX-GNOME-Autostart-enabled=true\n"
     )
 }
 

@@ -138,19 +138,29 @@ tarball, live mirror RokuCast 3/3 (one earlier transient join failure, see playb
 
 ## Phase 5 (v0.3.0): Packaging + update notice
 
-- [ ] **AUR `rokast`** (release tarball) and **`rokast-git`**: `build()` builds the UI and the patched supplicant;
+- [x] **AUR `rokast`** (release tarball) and **`rokast-git`**: `build()` builds the UI and the patched supplicant;
       install to `/usr/lib/rokast/` (supplicant found via the 1b lookup), `/usr/bin/rokast`, desktop file, icon.
       Depends: ffmpeg iw dhcpcd wpa_supplicant libnl openssl python gtk4; optdepends for the Wayland bits.
       `namcap` clean. Needs the user's AUR account + SSH key (Claude prepares, user approves the push).
       **Done when:** `makepkg -si` in a clean chroot (`extra-x86_64-build`) works and `rokast doctor` passes from `/usr/bin`.
-- [ ] **.deb** built in the release workflow (same layout), attached to the release. **Done when:** installs and
+- [x] **.deb** built in the release workflow (same layout), attached to the release. **Done when:** installs and
       `rokast doctor` runs in an `ubuntu:22.04` container.
-- [ ] **Update notice:** at most once a day, the app (and `rokast version --check`) asks
+- [x] **Update notice:** at most once a day, the app (and `rokast version --check`) asks
       `api.github.com/repos/papacasper/rokast/releases/latest`; if newer, a small banner/tray menu line "rokast X.Y.Z is
       available" linking to the release. `CHECK_UPDATES=0` turns it off; never auto-downloads. Packaged installs say
       "update with your package manager". **Done when:** a unit test with a fake newer tag shows the notice, and with
       `CHECK_UPDATES=0` no request is made (checked by pointing it at a local server that records hits).
-- [ ] App icon: a real `rokast.svg` instead of the theme's `video-display`.
+- [x] App icon: a real `rokast.svg` instead of the theme's `video-display`.
+
+**Status (2026-10-12):** done in the tree, not yet released. AUR: `packaging/aur/{rokast,rokast-git}/PKGBUILD`, shared
+layout in `packaging/stage`; `tests/test_pkg_arch.sh` (clean archlinux:base-devel container stands in for
+`extra-x86_64-build`): makepkg + check(), namcap clean apart from documented false positives, `rokast doctor` from
+`/usr/bin` all ok, both packages. On this laptop the package passed doctor and mirrored to the Living Room TV
+(RokuCast, clean teardown; one transient first-join failure, as before). AUR push waits for the user (account + key);
+`packaging/aur/update X.Y.Z` + playbook "AUR" section. .deb: `packaging/deb/build-deb`, built in ci + release
+workflows, `tests/test_pkg_deb.sh` all ok on ubuntu:22.04, 24.04, debian:12. Update notice: `src/miracast/update.py`,
+`tests/test_update.py` (local server counts hits: fake newer tag -> notice, `CHECK_UPDATES=0` -> 0 hits), UI banner +
+tray line checked against a fake 0.3.0. Icon: `assets/rokast.svg`. Next: release v0.3.0, then the AUR push.
 
 ## Not planned (and why)
 

@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# packaging/aur/update X.Y.Z
+# After the vX.Y.Z release is published: point packaging/aur/rokast/PKGBUILD at it (pkgver, pkgrel=1, the release
+# archive's sha256) and regenerate both .SRCINFO files. Needs makepkg (Arch). Pushing to the AUR is a separate,
+# manual step (playbooks/release.md, "AUR").
+set -euo pipefail
+root="$(cd "$(dirname "$(readlink -f "$0")")/../.." && pwd)"
+v="${1:?usage: packaging/aur/update X.Y.Z}"
+[[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "not a version: $v" >&2; exit 1; }
+t="$(mktemp -d)"; trap 'rm -rf "$t"' EXIT
+curl -fsSL "https://github.com/papacasper/rokast/archive/v$v.tar.gz" -o "$t/a.tar.gz"
+sum="$(sha256sum "$t/a.tar.gz" | cut -d' ' -f1)"
+p="$root/packaging/aur/rokast/PKGBUILD"
+sed -i "s/^pkgver=.*/pkgver=$v/; s/^pkgrel=.*/pkgrel=1/; 0,/^sha256sums=('[^']*'/s//sha256sums=('$sum'/" "$p"
+grep -q "^sha256sums=('$sum'" "$p" || { echo "could not set the sha256 in $p" >&2; exit 1; }
+for d in rokast rokast-git; do (cd "$root/packaging/aur/$d" && makepkg --printsrcinfo > .SRCINFO); done
+echo "rokast $v: sha256 $sum; PKGBUILD and .SRCINFO updated. Review with git diff, commit, then push to the AUR."

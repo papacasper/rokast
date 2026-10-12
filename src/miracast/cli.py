@@ -1,5 +1,5 @@
 """rokast CLI: list [--json] | start [name] | name | config | doctor [--report] | selftest [--seconds N] [--out FILE]
-| monitors [--json] | ui [--tray] | version.  Foreground; Ctrl+C stops and tears the link down."""
+| monitors [--json] | ui [--tray] | version [--check [--json]].  Foreground; Ctrl+C stops and tears the link down."""
 import asyncio
 import json
 import os
@@ -13,6 +13,7 @@ import capture  # noqa: E402
 import p2p  # noqa: E402
 import paths  # noqa: E402
 import selftest  # noqa: E402
+import update  # noqa: E402
 import wayland  # noqa: E402
 import wfd  # noqa: E402
 
@@ -22,7 +23,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 def load_conf():
     conf = {"TARGET": "", "BITRATE": "8M", "ENCODER": "auto", "AUDIO": "1",
             "DISPLAY": ":0", "RES": "1080p30,720p60,720p30", "NAME": "", "CAPTURE": "auto",
-            "MONITOR": ""}
+            "MONITOR": "", "CHECK_UPDATES": "1"}
     path, legacy = paths.config_file()
     if legacy:
         paths.migrate_config(path, legacy)
@@ -210,8 +211,12 @@ def cmd_doctor(report=False):
         chk("p2p-dev interface", p2p.p2p_dev_iface())
     except RuntimeError as e:
         chk("p2p-dev interface", False, str(e))
-    rokus = p2p.lan_rokus()
-    chk("Rokus on LAN", rokus, "none answered ECP :8060")
+    try:
+        rokus = p2p.lan_rokus()
+        chk("Rokus on LAN", rokus, "none answered ECP :8060")
+    except RuntimeError as e:   # no Wi-Fi interface to find the LAN from
+        rokus = []
+        chk("Rokus on LAN", False, str(e))
     if conf["TARGET"]:
         chk(f"target {conf['TARGET']!r} on LAN", any(r["name"].lower() == conf["TARGET"].lower() for r in rokus))
     if report:
@@ -254,6 +259,20 @@ def cmd_selftest(args):
     sys.exit(0 if ok else 1)
 
 
+def cmd_version(args=()):
+    """version: print it.  --check: also say whether a newer release is out (update.py; daily, CHECK_UPDATES=0 = off)."""
+    v = open(os.path.join(ROOT, "VERSION")).read().strip()
+    if "--check" not in args:
+        return print(v)
+    res = update.check(v, load_conf()["CHECK_UPDATES"] != "0")
+    msg = update.message(res, ROOT)
+    if "--json" in args:
+        return print(json.dumps({**res, "message": msg, "packaged": update.packaged(ROOT)}))
+    print(v)
+    print(msg or ("update check is off (CHECK_UPDATES=0)" if not res["enabled"] else
+                  "up to date" if res["latest"] else "could not reach GitHub; will try again tomorrow"))
+
+
 def cmd_ui(args=()):
     exe = os.path.join(ROOT, "ui", "target", "release", "rokast-ui")
     if not os.access(exe, os.X_OK):
@@ -268,7 +287,7 @@ if __name__ == "__main__":
      "selftest": lambda: cmd_selftest(a[1:]), "monitors": lambda: cmd_monitors(arg),
      "name": lambda: print(load_conf()["NAME"]),
      "config": lambda: print(load_conf()["_file"]),
-     "version": lambda: print(open(os.path.join(ROOT, "VERSION")).read().strip()),
+     "version": lambda: cmd_version(a[1:]),
      "ui": lambda: cmd_ui(a[1:])}.get(
         a[0], lambda: sys.exit("usage: rokast {list [--json]|start [name]|name|config|doctor [--report]|selftest [--seconds N] [--out FILE]|"
-                          "monitors [--json]|ui [--tray]|version}"))()
+                          "monitors [--json]|ui [--tray]|version [--check [--json]]}"))()

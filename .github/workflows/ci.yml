@@ -1,4 +1,5 @@
-# Every push and pull request: Python tests on the oldest and newest supported Python, shell checks, desktop app build.
+# Every push and pull request: Python tests on the oldest and newest supported Python, shell checks, desktop app build,
+# and the .deb built and installed in a clean ubuntu:22.04 container.
 name: ci
 
 on:
@@ -25,8 +26,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: bash -n + shellcheck
         run: |
-          for f in scripts/*; do bash -n "$f"; done
-          shellcheck scripts/* tests/*.sh
+          for f in scripts/* packaging/stage packaging/deb/build-deb packaging/aur/update; do bash -n "$f"; done
+          shellcheck scripts/* tests/*.sh packaging/stage packaging/deb/build-deb packaging/aur/update
       - name: install script test
         run: if [ -f tests/test_install.sh ]; then bash tests/test_install.sh; fi
 
@@ -45,3 +46,17 @@ jobs:
         run: |
           cargo build --locked
           cargo test --locked
+
+  deb:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: build deps (GTK 4, supplicant)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-4-dev libnl-3-dev libnl-genl-3-dev libssl-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ui
+      - run: cargo build --release --locked --manifest-path ui/Cargo.toml
+      - run: packaging/deb/build-deb dist
+      - run: bash tests/test_pkg_deb.sh dist/*.deb

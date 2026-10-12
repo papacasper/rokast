@@ -3,22 +3,29 @@
 # install folder, so it survives upgrades). Stores patch.sha256 so `rokast doctor` can tell when the patch changed.
 # Stock wpa_supplicant cannot join a Roku's P2P group as a P2P *client* from a standalone instance; see patches/.
 # Path rules: src/miracast/paths.py.
+# Packages (packaging/): ROKAST_HOSTAP_SRC=<unpacked wpa_supplicant-2.11 release tarball> ROKAST_SUPPLICANT_DIR=<out>.
 set -euo pipefail
 root="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
-src="${XDG_CACHE_HOME:-$HOME/.cache}/rokast/hostap-src"
+src="${ROKAST_HOSTAP_SRC:-${XDG_CACHE_HOME:-$HOME/.cache}/rokast/hostap-src}"
 dest="${ROKAST_SUPPLICANT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/rokast/supplicant}"
 
-if [ ! -d "$src/.git" ]; then
-    mkdir -p "$(dirname "$src")"
-    if [ -d "$root/vendor/hostap-src/.git" ]; then
-        mv "$root/vendor/hostap-src" "$src"          # pre-0.2 in-tree checkout: reuse it instead of cloning again
-        rmdir "$root/vendor" 2>/dev/null || true
-    else
-        git clone --depth 1 --branch hostap_2_11 https://w1.fi/hostap.git "$src"
+if [ -n "${ROKAST_HOSTAP_SRC:-}" ]; then
+    # a fresh release tarball, possibly inside someone else's git tree (an AUR clone), where `git apply` skips files
+    [ -d "$src/wpa_supplicant" ] || { echo "ROKAST_HOSTAP_SRC=$src is not a hostap source tree" >&2; exit 1; }
+    patch -d "$src" -p1 --forward < "$root/patches/hostap-2.11-roku.patch"
+else
+    if [ ! -d "$src/.git" ]; then
+        mkdir -p "$(dirname "$src")"
+        if [ -d "$root/vendor/hostap-src/.git" ]; then
+            mv "$root/vendor/hostap-src" "$src"          # pre-0.2 in-tree checkout: reuse it instead of cloning again
+            rmdir "$root/vendor" 2>/dev/null || true
+        else
+            git clone --depth 1 --branch hostap_2_11 https://w1.fi/hostap.git "$src"
+        fi
     fi
+    git -C "$src" checkout -- .
+    git -C "$src" apply "$root/patches/hostap-2.11-roku.patch"
 fi
-git -C "$src" checkout -- .
-git -C "$src" apply "$root/patches/hostap-2.11-roku.patch"
 cp "$root/patches/hostap.config" "$src/wpa_supplicant/.config"
 make -C "$src/wpa_supplicant" -j"$(nproc)" wpa_supplicant
 

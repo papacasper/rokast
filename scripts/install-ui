@@ -13,5 +13,6 @@ fi
 apps="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 mkdir -p "$apps"
 sed "s|@BIN@|$bin|" "$root/assets/rokast.desktop" > "$apps/io.github.papacasper.rokast.desktop"
+install -Dm644 "$root/assets/rokast.svg" "${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor/scalable/apps/io.github.papacasper.rokast.svg"
 if command -v update-desktop-database >/dev/null; then update-desktop-database "$apps" || true; fi
 echo "installed: $apps/io.github.papacasper.rokast.desktop (run: rokast ui, or 'rokast' in the app menu)"

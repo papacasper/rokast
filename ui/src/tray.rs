@@ -35,6 +35,8 @@ pub struct Tray {
     pub running: bool,
     pub can_start: bool,
     pub window_visible: bool,
+    /// (menu label, release page; empty for packaged installs) once a newer release is known
+    pub update: Option<(String, String)>,
     pub tx: async_channel::Sender<Cmd>,
 }
 
@@ -74,7 +76,22 @@ impl ksni::Tray for Tray {
         true
     }
     fn menu(&self) -> Vec<MenuItem<Self>> {
-        vec![
+        let mut items: Vec<MenuItem<Self>> = Vec::new();
+        if let Some((label, url)) = self.update.clone() {
+            items.push(
+                StandardItem {
+                    label,
+                    icon_name: "software-update-available".into(),
+                    enabled: !url.is_empty(),
+                    activate: Box::new(move |_: &mut Self| {
+                        let _ = std::process::Command::new("xdg-open").arg(&url).spawn();
+                    }),
+                    ..Default::default()
+                }
+                .into(),
+            );
+        }
+        items.extend([
             StandardItem { label: self.status.replace('_', "__"), enabled: false, ..Default::default() }.into(),
             MenuItem::Separator,
             StandardItem {
@@ -99,7 +116,8 @@ impl ksni::Tray for Tray {
                 ..Default::default()
             }
             .into(),
-        ]
+        ]);
+        items
     }
 }
 
@@ -108,7 +126,7 @@ pub fn spawn() -> (Option<ksni::blocking::Handle<Tray>>, async_channel::Receiver
     let (tx, rx) = async_channel::unbounded();
     let tray = Tray {
         look: Look::Idle, status: "Ready".into(), detail: String::new(), running: false, can_start: false,
-        window_visible: true, tx,
+        window_visible: true, update: None, tx,
     };
     (tray.spawn().ok(), rx)
 }

@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# packaging/stage <destdir> <supplicant-dir>
+# Lay out a system-wide rokast under <destdir> (PKGBUILD package(), the .deb). Same tree as a release tarball, so the
+# CLI, the app and autostart find each other with no packaging-specific code:
+#   /usr/lib/rokast/{VERSION,src,scripts,patches,ui/target/release/rokast-ui}
+#   /usr/lib/rokast/wpa_supplicant + patch.sha256   (paths.py PACKAGED_SUPPLICANT; the stamp makes doctor say "ok")
+#   /usr/bin/rokast -> ../lib/rokast/scripts/rokast, desktop entry, hicolor icon, license
+# Needs: ui/target/release/rokast-ui built, and <supplicant-dir> from
+#   ROKAST_HOSTAP_SRC=... ROKAST_SUPPLICANT_DIR=<supplicant-dir> scripts/build-supplicant
+set -euo pipefail
+root="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+[ $# = 2 ] || { echo "usage: packaging/stage <destdir> <supplicant-dir>" >&2; exit 2; }
+d="$1"; sup="$2"
+lib="$d/usr/lib/rokast"
+ui=ui/target/release/rokast-ui
+for f in "$root/$ui" "$sup/wpa_supplicant" "$sup/patch.sha256"; do
+    [ -s "$f" ] || { echo "stage: missing $f" >&2; exit 1; }
+done
+
+install -Dm644 -t "$lib" "$root/VERSION"
+install -Dm644 -t "$lib/src/miracast" "$root"/src/miracast/*.py
+install -Dm755 -t "$lib/scripts" "$root/scripts/rokast" "$root/scripts/askpass"
+install -Dm644 -t "$lib/patches" "$root/patches/hostap-2.11-roku.patch" "$root/patches/hostap.config"
+install -Dm755 "$root/$ui" "$lib/$ui"
+install -Dm755 "$sup/wpa_supplicant" "$lib/wpa_supplicant"
+install -Dm644 "$sup/patch.sha256" "$lib/patch.sha256"
+install -d "$d/usr/bin"
+ln -sfn ../lib/rokast/scripts/rokast "$d/usr/bin/rokast"
+install -d "$d/usr/share/applications"
+sed "s|@BIN@|/usr/lib/rokast/$ui|" "$root/assets/rokast.desktop" > "$d/usr/share/applications/io.github.papacasper.rokast.desktop"
+install -Dm644 "$root/assets/rokast.svg" "$d/usr/share/icons/hicolor/scalable/apps/io.github.papacasper.rokast.svg"
+install -Dm644 "$root/LICENSE" "$d/usr/share/licenses/rokast/LICENSE"
+echo "staged rokast $(cat "$root/VERSION") in $d"

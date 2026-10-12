@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="screen" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3584e4"/>
+      <stop offset="1" stop-color="#1a5fb4"/>
+    </linearGradient>
+    <linearGradient id="bezel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5e5c64"/>
+      <stop offset="1" stop-color="#3d3846"/>
+    </linearGradient>
+  </defs>
+  <!-- stand -->
+  <path d="M58 94h12l4 14H54z" fill="#77767b"/>
+  <rect x="36" y="106" width="56" height="8" rx="4" fill="#9a9996"/>
+  <!-- TV -->
+  <rect x="8" y="16" width="112" height="80" rx="10" fill="url(#bezel)"/>
+  <rect x="15" y="23" width="98" height="66" rx="5" fill="url(#screen)"/>
+  <!-- cast waves from the bottom-left corner of the screen -->
+  <g fill="none" stroke="#ffffff" stroke-linecap="round" stroke-width="7">
+    <path d="M30 60a24 24 0 0 1 24 24"/>
+    <path d="M30 42a42 42 0 0 1 42 42" opacity="0.85"/>
+  </g>
+  <circle cx="33" cy="81" r="6" fill="#ffffff"/>
+  <!-- laptop silhouette, top right: this computer -->
+  <rect x="78" y="34" width="24" height="16" rx="2" fill="none" stroke="#ffffff" stroke-width="4" opacity="0.9"/>
+  <path d="M74 54h32" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+</svg>

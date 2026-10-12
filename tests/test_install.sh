@@ -9,6 +9,7 @@ export HOME="$t/home"
 unset XDG_DATA_HOME XDG_CONFIG_HOME XDG_CACHE_HOME
 mkdir -p "$HOME"
 export base="$HOME/.local/share/rokast" desktop="$HOME/.local/share/applications/io.github.papacasper.rokast.desktop"
+export icon="$HOME/.local/share/icons/hicolor/scalable/apps/io.github.papacasper.rokast.svg"
 fails=0
 check() { if eval "$2"; then echo "ok    $1"; else echo "FAIL  $1   [$2]"; fails=$((fails + 1)); fi; }
 
@@ -37,6 +38,7 @@ check "upgrade: version 0.2.0" '[ "$(ver)" = 0.2.0 ]'
 check "upgrade: settings moved out of the old folder" 'grep -qx "TARGET=Den" "$HOME/.config/rokast/rokast.conf" && [ -f "$old/config/rokast.conf.moved" ] && [ ! -e "$old/config/rokast.conf" ]'
 check "upgrade: CLI sees the moved settings" '[ "$("$HOME/.local/bin/rokast" config 2>/dev/null)" = "$HOME/.config/rokast/rokast.conf" ]'
 check "menu entry points at current/" 'grep -qx "Exec=$base/current/ui/target/release/rokast-ui" "$desktop"'
+check "app icon installed" '[ -s "$icon" ] && grep -qx "Icon=io.github.papacasper.rokast" "$desktop"'
 check "menu entry target runs" '[ "$("$base/current/ui/target/release/rokast-ui")" = "stub-ui 0.2.0" ]'
 check "upgrade: old hostap checkout moved to the build cache" '[ -d "$HOME/.cache/rokast/hostap-src/.git" ] && [ ! -e "$old/vendor/hostap-src" ]'
 check "no local config copied into the install" '[ ! -e "$base/versions/0.2.0/config/rokast.conf" ]'
@@ -46,6 +48,7 @@ r4="$(release 0.4.0)"; inst "$r4" --no-supplicant
 check "keeps current + previous only" '[ "$(ls "$base/versions")" = "$(printf "0.3.0\n0.4.0")" ]'
 check "version 0.4.0" '[ "$(ver)" = 0.4.0 ]'
 
+rm "$base/versions/0.3.0/assets/rokast.svg"   # releases before 0.3.0 had no icon
 inst "$r4" --rollback
 check "rollback -> 0.3.0" '[ "$(ver)" = 0.3.0 ] && [ "$("$base/current/ui/target/release/rokast-ui")" = "stub-ui 0.3.0" ]'
 inst "$r4" --rollback
@@ -55,7 +58,7 @@ inst "$r4" --no-supplicant
 check "reinstall same version is fine" '[ "$(ver)" = 0.4.0 ] && [ -L "$base/previous" ]'
 
 inst "$r4" --uninstall
-check "uninstall removes install, link, menu entry" '[ ! -e "$base" ] && [ ! -e "$HOME/.local/bin/rokast" ] && [ ! -e "$desktop" ]'
+check "uninstall removes install, link, menu entry, icon" '[ ! -e "$base" ] && [ ! -e "$HOME/.local/bin/rokast" ] && [ ! -e "$desktop" ] && [ ! -e "$icon" ]'
 check "uninstall keeps settings" '[ -f "$HOME/.config/rokast/rokast.conf" ]'
 
 if [ "$fails" != 0 ]; then echo "test_install: $fails failed"; exit 1; fi

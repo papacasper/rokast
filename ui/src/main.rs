@@ -7,6 +7,7 @@ mod autostart;
 mod config;
 mod monitors;
 mod tray;
+mod update;
 
 use config::{conf_target, load_prefs, rokast_cmd, rokast_script, save_prefs, update_prefs, Prefs};
 
@@ -31,6 +32,7 @@ const CSS: &str = "
 .status-detail { opacity: 0.75; }
 .big-button { font-size: 14pt; font-weight: 700; padding: 10px 0; }
 .log { font-family: monospace; font-size: 9pt; }
+.update-banner { font-weight: 600; }
 ";
 
 #[derive(Deserialize, Clone)]
@@ -195,6 +197,7 @@ fn build(app: &gtk::Application) {
 
     // Tray icon; None when the desktop has no StatusNotifier host (then closing the window quits, as before).
     let (tray, tray_rx) = tray::spawn();
+    update::spawn(&root, &status, tray.clone());
 
     let ui = Rc::new(Ui {
         window, tv_model, tv_drop, monitor, refresh, res_drop, rate_drop, audio, name, title, detail, spinner, button, log, tray,
@@ -482,6 +485,7 @@ fn handle(ui: &Ui, st: &Rc<RefCell<State>>, ev: Ev, preferred: &str) {
 }
 
 fn main() -> glib::ExitCode {
+    gtk::Window::set_default_icon_name(APP_ID); // assets/rokast.svg, installed into the hicolor theme
     let app = gtk::Application::builder().application_id(APP_ID).flags(gio::ApplicationFlags::empty()).build();
     app.connect_activate(build);
     app.run_with_args(&std::env::args().take(1).collect::<Vec<_>>()) // our own flags (--tray) are read in build()

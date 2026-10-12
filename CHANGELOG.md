@@ -2,6 +2,17 @@
 
 Each `## <version>` section becomes the GitHub release notes for that tag (see `playbooks/release.md`).
 
+## Unreleased
+
+- **Packages:** an Arch/Manjaro AUR package (`rokast`, and `rokast-git` for main) and a `.deb` for Debian 12+ /
+  Ubuntu 22.04+, attached to each release. Both install to `/usr/lib/rokast` with the patched `wpa_supplicant`
+  prebuilt, so there is nothing to compile; `rokast` is on your PATH and in the app menu.
+- **Update notice:** once a day the desktop app checks for a newer release and shows a banner and a tray menu line
+  linking to it. `rokast version --check` does the same from the terminal. Nothing is downloaded; `CHECK_UPDATES=0`
+  turns it off. Packaged installs are told to update with their package manager.
+- rokast has its own icon now.
+- `rokast doctor` no longer crashes when Wi-Fi or wpa_supplicant is not available; it reports it.
+
 ## 0.2.0
 
 - `scripts/install`: installs for your user into `~/.local/share/rokast/versions/<version>/` with a `current` link,

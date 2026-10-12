@@ -12,6 +12,7 @@ base="${XDG_DATA_HOME:-$HOME/.local/share}/rokast"
 bindir="$HOME/.local/bin"
 apps="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 desktop="$apps/io.github.papacasper.rokast.desktop"
+icon="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor/scalable/apps/io.github.papacasper.rokast.svg"
 conf="${XDG_CONFIG_HOME:-$HOME/.config}/rokast/rokast.conf"
 hostap="${XDG_CACHE_HOME:-$HOME/.cache}/rokast/hostap-src"   # build-supplicant's checkout
 ui_rel=ui/target/release/rokast-ui
@@ -25,6 +26,7 @@ link() {   # link <target> <name>: replace atomically
 write_desktop() {
     mkdir -p "$apps"
     sed "s|@BIN@|$base/current/$ui_rel|" "$base/current/assets/rokast.desktop" > "$desktop"
+    if [ -f "$base/current/assets/rokast.svg" ]; then install -Dm644 "$base/current/assets/rokast.svg" "$icon"; fi  # 0.3.0+
     if command -v update-desktop-database >/dev/null; then update-desktop-database "$apps" || true; fi
 }
 
@@ -40,7 +42,7 @@ case "${1:-}" in
     if [ "$(readlink -f "$bindir/rokast" 2>/dev/null)" = "$(readlink -f "$base/current/scripts/rokast" 2>/dev/null)" ]; then
         rm -f "$bindir/rokast"
     fi
-    if [ -f "$desktop" ] && grep -q "$base/current/" "$desktop"; then rm -f "$desktop"; fi
+    if [ -f "$desktop" ] && grep -q "$base/current/" "$desktop"; then rm -f "$desktop" "$icon"; fi
     rm -f "${XDG_CONFIG_HOME:-$HOME/.config}/autostart/io.github.papacasper.rokast.desktop"
     rm -rf "$base" "${XDG_CACHE_HOME:-$HOME/.cache}/rokast"
     say "removed rokast; your settings are still in $(dirname "$conf")"

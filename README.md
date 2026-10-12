@@ -62,6 +62,16 @@ Limitations:
 
 ## Install
 
+**Packages** (from v0.3.0; they include the patched `wpa_supplicant` and the desktop app; skip the steps below):
+
+- Arch / Manjaro: from the AUR, `yay -S rokast` (or `rokast-git` for main).
+- Debian 12+ / Ubuntu 22.04+: download `rokast_X.Y.Z_amd64.deb` from the
+  [latest release](https://github.com/papacasper/rokast/releases/latest), then `sudo apt install ./rokast_*_amd64.deb`.
+
+Then run `rokast doctor`. Update with your package manager (or a newer .deb).
+
+**From source / release tarball:**
+
 1. Dependencies:
 
    ```bash
@@ -181,6 +191,7 @@ Environment variables with the same names override the file.
 | `CAPTURE` | `auto` | `auto` (Wayland session → `wayland`, else `x11`), `x11` or `wayland` |
 | `MONITOR` | primary monitor | Monitor to mirror, as `rokast monitors` names it (X11 only; on Wayland the screen-sharing dialog asks) |
 | `DISPLAY` | `:0` | X display to capture (X11 only) |
+| `CHECK_UPDATES` | `1` | Once a day, ask GitHub for the latest release and show a notice if it is newer (`rokast version --check`); `0` turns it off. Never downloads anything |
 
 Every key can also be set as an environment variable, e.g. `BITRATE=12M scripts/rokast start`.
 
