@@ -217,8 +217,9 @@ How you update depends on how you installed:
 | the AUR | your AUR helper, e.g. `yay -Syu rokast` |
 | running from a git clone without installing | `git pull` |
 
-`rokast update --check` only says whether there is something newer. Updating from v0.4.0 or older: install the new
-release by hand once (step 2 above); `rokast update` exists from v0.5.0 on.
+`rokast update --check` only says whether there is something newer. Updating from v0.3.0 or older: install the new
+release by hand once (step 2 above); those versions don't have `rokast update` yet. Checking signatures needs
+`ssh-keygen` (package `openssh`, or `openssh-client` on Debian/Ubuntu; the .deb and .rpm pull it in).
 
 ## Safety
 

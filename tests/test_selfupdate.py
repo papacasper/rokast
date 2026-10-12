@@ -6,6 +6,7 @@ import sys
 import tarfile
 import tempfile
 import unittest
+from unittest import mock
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO, "src", "miracast"))
@@ -78,6 +79,17 @@ class SelfUpdateTest(unittest.TestCase):
         for kind in ("deb", "rpm", "arch", "git", "other"):                                 # never for packages
             self.assertEqual(selfupdate.auto_reason(on, kind, False), f"{kind} install")
             self.assertEqual(selfupdate.auto_reason(on, kind, True), f"{kind} install")
+
+    def test_no_ssh_keygen_refuses_before_downloading(self):
+        rel = {"version": "9.9.9", "assets": {}}
+        env = {"PATH": self.d, "XDG_CACHE_HOME": self.d, "XDG_RUNTIME_DIR": self.d}
+        out = io.StringIO()
+        with mock.patch.object(selfupdate, "latest_release", return_value=rel), \
+                mock.patch.object(selfupdate.update, "kind", return_value="user"), \
+                mock.patch.object(selfupdate, "download") as dl, mock.patch("sys.stdout", out):
+            self.assertEqual(selfupdate.run_update(self.d, "0.1.0", yes=True, env=env), 1)
+        dl.assert_not_called()
+        self.assertIn("update: error checking the release signature needs ssh-keygen", out.getvalue())
 
 
 if __name__ == "__main__":

@@ -157,6 +157,9 @@ def run_update(root, current, yes=False, check_only=False, env=os.environ, ask=i
     if update.mirroring(env):
         say("error", "stop mirroring first (a rokast start is running)")
         return 1
+    if not shutil.which("ssh-keygen", path=env.get("PATH")):
+        say("error", "checking the release signature needs ssh-keygen: install openssh (openssh-client on Debian/Ubuntu)")
+        return 1
     if not yes:
         if not sys.stdin.isatty() or ask(f"Update rokast {current} -> {rel['version']}? [y/N] ").strip().lower() != "y":
             say("error", "not confirmed (use --yes)")
