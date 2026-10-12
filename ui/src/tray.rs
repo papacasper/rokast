@@ -37,6 +37,9 @@ pub struct Tray {
     pub window_visible: bool,
     /// (menu label, release page; empty for packaged installs) once a newer release is known
     pub update: Option<(String, String)>,
+    /// the tray line runs `rokast update --yes` (sent to the banner) instead of opening the page
+    pub update_can_run: bool,
+    pub update_tx: Option<async_channel::Sender<()>>,
     pub tx: async_channel::Sender<Cmd>,
 }
 
@@ -82,9 +85,15 @@ impl ksni::Tray for Tray {
                 StandardItem {
                     label,
                     icon_name: "software-update-available".into(),
-                    enabled: !url.is_empty(),
-                    activate: Box::new(move |_: &mut Self| {
-                        let _ = std::process::Command::new("xdg-open").arg(&url).spawn();
+                    enabled: self.update_can_run || !url.is_empty(),
+                    activate: Box::new(move |t: &mut Self| {
+                        if t.update_can_run {
+                            if let Some(tx) = &t.update_tx {
+                                let _ = tx.send_blocking(());
+                            }
+                        } else if !url.is_empty() {
+                            let _ = std::process::Command::new("xdg-open").arg(&url).spawn();
+                        }
                     }),
                     ..Default::default()
                 }
@@ -126,7 +135,7 @@ pub fn spawn() -> (Option<ksni::blocking::Handle<Tray>>, async_channel::Receiver
     let (tx, rx) = async_channel::unbounded();
     let tray = Tray {
         look: Look::Idle, status: "Ready".into(), detail: String::new(), running: false, can_start: false,
-        window_visible: true, update: None, tx,
+        window_visible: true, update: None, update_can_run: false, update_tx: None, tx,
     };
     (tray.spawn().ok(), rx)
 }

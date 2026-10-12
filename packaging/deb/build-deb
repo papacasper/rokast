@@ -9,10 +9,11 @@ root="$(cd "$(dirname "$(readlink -f "$0")")/../.." && pwd)"
 out="$(mkdir -p "${1:?usage: packaging/deb/build-deb <outdir>}" && cd "$1" && pwd)"
 v="$(cat "$root/VERSION")"
 t="$(mktemp -d)"; trap 'rm -rf "$t"' EXIT
-"$root/packaging/supplicant" "$t/supplicant"
+sup="${ROKAST_PREBUILT_SUPPLICANT:-$t/supplicant}"   # tests reuse one build (wpa_supplicant + patch.sha256)
+[ -n "${ROKAST_PREBUILT_SUPPLICANT:-}" ] || "$root/packaging/supplicant" "$sup"
 
 d="$t/rokast_${v}_amd64"
-"$root/packaging/stage" "$d" "$t/supplicant"
+"$root/packaging/stage" "$d" "$sup"
 install -Dm644 "$root/LICENSE" "$d/usr/share/doc/rokast/copyright"
 mkdir -p "$d/DEBIAN"
 cat > "$d/DEBIAN/control" <<EOF

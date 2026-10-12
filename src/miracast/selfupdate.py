@@ -1,7 +1,9 @@
 """rokast update [--check] [--yes] [--rollback] [--auto]: replace this install with the latest signed release.
 
-Only installs made by scripts/install (update.kind() == "user") replace themselves; packages and git clones are told
-how to update instead. Steps (docs/plan-v0.5.md, phase 9):
+Installs made by scripts/install (update.kind() == "user") replace themselves. .deb/.rpm installs get the new
+package downloaded and checked the same way, then installed by apt-get/dnf through pkexec (the polkit password prompt
+is the consent; as root it runs directly; without pkexec or a polkit agent it prints the command). AUR installs and
+git clones are told how to update instead. Steps (docs/plan-v0.5.md, phase 9):
   1. the latest release from the GitHub API (no drafts or prereleases; only if newer than this version)
   2. refuse while a `rokast start` runs (update.mirroring())
   3. download the tarball, SHA256SUMS and SHA256SUMS.sig into $XDG_CACHE_HOME/rokast/download/<v>/
@@ -31,9 +33,9 @@ GITHUB_HOSTS = {"api.github.com", "github.com", "objects.githubusercontent.com",
 MAX_BYTES = 200 * 1024 * 1024
 HOW = {"git": "this is a git clone: update it with `git pull`",
        "arch": "installed from the AUR: update it with your AUR helper (e.g. `yay -Syu rokast`)",
-       "deb": "installed from a .deb: download the new .deb from the release page and install it with apt",
-       "rpm": "installed from an .rpm: download the new .rpm from the release page and install it with dnf",
        "other": "not installed by scripts/install: update it the way you installed it"}
+ASSET = {"user": "rokast-{v}-x86_64-linux.tar.gz", "deb": "rokast_{v}_amd64.deb", "rpm": "rokast-{v}-1.x86_64.rpm"}
+PKG_TOOL = {"deb": ["apt-get", "install", "-y"], "rpm": ["dnf", "install", "-y"]}
 
 
 class UpdateError(Exception):
@@ -147,7 +149,7 @@ def run_update(root, current, yes=False, check_only=False, env=os.environ, ask=i
         say("uptodate", current)
         return 0
     say("available", rel["version"])
-    if kind != "user":
+    if kind not in ASSET:
         say("error", HOW[kind])
         return 1
     if check_only:
@@ -160,7 +162,7 @@ def run_update(root, current, yes=False, check_only=False, env=os.environ, ask=i
             say("error", "not confirmed (use --yes)")
             return 1
     v = rel["version"]
-    tarball = f"rokast-{v}-x86_64-linux.tar.gz"
+    tarball = ASSET[kind].format(v=v)
     missing = [n for n in (tarball, "SHA256SUMS", "SHA256SUMS.sig") if n not in rel["assets"]]
     if missing:
         say("error", f"release {v} has no {', '.join(missing)} (unsigned releases are not installed)")
@@ -174,8 +176,10 @@ def run_update(root, current, yes=False, check_only=False, env=os.environ, ask=i
             download(rel["assets"][name], os.path.join(folder, name), env)
         say("verifying")
         verify(folder, tarball, os.path.join(root, "config", "release-signers"))
-        new = extract(os.path.join(folder, tarball), os.path.join(folder, "x"), v)
         say("installing", v)
+        if kind in PKG_TOOL:
+            return _install_package(os.path.join(folder, tarball), v, PKG_TOOL[kind], env)
+        new = extract(os.path.join(folder, tarball), os.path.join(folder, "x"), v)
         return _install(new, v, env)
     except (UpdateError, OSError, tarfile.TarError) as e:
         say("error", str(e))
@@ -207,6 +211,34 @@ def _install(new, v, env):
             subprocess.run([os.path.join(base, "current", "scripts", "install"), "--rollback"], env=env,
                            capture_output=True)
         raise UpdateError(f"the new version does not run (version said {got!r}); rolled back")
+    say("done", v)
+    return 0
+
+
+def _install_package(pkg, v, tool, env):
+    """apt-get/dnf install the verified package: directly as root, else through pkexec. If that can't ask for the
+    password (no pkexec, no polkit agent, dialog dismissed), keep the package and print the command instead."""
+    if os.geteuid() == 0:
+        cmd = [*tool, pkg]
+    elif shutil.which("pkexec"):
+        cmd = ["pkexec", *tool, pkg]
+    else:
+        cmd = None
+    p = subprocess.run(cmd, capture_output=True, text=True, env=env) if cmd else None
+    if p is None or (cmd[0] == "pkexec" and p.returncode in (126, 127)):
+        keep = os.path.join(os.path.dirname(update.cache_file(env)), os.path.basename(pkg))
+        shutil.move(pkg, keep)
+        raise UpdateError(f"could not ask for your password; install it yourself: sudo {' '.join(tool)} {keep}")
+    for ln in (p.stdout + p.stderr).splitlines()[-20:]:
+        print(f"update: log {ln}", flush=True)
+    if p.returncode != 0:
+        raise UpdateError(f"{tool[0]} failed (exit {p.returncode})")
+    try:
+        got = subprocess.run(["rokast", "version"], capture_output=True, text=True, env=env, timeout=60).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        got = ""
+    if got != v:
+        raise UpdateError(f"{tool[0]} finished but rokast version says {got!r}")
     say("done", v)
     return 0
 

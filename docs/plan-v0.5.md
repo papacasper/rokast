@@ -105,18 +105,20 @@ starting a feature that changes the release pipeline.
 
 ## Phase 10: the app, and package installs
 
-- [ ] **Update button.** The banner becomes "rokast X.Y.Z is available [Update]" for `user` installs; clicking runs
+- [x] **Update button.** The banner becomes "rokast X.Y.Z is available [Update]" for `user` installs; clicking runs
       `rokast update --yes` and shows its `update:` lines in the banner. The button is disabled while mirroring.
       Success: "Updated to X.Y.Z [Restart rokast]" (re-runs `current/.../rokast-ui`, with `--tray` if it was
       started that way). Failure: the reason plus the "Get it" link. The tray menu item becomes "Update to X.Y.Z".
       **Done when:** Rust unit tests cover the banner states (available, updating, done, failed, packaged per kind);
       the app is checked against the fake release server from the tests (screenshots in the session note).
-- [ ] **.deb/.rpm.** `rokast update` downloads and verifies the matching `.deb`/`.rpm` (same signature + sha256
+- [x] **.deb/.rpm.** `rokast update` downloads and verifies the matching `.deb`/`.rpm` (same signature + sha256
       checks), then runs `pkexec apt-get install -y ./rokast_X_amd64.deb` or `pkexec dnf install -y ./rokast-X.rpm`.
       No polkit agent or no `pkexec`: print the command for the user to run. AUR/git: print their update path.
       **Done when:** `tests/test_pkg_deb.sh` and `tests/test_pkg_rpm.sh` gain an upgrade case: install a package
       built at version A, serve version B from the fake server, `rokast update --yes` (as root, so no pkexec)
-      leaves version B installed.
+      leaves version B installed. (Landed as its own `tests/test_pkg_update.sh deb|rpm`, also covering the
+      no-pkexec user case; CI `deb` job.) Also found and fixed: the 0.3.0 app panicked at start (GTK call before
+      init); `tests/test_ui_starts.sh` (Xvfb) now runs in the CI `ui` job.
 
 ## Phase 11: tests, rehearsal, release
 

@@ -10,8 +10,9 @@ root="$(cd "$(dirname "$(readlink -f "$0")")/../.." && pwd)"
 out="$(mkdir -p "${1:?usage: packaging/rpm/build-rpm <outdir>}" && cd "$1" && pwd)"
 v="$(cat "$root/VERSION")"
 t="$(mktemp -d)"; trap 'rm -rf "$t"' EXIT
-"$root/packaging/supplicant" "$t/supplicant"
-"$root/packaging/stage" "$t/tree" "$t/supplicant" >/dev/null
+sup="${ROKAST_PREBUILT_SUPPLICANT:-$t/supplicant}"   # tests reuse one build (wpa_supplicant + patch.sha256)
+[ -n "${ROKAST_PREBUILT_SUPPLICANT:-}" ] || "$root/packaging/supplicant" "$sup"
+"$root/packaging/stage" "$t/tree" "$sup" >/dev/null
 cat > "$t/rokast.spec" <<EOF
 Name:           rokast
 Version:        $v

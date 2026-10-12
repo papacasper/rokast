@@ -4,6 +4,20 @@ Each `## <version>` section becomes the GitHub release notes for that tag (see `
 
 ## Unreleased
 
+- **Desktop app opens again:** the 0.3.0 app closed straight away at start (it set its icon before GTK was ready).
+  CI now starts the app on a headless screen, so this can't ship again.
+- **Self-update:** `rokast update` installs the latest release: it downloads it, checks its signature and checksum,
+  installs it beside the current one and checks it runs, rolling back by itself if not (`rokast update --rollback`
+  to go back by hand). The app's update banner has an **Update** button and then **Restart rokast**; the tray line
+  does the same. It refuses while you are mirroring. `.deb`/`.rpm` installs update through your package manager
+  (it asks for your password; without a password prompt it prints the command to run). AUR and git installs are
+  told how to update. `AUTO_UPDATE=1` in `rokast.conf` installs updates when the app starts (off by default).
+- **Signed releases:** each release's `SHA256SUMS` is signed (`SHA256SUMS.sig`); `rokast update` only installs a
+  release signed by the key in `config/release-signers`. Check one by hand with
+  `ssh-keygen -Y verify -f config/release-signers -I rokast-release -n rokast-release -s SHA256SUMS.sig < SHA256SUMS`.
+- `scripts/install` builds the supplicant before switching to the new version, so a failed build changes nothing.
+- **Upgrading:** from 0.3.0 or older, update by hand once (download the release and run `scripts/install`, or install
+  the new package); after that, `rokast update` does it.
 - **Join reliability:** fixed the first connection after the TV sat idle often failing (stuck "Connecting", then
   "could not join"). The TV hides its group's name in its beacons and does not always answer a general search;
   rokast now asks for the group by name. If a start still fails before the picture appears, it starts over once

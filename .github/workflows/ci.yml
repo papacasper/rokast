@@ -46,7 +46,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: GTK 4 dev files
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-4-dev
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-4-dev xvfb xauth dbus
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
@@ -56,6 +56,8 @@ jobs:
         run: |
           cargo build --locked
           cargo test --locked
+      - name: the app starts and stays up (headless X)
+        run: tests/test_ui_starts.sh
 
   deb:
     runs-on: ubuntu-22.04
@@ -72,3 +74,7 @@ jobs:
       - run: bash tests/test_pkg_deb.sh dist/*.deb
       - run: packaging/rpm/build-rpm dist
       - run: bash tests/test_pkg_rpm.sh dist/*.rpm
+      - name: rokast update on .deb and .rpm installs (A -> signed B, in clean containers)
+        run: |
+          bash tests/test_pkg_update.sh deb
+          bash tests/test_pkg_update.sh rpm

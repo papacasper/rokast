@@ -486,8 +486,9 @@ fn handle(ui: &Ui, st: &Rc<RefCell<State>>, ev: Ev, preferred: &str) {
 }
 
 fn main() -> glib::ExitCode {
-    gtk::Window::set_default_icon_name(APP_ID); // assets/rokast.svg, installed into the hicolor theme
     let app = gtk::Application::builder().application_id(APP_ID).flags(gio::ApplicationFlags::empty()).build();
+    // assets/rokast.svg, installed into the hicolor theme; GTK is only initialised once startup runs
+    app.connect_startup(|_| gtk::Window::set_default_icon_name(APP_ID));
     app.connect_activate(build);
     app.run_with_args(&std::env::args().take(1).collect::<Vec<_>>()) // our own flags (--tray) are read in build()
 }
