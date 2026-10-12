@@ -49,6 +49,7 @@ docker run --rm -v "$t/pkg:/pkg:ro" -v "$t/srv:/srv:ro" "$image" bash -c "
     for _ in $(seq 50); do python3 -I -c "import urllib.request as u; u.urlopen(\"http://127.0.0.1:8000/latest.json\")" 2>/dev/null && break; sleep 0.2; done
     export ROKAST_UPDATE_URL=http://127.0.0.1:8000/latest.json
     mkdir -p /tmp/u && chown 1000:1000 /tmp/u
+    echo "u:x:1000:1000::/tmp/u:/bin/sh" >> /etc/passwd   # ssh-keygen refuses to run for a uid with no passwd entry
     HOME=/tmp/u python3 -I -c "import os, sys; os.setgid(1000); os.setuid(1000); os.execvp(\"rokast\", [\"rokast\", \"update\", \"--yes\"])"
     echo "user_exit=$?"
     ls /tmp/u/.cache/rokast/ | sed "s/^/kept=/"
