@@ -19,10 +19,10 @@ import time
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
+import paths
+
 CTRL = "/run/wpa_supplicant"          # NetworkManager's wpa_supplicant
 OWN = "/run/rokast"              # our patched instance (root-owned)
-ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-SUPPLICANT = os.path.join(ROOT, "vendor", "hostap-src", "wpa_supplicant", "wpa_supplicant")
 DEVICE_TYPE = "10-0050F204-5"         # WPS primary device type: smartphone, what the Roku accepts as a source
 WFD_SOURCE_IE = "000601101c440032"    # WFD dev-info: source, session available, RTSP 7236, 50 Mbps (as AOSP phones send)
 # Vendor IEs a Samsung phone sends in its assoc request; kept verbatim (the TV accepts the join with them).
@@ -162,8 +162,9 @@ def _wait_state(iface, want, timeout):
 
 
 def _start_own(iface, mac):
-    if not os.access(SUPPLICANT, os.X_OK):
-        raise RuntimeError(f"patched wpa_supplicant missing: run scripts/build-supplicant ({SUPPLICANT})")
+    supplicant = paths.find_supplicant()
+    if not supplicant:
+        raise RuntimeError("patched wpa_supplicant missing: run scripts/build-supplicant")
     wifi = wifi_iface()
     sh("sudo", "iw", "dev", wifi, "interface", "add", iface, "type", "__p2pcl")
     sh("sudo", "iw", "dev", iface, "set", "type", "__p2pcl")   # `interface add` alone leaves it managed
@@ -176,7 +177,7 @@ def _start_own(iface, mac):
     subprocess.run(["sudo", "tee", conf], input=f"ctrl_interface={OWN}/ctrl\nupdate_config=0\np2p_disabled=1\n",
                    text=True, capture_output=True, check=True)
     # WPA_FORCE_P2P_GROUP: patched behaviour, keep the iface in P2P-client mode at association
-    sh("sudo", "env", "WPA_FORCE_P2P_GROUP=1", SUPPLICANT, "-B", "-K", "-d", "-D", "nl80211", "-i", iface,
+    sh("sudo", "env", "WPA_FORCE_P2P_GROUP=1", supplicant, "-B", "-K", "-d", "-D", "nl80211", "-i", iface,
        "-c", conf, "-f", f"{OWN}/supplicant.log", "-P", f"{OWN}/pid")
     t0 = time.time()
     while "wpa_state" not in own(iface, "status", check=False):

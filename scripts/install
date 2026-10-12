@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+# scripts/install [--no-supplicant] | --rollback | --uninstall
+# Install this copy of rokast (release tarball or git clone) for the current user, upgrade-safe:
+#   ~/.local/share/rokast/versions/<VERSION>/   this release      current -> active version, previous -> the one before
+#   ~/.local/bin/rokast, app menu entry         point at current/, so an upgrade or rollback just moves the link
+#   ~/.config/rokast/                           settings, kept across upgrades and by --uninstall
+# Older installs (a v0.1.0 folder found through the old ~/.local/bin/rokast link or menu entry) have their
+# config/rokast.conf moved to ~/.config/rokast/. Keeps the current and previous version, deletes older ones.
+set -euo pipefail
+src="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+base="${XDG_DATA_HOME:-$HOME/.local/share}/rokast"
+bindir="$HOME/.local/bin"
+apps="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+desktop="$apps/io.github.papacasper.rokast.desktop"
+conf="${XDG_CONFIG_HOME:-$HOME/.config}/rokast/rokast.conf"
+ui_rel=ui/target/release/rokast-ui
+say() { echo "install: $*"; }
+die() { echo "install: $*" >&2; exit 1; }
+
+link() {   # link <target> <name>: replace atomically
+    ln -sfn "$1" "$2.tmp.$$" && mv -Tf "$2.tmp.$$" "$2"
+}
+
+write_desktop() {
+    mkdir -p "$apps"
+    sed "s|@BIN@|$base/current/$ui_rel|" "$base/current/assets/rokast.desktop" > "$desktop"
+    if command -v update-desktop-database >/dev/null; then update-desktop-database "$apps" || true; fi
+}
+
+case "${1:-}" in
+--rollback)
+    [ -L "$base/previous" ] || die "no previous version to roll back to"
+    cur="$(readlink "$base/current")"; prev="$(readlink "$base/previous")"
+    link "$prev" "$base/current"; link "$cur" "$base/previous"
+    write_desktop
+    say "rolled back: $(basename "$cur") -> $(basename "$prev")"
+    exit 0 ;;
+--uninstall)
+    if [ "$(readlink -f "$bindir/rokast" 2>/dev/null)" = "$(readlink -f "$base/current/scripts/rokast" 2>/dev/null)" ]; then
+        rm -f "$bindir/rokast"
+    fi
+    if [ -f "$desktop" ] && grep -q "$base/current/" "$desktop"; then rm -f "$desktop"; fi
+    rm -f "${XDG_CONFIG_HOME:-$HOME/.config}/autostart/io.github.papacasper.rokast.desktop"
+    rm -rf "$base" "${XDG_CACHE_HOME:-$HOME/.cache}/rokast"
+    say "removed rokast; your settings are still in $(dirname "$conf")"
+    exit 0 ;;
+--no-supplicant|"") ;;
+*) die "usage: scripts/install [--no-supplicant] | --rollback | --uninstall" ;;
+esac
+
+v="$(cat "$src/VERSION")"
+[[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "bad VERSION '$v'"
+dest="$base/versions/$v"
+
+# 1. Desktop app binary: build a git checkout, use the prebuilt one in a release tarball.
+if [ -d "$src/.git" ] && command -v cargo >/dev/null; then
+    cargo build --release --manifest-path "$src/ui/Cargo.toml"
+elif [ ! -x "$src/$ui_rel" ] && command -v cargo >/dev/null; then
+    cargo build --release --manifest-path "$src/ui/Cargo.toml"
+fi
+[ -x "$src/$ui_rel" ] || say "no desktop app binary (needs cargo or a release tarball): installing the command line only"
+
+# 2. Copy this release into versions/<v> (tracked files only for a git checkout: never local config or credentials).
+if [ "$src" != "$dest" ]; then
+    tmp="$base/versions/.$v.tmp.$$"
+    rm -rf "$tmp"; mkdir -p "$tmp"
+    if [ -d "$src/.git" ]; then
+        git -C "$src" ls-files -z -co --exclude-standard | (cd "$src" && xargs -0 cp --parents -a -t "$tmp" --)
+    else
+        tar -C "$src" --exclude=./.git --exclude=./ui/target --exclude=./vendor \
+            --exclude='./config/rokast.conf' --exclude='./config/rokast.conf.moved' -cf - . | tar -C "$tmp" -xf -
+    fi
+    if [ -x "$src/$ui_rel" ]; then install -Dm755 "$src/$ui_rel" "$tmp/$ui_rel"; fi
+    rm -rf "$dest"; mv "$tmp" "$dest"
+fi
+
+# 3. Settings from older installs -> ~/.config/rokast/rokast.conf (first one found wins).
+old_roots=("$src")
+if [ -L "$bindir/rokast" ]; then old_roots+=("$(dirname "$(dirname "$(readlink -f "$bindir/rokast")")")"); fi
+if [ -f "$desktop" ]; then
+    exe="$(sed -n 's/^Exec=//p' "$desktop" | head -1)"
+    old_roots+=("${exe%/"$ui_rel"*}")
+fi
+for r in "${old_roots[@]}"; do
+    if [ ! -f "$conf" ] && [ -f "$r/config/rokast.conf" ]; then
+        mkdir -p "$(dirname "$conf")"
+        cp -p "$r/config/rokast.conf" "$conf" && mv "$r/config/rokast.conf" "$r/config/rokast.conf.moved"
+        say "settings moved from $r/config/rokast.conf to $conf"
+    fi
+done
+
+# 4. Switch current (remember the old one for --rollback), entry points, prune.
+old="$(readlink "$base/current" 2>/dev/null || true)"
+link "$dest" "$base/current"
+if [ -n "$old" ] && [ "$old" != "$dest" ]; then link "$old" "$base/previous"; fi
+mkdir -p "$bindir"
+link "$base/current/scripts/rokast" "$bindir/rokast"
+if [ -x "$dest/$ui_rel" ]; then write_desktop; fi
+keep_prev="$(readlink "$base/previous" 2>/dev/null || true)"
+for d in "$base"/versions/*/; do
+    d="${d%/}"
+    if [ "$d" != "$dest" ] && [ "$d" != "$keep_prev" ]; then rm -rf "$d"; say "removed old version $(basename "$d")"; fi
+done
+say "rokast $v installed: $bindir/rokast -> $dest"
+case ":$PATH:" in *":$bindir:"*) ;; *) say "note: $bindir is not on your PATH" ;; esac
+
+# 5. Patched wpa_supplicant: build if missing or built from a different patch.
+if [ "${1:-}" != --no-supplicant ]; then
+    stamp="$base/supplicant/patch.sha256"
+    want="$(cat "$dest/patches/hostap-2.11-roku.patch" "$dest/patches/hostap.config" | sha256sum | cut -d' ' -f1)"
+    if [ ! -x "$base/supplicant/wpa_supplicant" ] || [ "$(cat "$stamp" 2>/dev/null)" != "$want" ]; then
+        say "building the patched wpa_supplicant (needs: git, make, gcc, libnl, openssl headers)"
+        "$dest/scripts/build-supplicant" || die "wpa_supplicant build failed; fix the build deps and run: $dest/scripts/build-supplicant"
+    fi
+fi
+say "done. Check with: rokast doctor"

@@ -7,3 +7,4 @@ config/airplay.cred
 vendor/
 src/lancast/
 /ui/target/
+config/rokast.conf.moved

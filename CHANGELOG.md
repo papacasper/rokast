@@ -2,6 +2,23 @@
 
 Each `## <version>` section becomes the GitHub release notes for that tag (see `playbooks/release.md`).
 
+## Unreleased
+
+Rename this heading to `## 0.2.0` at release time.
+
+- `scripts/install`: installs for your user into `~/.local/share/rokast/versions/<version>/` with a `current` link,
+  puts `rokast` on your PATH and in the app menu, and keeps the previous version for `scripts/install --rollback`.
+  `--uninstall` removes everything except your settings.
+- Settings now live in `~/.config/rokast/rokast.conf` (`rokast config` prints the path, `ROKAST_CONFIG` overrides it).
+- The patched `wpa_supplicant` now lives in `~/.local/share/rokast/supplicant/`, outside the install folder, and is only
+  rebuilt when its patch changes. `rokast doctor` reports a supplicant built from an older patch.
+- CI runs the tests, shell checks and desktop app build on every push.
+
+### Upgrading from 0.1.0
+
+Run `scripts/install` from the new release. Your `config/rokast.conf` is moved to `~/.config/rokast/rokast.conf`
+(the old file is renamed `rokast.conf.moved`), and an existing `vendor/hostap-src` build tree is reused.
+
 ## 0.1.0
 
 First release.

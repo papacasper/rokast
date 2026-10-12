@@ -38,11 +38,14 @@ pub fn rokast_cmd(args: &[&str]) -> Command {
     c
 }
 
-pub fn prefs_path() -> PathBuf {
-    let base = std::env::var_os("XDG_CONFIG_HOME")
+fn config_home() -> PathBuf {
+    std::env::var_os("XDG_CONFIG_HOME")
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(std::env::var_os("HOME").unwrap_or_default()).join(".config"));
-    base.join("rokast/ui.json")
+        .unwrap_or_else(|| PathBuf::from(std::env::var_os("HOME").unwrap_or_default()).join(".config"))
+}
+
+pub fn prefs_path() -> PathBuf {
+    config_home().join("rokast/ui.json")
 }
 
 pub fn load_prefs() -> Prefs {
@@ -62,9 +65,22 @@ pub fn save_prefs(p: &Prefs) {
     }
 }
 
-/// TARGET from config/rokast.conf, used until the UI has remembered a choice of its own.
+/// rokast.conf as the CLI finds it (src/miracast/paths.py): $ROKAST_CONFIG, else ~/.config/rokast/rokast.conf,
+/// else the pre-0.2 in-tree config/rokast.conf (the CLI migrates it on its next run).
+fn conf_file() -> PathBuf {
+    if let Some(p) = std::env::var_os("ROKAST_CONFIG") {
+        return p.into();
+    }
+    let p = config_home().join("rokast/rokast.conf");
+    if p.exists() {
+        return p;
+    }
+    rokast_script().parent().map(|d| d.join("../config/rokast.conf")).unwrap_or(p)
+}
+
+/// TARGET from rokast.conf, used until the UI has remembered a choice of its own.
 pub fn conf_target() -> String {
-    let conf = rokast_script().parent().map(|d| d.join("../config/rokast.conf")).unwrap_or_default();
+    let conf = conf_file();
     std::fs::read_to_string(conf)
         .unwrap_or_default()
         .lines()

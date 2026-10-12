@@ -1,4 +1,4 @@
-"""rokast CLI: list [--json] | start [name] | name | doctor | ui [--tray] | version.  Foreground; Ctrl+C stops and tears the link down."""
+"""rokast CLI: list [--json] | start [name] | name | config | doctor | ui [--tray] | version.  Foreground; Ctrl+C stops and tears the link down."""
 import asyncio
 import json
 import os
@@ -10,6 +10,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import capture  # noqa: E402
 import p2p  # noqa: E402
+import paths  # noqa: E402
 import wayland  # noqa: E402
 import wfd  # noqa: E402
 
@@ -19,7 +20,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 def load_conf():
     conf = {"TARGET": "", "BITRATE": "8M", "ENCODER": "auto", "AUDIO": "1",
             "DISPLAY": ":0", "RES": "1080p30,720p60,720p30", "NAME": "", "CAPTURE": "auto"}
-    path = os.path.join(ROOT, "config", "rokast.conf")
+    path, legacy = paths.config_file()
+    if legacy:
+        paths.migrate_config(path, legacy)
+    conf["_file"] = path
     if os.path.exists(path):
         for ln in open(path):
             ln = ln.split("#")[0].strip()
@@ -110,7 +114,7 @@ def cmd_start(name=None):
     name = name or conf["TARGET"]
     if not name:
         status("error", "no TV selected")
-        sys.exit("no target: `rokast start \"<name>\"` or set TARGET in config/rokast.conf (see `rokast list`)")
+        sys.exit(f"no target: `rokast start \"<name>\"` or set TARGET in {conf['_file']} (see `rokast list`)")
     signal.signal(signal.SIGTERM, lambda *_: (_ for _ in ()).throw(KeyboardInterrupt()))
     dev = cast = None
     try:
@@ -166,8 +170,14 @@ def cmd_doctor():
             chk(f"screen-sharing portal v{wayland.ScreenCast()._prop('version')}", True)
         except Exception as e:  # noqa: BLE001 - any failure here means "no portal"
             chk("screen-sharing portal", False, str(e))
+    print(f"config: {conf['_file']}" + ("" if os.path.exists(conf["_file"]) else " (not created yet: defaults)"))
     print(f"name on TV: {conf['NAME']}")
-    chk("patched wpa_supplicant built", os.access(p2p.SUPPLICANT, os.X_OK), "run scripts/build-supplicant")
+    sup = paths.find_supplicant()
+    state = paths.supplicant_state(sup)
+    chk(f"patched wpa_supplicant {state}" + (f": {sup}" if sup else ""), state in ("ok", "external", "legacy"),
+        "run scripts/build-supplicant" + (" (the patch changed since it was built)" if state == "outdated" else ""))
+    if state == "legacy":
+        print("note  patched wpa_supplicant is in the old in-tree location; run scripts/build-supplicant to move it")
     try:
         chk(f"encoder {capture.pick_encoder(conf['ENCODER'])} (ENCODER={conf['ENCODER']})", True)
     except RuntimeError as e:
@@ -195,6 +205,7 @@ if __name__ == "__main__":
     arg = a[1] if len(a) > 1 else None
     {"list": lambda: cmd_list(arg), "doctor": cmd_doctor, "start": lambda: cmd_start(arg),
      "name": lambda: print(load_conf()["NAME"]),
+     "config": lambda: print(load_conf()["_file"]),
      "version": lambda: print(open(os.path.join(ROOT, "VERSION")).read().strip()),
      "ui": lambda: cmd_ui(a[1:])}.get(
-        a[0], lambda: sys.exit("usage: rokast {list [--json]|start [name]|name|doctor|ui [--tray]|version}"))()
+        a[0], lambda: sys.exit("usage: rokast {list [--json]|start [name]|name|config|doctor|ui [--tray]|version}"))()

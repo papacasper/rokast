@@ -1,4 +1,4 @@
-# Copy to config/rokast.conf (gitignored).
+# Copy to ~/.config/rokast/rokast.conf (`rokast config` prints the path in use).
 TARGET=                     # exact TV name from `scripts/rokast list`, e.g. 43" onn. Roku TV
 RES=1080p30,720p60,720p30   # preference order; falls back to whatever the TV supports
 BITRATE=8M

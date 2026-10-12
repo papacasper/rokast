@@ -1,7 +1,7 @@
 # mirror-laptop-to-roku
 
 when: user wants the laptop screen (and audio) on a Roku TV with nothing installed on the TV, or the mirror is broken
-tools: scripts/rokast (src/miracast/{p2p,wfd,capture,cli}.py), scripts/build-supplicant (patches/), ui/ (GTK4 Rust app, scripts/install-ui)
+tools: scripts/rokast (src/miracast/{p2p,wfd,capture,cli}.py), scripts/build-supplicant (patches/), scripts/install, ui/ (GTK4 Rust app), paths in src/miracast/paths.py
 cost: free
 
 ## How it works
@@ -16,17 +16,17 @@ Native Miracast (Wi-Fi Display), same as Windows/Android "Cast":
 
 - X11 session (XFCE here), or Wayland with xdg-desktop-portal + backend, gst-plugin-pipewire, python-gobject. Wi-Fi chip with P2P (Intel AX211: yes; `iw list | rg P2P`).
 - NetworkManager's wpa_supplicant exposes `p2p-dev-<wifi>` (check: `sudo ls /run/wpa_supplicant`).
-- Patched supplicant built: `scripts/build-supplicant` (once; clones hostap_2_11 into gitignored `vendor/`, applies `patches/hostap-2.11-roku.patch`).
+- Patched supplicant built: `scripts/install` or `scripts/build-supplicant` (clones hostap_2_11 into `~/.cache/rokast/hostap-src`, applies `patches/hostap-2.11-roku.patch`, installs to `~/.local/share/rokast/supplicant/` with a `patch.sha256` stamp; `doctor` FAILs when the stamp no longer matches the patch).
 - Roku: Settings > System > Screen mirroring = "Prompt" or "Always allow".
 - `scripts/rokast doctor` prints only `ok`.
 
 ## Steps
 
 1. `scripts/rokast list` -> the TV name (only Rokus answering on OUR LAN are listed; neighbours' TVs are unselectable by design).
-2. `scripts/rokast start` (TARGET from config/rokast.conf, or `start "<name>"`). Accept the prompt on the TV if shown. ~20 s to picture.
+2. `scripts/rokast start` (TARGET from `~/.config/rokast/rokast.conf` (`rokast config` prints it), or `start "<name>"`). Accept the prompt on the TV if shown. ~20 s to picture.
 3. Ctrl+C (or SIGTERM) stops mirroring, stops our supplicant, removes the group iface.
 
-Desktop app: `scripts/install-ui` once (cargo build + menu entry), then `rokast ui`. It runs `rokast list --json` and
+Desktop app: `scripts/install` once (cargo build or prebuilt + menu entry), then `rokast ui`. It runs `rokast list --json` and
 `rokast start <tv>` (settings passed as RES/BITRATE/AUDIO env), follows the `status: <state>` lines, and stops with SIGTERM
 (also on Quit, waiting for teardown). Keep the status line names stable: the UI keys off them.
 Tray icon (ui/src/tray.rs, ksni StatusNotifierItem, icon drawn in code: grey idle, amber connecting, green mirroring, red error):
@@ -35,10 +35,13 @@ left click toggles the window; menu = status, Start/Stop, Show/Hide, Quit. With 
 
 ## Verify
 
+- Install/upgrade: `bash tests/test_install.sh` (scratch HOME: v0.1.0 layout -> upgrade, prune, rollback, uninstall).
+  Real layout: `~/.local/share/rokast/{versions/<v>,current,previous,supplicant}`, `~/.local/bin/rokast -> current/scripts/rokast`.
+
 - `python3 -I -m unittest discover -s tests` (handshake vs fake Roku sink, IE bytes vs the working phone, command builders, allowlist).
 - Live: `link up: p2p-wlo1-mir ...`, `wfd: sink ... connected`, `wfd: negotiated 1920x1080@30 ...`, ffmpeg line; TV shows the screen;
   `curl -s <tv-ip>:8060/query/active-app` -> RokuCast.
-- After stop: `iw dev` shows only wlo1; no `vendor/hostap-src` process; wlo1 keeps its LAN IP.
+- After stop: `iw dev` shows only wlo1; no `~/.local/share/rokast/supplicant` process; wlo1 keeps its LAN IP.
 
 ## Why each piece exists (do not "simplify" these away)
 

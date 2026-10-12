@@ -71,18 +71,25 @@ Limitations:
 
 2. Get rokast, either the latest [release](https://github.com/papacasper/rokast/releases) tarball
    (`tar xzf rokast-*-x86_64-linux.tar.gz && cd rokast-*`; it includes a prebuilt desktop app, so no Rust needed)
-   or a git clone as below. Then build the patched `wpa_supplicant` (it is only used by this tool, in its own
+   or a git clone as below. Then install it for your user. This puts `rokast` on your PATH (`~/.local/bin`), adds the
+   desktop app to the app menu, and builds the patched `wpa_supplicant` (it is only used by this tool, in its own
    control directory; your system `wpa_supplicant` is not replaced):
 
    ```bash
    git clone https://github.com/papacasper/rokast && cd rokast
-   scripts/build-supplicant
+   scripts/install
    ```
+
+   Installed files live in `~/.local/share/rokast/` (one folder per version), settings in `~/.config/rokast/`.
+   To upgrade, run `scripts/install` from the newer release; your settings are kept, and the supplicant is only
+   rebuilt when its patch changed. `scripts/install --rollback` goes back to the previous version,
+   `scripts/install --uninstall` removes everything except your settings. Upgrading from v0.1.0 moves your old
+   `config/rokast.conf` to `~/.config/rokast/rokast.conf` automatically.
 
 3. Configure (optional):
 
    ```bash
-   cp config/rokast.conf.example config/rokast.conf   # set TARGET to your TV's name
+   mkdir -p ~/.config/rokast && cp config/rokast.conf.example ~/.config/rokast/rokast.conf   # set TARGET to your TV's name
    ```
 
 4. On the TV: **Settings > System > Screen mirroring > Screen mirroring mode = Prompt** (or Always allow).
@@ -90,14 +97,11 @@ Limitations:
 5. Check everything:
 
    ```bash
-   scripts/rokast doctor
+   rokast doctor
    ```
 
-6. Optional: put it on your PATH so you can just type `rokast`:
-
-   ```bash
-   ln -s "$PWD/scripts/rokast" ~/.local/bin/rokast
-   ```
+   (Without installing, everything also runs straight from the folder: `scripts/build-supplicant` once, then
+   `scripts/rokast ...`.)
 
 ## Desktop app
 
@@ -118,7 +122,7 @@ Without a tray, closing the window stops mirroring and quits.
 ```bash
 # needs Rust (cargo) and GTK 4 development files:
 #   Arch/Manjaro: sudo pacman -S --needed rust gtk4    Debian/Ubuntu: sudo apt install cargo libgtk-4-dev    Fedora: sudo dnf install cargo gtk4-devel
-scripts/install-ui     # builds it (or uses the release tarball's prebuilt binary) and adds "rokast" to the app menu
+scripts/install        # (step 2) builds it, or uses the release tarball's prebuilt binary, and adds "rokast" to the app menu
 rokast ui              # or launch from the menu; `rokast ui --tray` to start in the tray
 ```
 
@@ -144,7 +148,10 @@ don't ask again on desktops that support it.
 The laptop must be on the same LAN as the TV **once per run** so the tool can verify which TV is
 yours (see Safety). The mirror itself runs over Wi-Fi Direct.
 
-### Configuration (`config/rokast.conf`)
+### Configuration (`~/.config/rokast/rokast.conf`)
+
+`rokast config` prints the file in use; `ROKAST_CONFIG=/path/to/file` uses another one.
+Environment variables with the same names override the file.
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -173,7 +180,8 @@ Every key can also be set as an environment variable, e.g. `BITRATE=12M scripts/
 | Symptom | Fix |
 |---|---|
 | `no p2p-dev-* interface` | NetworkManager's Wi-Fi P2P is unavailable; check `sudo ls /run/wpa_supplicant` and `iw list` for P2P support |
-| `patched wpa_supplicant missing` | run `scripts/build-supplicant` |
+| `patched wpa_supplicant missing` | run `scripts/install` (or `scripts/build-supplicant`) |
+| `doctor`: supplicant built from an older patch | an upgrade changed the patch; run `scripts/build-supplicant` |
 | `could not join the TV's Wi-Fi Direct group` | TV screen mirroring mode must be Prompt/Always allow; stand closer; retry |
 | `the TV joined but never opened RTSP` | the TV's prompt was declined or timed out, or the device is in the TV's blocked list (Settings > System > Screen mirroring > Screen mirroring devices) |
 | `no screen-sharing portal` | install `xdg-desktop-portal` and your desktop's backend; `rokast doctor` checks it |
@@ -198,13 +206,14 @@ The full write-up, including what did *not* work and why, is in
 ## Development
 
 ```bash
-python3 -I -m unittest discover -s tests   # RTSP handshake vs a fake Roku sink, IE bytes, command builders, allowlist
+python3 -I -m unittest discover -s tests   # RTSP handshake vs a fake Roku sink, IE bytes, command builders, allowlist, paths
+bash tests/test_install.sh                 # installer: upgrade, rollback, uninstall in a throwaway HOME
 ```
 
 Releases: add a `## X.Y.Z` section to `CHANGELOG.md`, then `scripts/release X.Y.Z`; GitHub Actions builds and publishes
 the release (see `playbooks/release.md`).
 
-Layout: `src/miracast/{p2p,wfd,capture,wayland,cli}.py`, `ui/` (Rust GTK 4 desktop app),
+Layout: `src/miracast/{p2p,wfd,capture,wayland,paths,cli}.py`, `ui/` (Rust GTK 4 desktop app),
 `patches/` (wpa_supplicant patch + build config), `scripts/` (entry points), `playbooks/` (operational runbook).
 
 `rokast start` prints machine-readable progress lines, `status: scanning|sharing|joining|waiting|streaming|stopped|error [detail]`,

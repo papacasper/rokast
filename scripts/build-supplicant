@@ -1,14 +1,27 @@
 #!/usr/bin/env bash
-# Build the patched wpa_supplicant rokast needs (vendor/hostap-src/wpa_supplicant/wpa_supplicant).
+# Build the patched wpa_supplicant rokast needs and install it to $XDG_DATA_HOME/rokast/supplicant/ (outside the
+# install folder, so it survives upgrades). Stores patch.sha256 so `rokast doctor` can tell when the patch changed.
 # Stock wpa_supplicant cannot join a Roku's P2P group as a P2P *client* from a standalone instance; see patches/.
+# Path rules: src/miracast/paths.py.
 set -euo pipefail
-cd "$(dirname "$(readlink -f "$0")")/.."
-SRC=vendor/hostap-src
-if [ ! -d "$SRC/.git" ]; then
-    git clone --depth 1 --branch hostap_2_11 https://w1.fi/hostap.git "$SRC"
+root="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+src="${XDG_CACHE_HOME:-$HOME/.cache}/rokast/hostap-src"
+dest="${ROKAST_SUPPLICANT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/rokast/supplicant}"
+
+if [ ! -d "$src/.git" ]; then
+    mkdir -p "$(dirname "$src")"
+    if [ -d "$root/vendor/hostap-src/.git" ]; then
+        mv "$root/vendor/hostap-src" "$src"          # pre-0.2 in-tree checkout: reuse it instead of cloning again
+        rmdir "$root/vendor" 2>/dev/null || true
+    else
+        git clone --depth 1 --branch hostap_2_11 https://w1.fi/hostap.git "$src"
+    fi
 fi
-git -C "$SRC" checkout -- .
-git -C "$SRC" apply "$PWD/patches/hostap-2.11-roku.patch"
-cp patches/hostap.config "$SRC/wpa_supplicant/.config"
-make -C "$SRC/wpa_supplicant" -j"$(nproc)" wpa_supplicant
-echo "built $SRC/wpa_supplicant/wpa_supplicant"
+git -C "$src" checkout -- .
+git -C "$src" apply "$root/patches/hostap-2.11-roku.patch"
+cp "$root/patches/hostap.config" "$src/wpa_supplicant/.config"
+make -C "$src/wpa_supplicant" -j"$(nproc)" wpa_supplicant
+
+install -Dm755 "$src/wpa_supplicant/wpa_supplicant" "$dest/wpa_supplicant"
+cat "$root/patches/hostap-2.11-roku.patch" "$root/patches/hostap.config" | sha256sum | cut -d' ' -f1 > "$dest/patch.sha256"
+echo "installed $dest/wpa_supplicant"

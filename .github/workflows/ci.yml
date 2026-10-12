@@ -26,7 +26,7 @@ jobs:
       - name: bash -n + shellcheck
         run: |
           for f in scripts/*; do bash -n "$f"; done
-          shellcheck scripts/*
+          shellcheck scripts/* tests/*.sh
       - name: install script test
         run: if [ -f tests/test_install.sh ]; then bash tests/test_install.sh; fi
 

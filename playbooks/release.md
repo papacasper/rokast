@@ -6,7 +6,7 @@ Goal: a GitHub Release `vX.Y.Z` with `rokast-X.Y.Z-x86_64-linux.tar.gz` (source 
 ## Steps
 
 1. Pick the version (semver: fix = patch, feature = minor). Add a `## X.Y.Z` section at the top of `CHANGELOG.md`
-   (user-facing changes, short bullets). Commit and push it to main.
+   (user-facing changes, short bullets; rename `## Unreleased` and drop its reminder line if there is one). Commit and push it to main.
 2. `scripts/release X.Y.Z`. It refuses unless on main, clean, in sync with origin, tag new, CHANGELOG section present;
    runs the Python + Rust tests; writes `VERSION` and `ui/Cargo.toml`; commits "Release vX.Y.Z" if anything changed; tags; pushes.
 3. The tag push runs `.github/workflows/release.yml` (Ubuntu 22.04): re-checks tag == VERSION == Cargo.toml and the

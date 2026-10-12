@@ -1,6 +1,6 @@
 # Plan: v0.2.0 and v0.3.0
 
-Status: proposed 2026-10-12. Each task has a **Done when** check that must pass by running it, not by eye.
+Status: proposed 2026-10-12; phases 0 and 1 done 2026-10-12. Each task has a **Done when** check that must pass by running it, not by eye.
 Order matters: each phase relies on the one before it. Tick tasks off here as they land; move the
 finished work into `CHANGELOG.md` at release time (`playbooks/release.md`).
 
@@ -28,9 +28,9 @@ finished work into `CHANGELOG.md` at release time (`playbooks/release.md`).
 
 Why: today tests only run when a release is tagged, so a broken `main` is found at release time.
 
-- [ ] `.github/workflows/ci.yml` on push + pull_request: Python tests (3.10 and 3.12, the oldest and newest we
+- [x] `.github/workflows/ci.yml` on push + pull_request: Python tests (3.10 and 3.12, the oldest and newest we
       claim), `cargo build --locked` + `cargo test` on ubuntu-22.04, `bash -n scripts/*`, `shellcheck scripts/*`.
-- [ ] README badge.
+- [x] README badge.
 
 **Done when:** `gh run list -w ci -L1` shows `completed success` on the commit that adds it, and a deliberately broken
 test on a throwaway branch shows `failure`.
@@ -41,36 +41,36 @@ Why: with the v0.1.0 tarball, unpacking a new version leaves the user's settings
 PATH link behind in the old folder.
 
 ### 1a. Config moves to `~/.config/rokast/rokast.conf`
-- [ ] `cli.py load_conf()`: read `$XDG_CONFIG_HOME/rokast/rokast.conf`; if missing and `<install>/config/rokast.conf`
+- [x] `cli.py load_conf()`: read `$XDG_CONFIG_HOME/rokast/rokast.conf`; if missing and `<install>/config/rokast.conf`
       exists, copy it there once and print `config: moved to ...`. Env vars still override.
-- [ ] `ROKAST_CONFIG=<file>` env override (tests, multiple setups).
-- [ ] `ui/src/config.rs conf_target()`: same lookup (or ask the CLI: `rokast config get TARGET`, so the lookup lives in one place).
-- [ ] `rokast doctor` prints which config file it used.
-- [ ] Tests: fresh (no file) -> defaults; legacy only -> migrated; both -> XDG wins; env beats file.
+- [x] `ROKAST_CONFIG=<file>` env override (tests, multiple setups).
+- [x] `ui/src/config.rs conf_target()`: same lookup (or ask the CLI: `rokast config get TARGET`, so the lookup lives in one place).
+- [x] `rokast doctor` prints which config file it used.
+- [x] Tests: fresh (no file) -> defaults; legacy only -> migrated; both -> XDG wins; env beats file.
 
 **Done when:** tests pass; on this laptop `rokast doctor` reports `~/.config/rokast/rokast.conf` with `TARGET=Living Room`
 after one run, and the repo's `config/rokast.conf` is no longer read.
 
 ### 1b. Patched supplicant moves out of the install folder
-- [ ] `build-supplicant` installs the binary to `~/.local/share/rokast/supplicant/wpa_supplicant` plus `patch.sha256`
+- [x] `build-supplicant` installs the binary to `~/.local/share/rokast/supplicant/wpa_supplicant` plus `patch.sha256`
       (sha256 of `patches/hostap-2.11-roku.patch` + `patches/hostap.config`). Build tree stays in a cache dir
       (`~/.cache/rokast/hostap-src`), not `vendor/`.
-- [ ] `p2p.py` lookup order: `$ROKAST_SUPPLICANT` -> `~/.local/share/rokast/supplicant/` -> `/usr/lib/rokast/wpa_supplicant`
+- [x] `p2p.py` lookup order: `$ROKAST_SUPPLICANT` -> `~/.local/share/rokast/supplicant/` -> `/usr/lib/rokast/wpa_supplicant`
       (packages, phase 5) -> legacy `vendor/...`. One pure function, unit-tested.
-- [ ] `doctor`: `FAIL patched wpa_supplicant is out of date (patch changed): run scripts/build-supplicant` when the
+- [x] `doctor`: `FAIL patched wpa_supplicant is out of date (patch changed): run scripts/build-supplicant` when the
       stored hash differs from the shipped patch.
 
 **Done when:** tests pass; after `scripts/build-supplicant`, `rm -rf vendor/` and a live mirror still works; changing one
 byte of a copy of the patch makes `doctor` report out of date.
 
 ### 1c. Installer with versioned installs
-- [ ] `scripts/install`: copy the release into `~/.local/share/rokast/versions/<VERSION>/`, point
+- [x] `scripts/install`: copy the release into `~/.local/share/rokast/versions/<VERSION>/`, point
       `~/.local/share/rokast/current` at it, write `~/.local/bin/rokast` (symlink to `current/scripts/rokast`) and the menu
       entry with `Exec=.../current/ui/target/release/rokast-ui`. Runs `install-ui` logic (prebuilt or cargo).
       Builds the supplicant only if missing or out of date (1b hash).
-- [ ] `scripts/install --rollback`: point `current` at the previous version. `--uninstall`: remove all but config.
-- [ ] Keep the last 2 versions, delete older ones.
-- [ ] Running straight from a git clone keeps working (dev mode, no install needed).
+- [x] `scripts/install --rollback`: point `current` at the previous version. `--uninstall`: remove all but config.
+- [x] Keep the last 2 versions, delete older ones.
+- [x] Running straight from a git clone keeps working (dev mode, no install needed).
 
 **Done when:** in a scratch `HOME`: install v0.1.0 layout -> install new build -> `rokast version` shows the new one, the
 menu entry still launches, config kept; `--rollback` -> old version; `--uninstall` leaves only `~/.config/rokast/`.
