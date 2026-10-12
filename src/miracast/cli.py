@@ -1,4 +1,5 @@
-"""rokast CLI: list [--json] | start [name] | name | config | doctor | ui [--tray] | version.  Foreground; Ctrl+C stops and tears the link down."""
+"""rokast CLI: list [--json] | start [name] | name | config | doctor [--report] | selftest [--seconds N] [--out FILE]
+| ui [--tray] | version.  Foreground; Ctrl+C stops and tears the link down."""
 import asyncio
 import json
 import os
@@ -11,6 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import capture  # noqa: E402
 import p2p  # noqa: E402
 import paths  # noqa: E402
+import selftest  # noqa: E402
 import wayland  # noqa: E402
 import wfd  # noqa: E402
 
@@ -148,9 +150,14 @@ def cmd_start(name=None):
     status("stopped")
 
 
-def cmd_doctor():
+def cmd_doctor(report=False):
+    """Checks everything `start` needs. --report: plus system info and a selftest, for a hardware report issue."""
     import shutil
     conf = load_conf()
+    if report:
+        print(f"rokast {open(os.path.join(ROOT, 'VERSION')).read().strip()}")
+        for k, v in selftest.system_info():
+            print(f"{k + ':':<13}{v}")
     ok = True
 
     def chk(label, cond, extra=""):
@@ -190,6 +197,32 @@ def cmd_doctor():
     chk("Rokus on LAN", rokus, "none answered ECP :8060")
     if conf["TARGET"]:
         chk(f"target {conf['TARGET']!r} on LAN", any(r["name"].lower() == conf["TARGET"].lower() for r in rokus))
+    if report:
+        try:
+            chk("selftest", selftest.run(conf, capture_mode(conf)))
+        except (RuntimeError, OSError, subprocess.SubprocessError) as e:
+            chk("selftest", False, str(e))
+    sys.exit(0 if ok else 1)
+
+
+def cmd_selftest(args):
+    """Capture + encode a few seconds to a file and check it with ffprobe (no TV needed)."""
+    seconds, out = 5, None
+    it = iter(args)
+    for a in it:
+        if a == "--seconds":
+            seconds = int(next(it, "5"))
+        elif a == "--out":
+            out = next(it, None)
+        else:
+            sys.exit("usage: rokast selftest [--seconds N] [--out FILE]")
+    if not 1 <= seconds <= 600:
+        sys.exit("--seconds must be 1..600")
+    conf = load_conf()
+    try:
+        ok = selftest.run(conf, capture_mode(conf), seconds, out)
+    except (RuntimeError, OSError, subprocess.SubprocessError) as e:
+        sys.exit(f"selftest: FAIL {e}")
     sys.exit(0 if ok else 1)
 
 
@@ -203,9 +236,11 @@ def cmd_ui(args=()):
 if __name__ == "__main__":
     a = sys.argv[1:] or ["help"]
     arg = a[1] if len(a) > 1 else None
-    {"list": lambda: cmd_list(arg), "doctor": cmd_doctor, "start": lambda: cmd_start(arg),
+    {"list": lambda: cmd_list(arg), "doctor": lambda: cmd_doctor(arg == "--report"), "start": lambda: cmd_start(arg),
+     "selftest": lambda: cmd_selftest(a[1:]),
      "name": lambda: print(load_conf()["NAME"]),
      "config": lambda: print(load_conf()["_file"]),
      "version": lambda: print(open(os.path.join(ROOT, "VERSION")).read().strip()),
      "ui": lambda: cmd_ui(a[1:])}.get(
-        a[0], lambda: sys.exit("usage: rokast {list [--json]|start [name]|name|config|doctor|ui [--tray]|version}"))()
+        a[0], lambda: sys.exit("usage: rokast {list [--json]|start [name]|name|config|doctor [--report]|selftest [--seconds N] [--out FILE]|"
+                          "ui [--tray]|version}"))()

@@ -1,6 +1,6 @@
 # Plan: v0.2.0 and v0.3.0
 
-Status: proposed 2026-10-12; phases 0 and 1 done 2026-10-12. Each task has a **Done when** check that must pass by running it, not by eye.
+Status: proposed 2026-10-12; phases 0, 1 and 2 done 2026-10-12. Each task has a **Done when** check that must pass by running it, not by eye.
 Order matters: each phase relies on the one before it. Tick tasks off here as they land; move the
 finished work into `CHANGELOG.md` at release time (`playbooks/release.md`).
 
@@ -81,12 +81,14 @@ Scripted as `tests/test_install.sh`, run in CI.
 Why: GNOME/KDE Wayland, VAAPI and "no tray" have never run. Capture can be tested without a Roku or Wi-Fi Direct,
 which makes these testable on any machine, VM or live USB.
 
-- [ ] `rokast selftest [--seconds 5] [--out file.ts]`: runs the real capture + encode pipeline (same `capture.py`
+- [x] `rokast selftest [--seconds 5] [--out file.ts]`: runs the real capture + encode pipeline (same `capture.py`
       code, same encoder pick) into a file instead of RTP, then checks it with `ffprobe` (H.264 stream at the expected
       size, at least `fps * seconds * 0.8` frames, audio stream if AUDIO=1). Prints `selftest: ok ...` / exits non-zero.
-- [ ] Hardware report: `rokast doctor --report` prints doctor + selftest + distro, desktop, session type, GPU, Wi-Fi chip,
+- [x] Hardware report: `rokast doctor --report` prints doctor + selftest + distro, desktop, session type, GPU, Wi-Fi chip,
       kernel. Issue template `.github/ISSUE_TEMPLATE/hardware-report.md` asks for it.
-- [ ] Test matrix (record results in README "Status / compatibility"):
+- [x] Test matrix (record results in README "Status / compatibility"). 2026-10-12: X11+NVENC, X11+VAAPI Intel
+      (needed intel-media-driver; found and fixed two VAAPI argv bugs), libx264, no tray host: tested here. GNOME, KDE,
+      AMD and another Wi-Fi chip: listed as untested, waiting for hardware reports.
 
 | Path | How to test | Needs |
 |---|---|---|

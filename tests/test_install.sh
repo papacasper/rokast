@@ -15,7 +15,7 @@ check() { if eval "$2"; then echo "ok    $1"; else echo "FAIL  $1   [$2]"; fails
 release() {   # release <version>: a tarball-like folder (no .git) with a stub prebuilt UI
     local d="$t/rokast-$1"
     mkdir -p "$d"
-    git -C "$repo" ls-files -z | (cd "$repo" && xargs -0 cp --parents -a -t "$d" --)
+    git -C "$repo" ls-files -z -co --exclude-standard | (cd "$repo" && xargs -0 cp --parents -a -t "$d" --)
     echo "$1" > "$d/VERSION"
     mkdir -p "$d/ui/target/release"
     printf '#!/bin/sh\necho stub-ui %s\n' "$1" > "$d/ui/target/release/rokast-ui"; chmod +x "$d/ui/target/release/rokast-ui"

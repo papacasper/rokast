@@ -30,24 +30,34 @@ encoder: h264_nvenc
 
 ## Status / compatibility
 
-| Tested | |
-|---|---|
-| TV | Roku TV G512X (Roku OS, screen mirroring = Prompt) |
-| Laptop | Manjaro, XFCE on X11, Intel AX211 Wi-Fi, NVIDIA (NVENC) |
-| Wayland | sway 1.12 + xdg-desktop-portal-wlr (headless session, same laptop) |
+`rokast selftest` runs the real capture + encode pipeline into a file for 5 seconds and checks it with ffprobe, without
+a TV, so capture and encoding can be tested on any machine. `rokast doctor --report` adds it to a full hardware report.
+
+| Path | Result | Tested on |
+|---|---|---|
+| Full mirror to a Roku | works | Roku TV G512X; Manjaro, XFCE on X11, Intel AX211 Wi-Fi (iwlwifi) |
+| X11 capture + NVENC | works (selftest + live) | same laptop, NVIDIA RTX 4060 Mobile |
+| X11 capture + VAAPI (Intel) | works (selftest) | same laptop, Intel Raptor Lake UHD, intel-media-driver |
+| X11 capture + libx264 | works (selftest) | same laptop |
+| Wayland, wlroots portal | works (live) | sway 1.12 + xdg-desktop-portal-wlr (headless session, same laptop) |
+| Desktop app without a tray host | works | same laptop, app on a D-Bus session with no StatusNotifierWatcher |
+| Wayland, GNOME portal | untested | |
+| Wayland, KDE portal | untested | |
+| VAAPI (AMD) | untested | |
+| Full mirror on another Wi-Fi chip | untested | |
 
 It should work on any Roku device that accepts screen mirroring from Android phones, and on any
 Linux machine whose Wi-Fi chip supports P2P-client mode (`iw list` shows `P2P-client` under
 "Supported interface modes"; most Intel AX2xx/AX1xx/9xxx cards do). Reports for other hardware
-are welcome. Please open an issue with `scripts/rokast doctor` output.
+are welcome: open a [hardware report](https://github.com/papacasper/rokast/issues/new?template=hardware-report.md)
+with the output of `rokast doctor --report`.
 
 Limitations:
-- Wayland capture has been tested on sway (wlroots portal). GNOME and KDE use the same portal API
-  but haven't been tried yet; reports welcome.
 - Needs **NetworkManager** with Wi-Fi P2P available (`sudo ls /run/wpa_supplicant` shows `p2p-dev-<wifi>`).
 - Uses `sudo` for the network setup (interface creation, wpa_supplicant, dhcpcd).
-- VAAPI encoding (Intel/AMD GPUs) is implemented but has not been tested on real hardware yet;
-  `ENCODER=auto` only picks it if a test encode succeeds, otherwise falls back to libx264.
+- VAAPI needs your GPU's VA-API driver: `intel-media-driver` (Intel Broadwell and newer; the old `libva-intel-driver`
+  does not support recent chips) or Mesa's VA-API driver (AMD). `ENCODER=auto` only picks VAAPI if a test encode
+  succeeds, otherwise it falls back to libx264.
 - Non-Roku Miracast sinks (Samsung/LG TVs, dongles) may work but are untested.
 
 ## Install
@@ -135,6 +145,8 @@ Your last choices are remembered in `~/.config/rokast/ui.json`.
 scripts/rokast list                  # Rokus on your LAN (name, IP, model); --json for scripts
 scripts/rokast start "Living Room"   # or just `scripts/rokast start` with TARGET set in config
 # Ctrl+C to stop
+scripts/rokast selftest              # capture + encode 5 s to a file and check it (no TV needed); --seconds N, --out FILE
+scripts/rokast doctor --report       # all checks + system info + selftest, for a hardware report
 ```
 
 On first use the TV may ask whether to allow the device. It shows this computer's name (the pretty
@@ -181,6 +193,7 @@ Every key can also be set as an environment variable, e.g. `BITRATE=12M scripts/
 |---|---|
 | `no p2p-dev-* interface` | NetworkManager's Wi-Fi P2P is unavailable; check `sudo ls /run/wpa_supplicant` and `iw list` for P2P support |
 | `patched wpa_supplicant missing` | run `scripts/install` (or `scripts/build-supplicant`) |
+| `selftest` FAIL with `h264_vaapi` / `VAAPI` errors | install your GPU's VA-API driver (see Limitations), or set `ENCODER=libx264` |
 | `doctor`: supplicant built from an older patch | an upgrade changed the patch; run `scripts/build-supplicant` |
 | `could not join the TV's Wi-Fi Direct group` | TV screen mirroring mode must be Prompt/Always allow; stand closer; retry |
 | `the TV joined but never opened RTSP` | the TV's prompt was declined or timed out, or the device is in the TV's blocked list (Settings > System > Screen mirroring > Screen mirroring devices) |
@@ -206,14 +219,14 @@ The full write-up, including what did *not* work and why, is in
 ## Development
 
 ```bash
-python3 -I -m unittest discover -s tests   # RTSP handshake vs a fake Roku sink, IE bytes, command builders, allowlist, paths
+python3 -I -m unittest discover -s tests   # RTSP handshake vs a fake Roku sink, IE bytes, command builders, allowlist, paths, selftest checks
 bash tests/test_install.sh                 # installer: upgrade, rollback, uninstall in a throwaway HOME
 ```
 
 Releases: add a `## X.Y.Z` section to `CHANGELOG.md`, then `scripts/release X.Y.Z`; GitHub Actions builds and publishes
 the release (see `playbooks/release.md`).
 
-Layout: `src/miracast/{p2p,wfd,capture,wayland,paths,cli}.py`, `ui/` (Rust GTK 4 desktop app),
+Layout: `src/miracast/{p2p,wfd,capture,wayland,paths,selftest,cli}.py`, `ui/` (Rust GTK 4 desktop app),
 `patches/` (wpa_supplicant patch + build config), `scripts/` (entry points), `playbooks/` (operational runbook).
 
 `rokast start` prints machine-readable progress lines, `status: scanning|sharing|joining|waiting|streaming|stopped|error [detail]`,

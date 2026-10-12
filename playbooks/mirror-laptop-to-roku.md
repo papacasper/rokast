@@ -35,6 +35,9 @@ left click toggles the window; menu = status, Start/Stop, Show/Hide, Quit. With 
 
 ## Verify
 
+- Capture without a TV: `rokast selftest` (`selftest: ok h264 1920x1080 ~146 frames, aac audio`; `ENCODER=h264_vaapi|libx264`
+  to test the others). Hardware report: `rokast doctor --report`. Results table: README "Status / compatibility".
+
 - Install/upgrade: `bash tests/test_install.sh` (scratch HOME: v0.1.0 layout -> upgrade, prune, rollback, uninstall).
   Real layout: `~/.local/share/rokast/{versions/<v>,current,previous,supplicant}`, `~/.local/bin/rokast -> current/scripts/rokast`.
 

@@ -146,6 +146,21 @@ class Capture(unittest.TestCase):
         self.assertLess(cmd.index("-vaapi_device"), cmd.index("-i"))
         self.assertTrue(cmd[cmd.index("-vf") + 1].endswith("format=nv12,hwupload"))
 
+    def test_vaapi_profile_and_level_spelling(self):
+        # h264_vaapi rejects "baseline" and fails mid-encode with "-level 4.0" (found by rokast selftest on Intel iHD)
+        n = wfd.Negotiated(1920, 1080, 30, "baseline", "4.0", "AAC", 19000)
+        cmd = capture.build_cmd(n, "192.168.49.2", 22222, encoder="h264_vaapi")
+        self.assertEqual(cmd[cmd.index("-profile:v") + 1], "constrained_baseline")
+        self.assertEqual(cmd[cmd.index("-level") + 1], "40")
+        n.level = "4.2"
+        self.assertEqual(capture.build_cmd(n, "x", 1, encoder="h264_vaapi")[cmd.index("-level") + 1], "42")
+
+    def test_file_output_for_selftest(self):
+        n = wfd.Negotiated(1280, 720, 30, "high", "4.0", "AAC", 19000)
+        cmd = capture.build_cmd(n, None, None, out="/tmp/x.ts", seconds=5)
+        self.assertEqual(cmd[cmd.index("-t"):], ["-t", "5", "-y", "-f", "mpegts", "/tmp/x.ts"])
+        self.assertNotIn("rtp_mpegts", cmd)
+
     def test_raw_stdin_input_for_wayland(self):
         n = wfd.Negotiated(1280, 720, 60, "high", "4.0", "AAC", 19000)
         cmd = capture.build_cmd(n, "192.168.49.2", 22222, source="raw")

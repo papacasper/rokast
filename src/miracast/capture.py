@@ -38,11 +38,12 @@ def pick_encoder(wanted="auto"):
 
 
 def build_cmd(n, sink_ip, server_port, display=":0", encoder="h264_nvenc", bitrate="8M", audio=True, monitor=None,
-              source="x11"):
+              source="x11", out=None, seconds=None):
     """Pure function: Negotiated + target -> ffmpeg argv. Unit-tested.
 
     source "x11": x11grab of `display`; "raw": I420 frames of exactly n.width x n.height @ n.fps on stdin
-    (the Wayland path, see wayland.gst_cmd)."""
+    (the Wayland path, see wayland.gst_cmd). `out`: write MPEG-TS to that file (for `seconds`) instead of RTP
+    (rokast selftest: the same pipeline, minus the TV)."""
     gop = n.fps  # 1s GOP: sink can resync/IDR-request cheaply
     display = display.split(".")[0]  # ":0.0" (inherited $DISPLAY) -> ":0"; the screen suffix is appended below
     cmd = ["ffmpeg", "-hide_banner", "-loglevel", "warning", "-nostdin",
@@ -70,14 +71,22 @@ def build_cmd(n, sink_ip, server_port, display=":0", encoder="h264_nvenc", bitra
     else:
         cmd += ["-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency",
                 "-b:v", bitrate, "-maxrate", bitrate, "-bufsize", "1M", "-bf", "0"]
-    cmd += ["-profile:v", "baseline" if n.profile == "baseline" else "high",
-            "-level", LEVEL_FLAG.get(n.level, "4.0"), "-g", str(gop), "-keyint_min", str(gop)]
+    level = LEVEL_FLAG.get(n.level, "4.0")
+    if encoder == "h264_vaapi":   # its names differ: "constrained_baseline", and level as level_idc ("4.0" breaks encoding)
+        cmd += ["-profile:v", "constrained_baseline" if n.profile == "baseline" else "high",
+                "-level", str(round(float(level) * 10))]
+    else:
+        cmd += ["-profile:v", "baseline" if n.profile == "baseline" else "high", "-level", level]
+    cmd += ["-g", str(gop), "-keyint_min", str(gop)]
     if use_audio:
         acodec = ["-c:a", "aac", "-b:a", "160k"] if n.audio == "AAC" else ["-c:a", "pcm_s16be"]
         cmd += ["-map", "1:a", *acodec, "-ar", "48000", "-ac", "2", "-af", "aresample=async=1:first_pts=0"]
     cmd += ["-muxdelay", "0", "-muxpreload", "0", "-flush_packets", "1",
-            "-mpegts_flags", "+resend_headers", "-pat_period", "0.2",
-            "-f", "rtp_mpegts", f"rtp://{sink_ip}:{n.rtp_port}?localport={server_port}&pkt_size=1316"]
+            "-mpegts_flags", "+resend_headers", "-pat_period", "0.2"]
+    if out:
+        cmd += (["-t", str(seconds)] if seconds else []) + ["-y", "-f", "mpegts", out]
+    else:
+        cmd += ["-f", "rtp_mpegts", f"rtp://{sink_ip}:{n.rtp_port}?localport={server_port}&pkt_size=1316"]
     return cmd
 
 
