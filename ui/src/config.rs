@@ -12,6 +12,15 @@ pub struct Prefs {
     pub audio: bool,
     #[serde(default)]
     pub name: String,
+    #[serde(default)]
+    pub monitor: String,
+    /// Window size and the Details pane, as the user left them (0 = default size).
+    #[serde(default)]
+    pub width: i32,
+    #[serde(default)]
+    pub height: i32,
+    #[serde(default)]
+    pub details: bool,
 }
 
 pub fn rokast_script() -> PathBuf {
@@ -38,7 +47,7 @@ pub fn rokast_cmd(args: &[&str]) -> Command {
     c
 }
 
-fn config_home() -> PathBuf {
+pub fn config_home() -> PathBuf {
     std::env::var_os("XDG_CONFIG_HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(std::env::var_os("HOME").unwrap_or_default()).join(".config"))
@@ -63,6 +72,13 @@ pub fn save_prefs(p: &Prefs) {
     if let Ok(s) = serde_json::to_string_pretty(p) {
         let _ = std::fs::write(path, s);
     }
+}
+
+/// Change some remembered choices, keeping the rest.
+pub fn update_prefs(f: impl FnOnce(&mut Prefs)) {
+    let mut p = load_prefs();
+    f(&mut p);
+    save_prefs(&p);
 }
 
 /// rokast.conf as the CLI finds it (src/miracast/paths.py): $ROKAST_CONFIG, else ~/.config/rokast/rokast.conf,

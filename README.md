@@ -129,6 +129,10 @@ The tray works on desktops with StatusNotifierItem support (KDE, XFCE, Cinnamon,
 waybar/sway/Hyprland bars). GNOME needs the *AppIndicator and KStatusNotifierItem Support* extension.
 Without a tray, closing the window stops mirroring and quits.
 
+Turn on **Start with my computer, in the tray** to have it start as a tray icon (no window) when you log in;
+that writes `~/.config/autostart/io.github.papacasper.rokast.desktop`, and turning it off removes it. With two or
+more monitors on X11, a **Monitor** dropdown picks which one to mirror (on Wayland the screen-sharing dialog asks).
+
 ```bash
 # needs Rust (cargo) and GTK 4 development files:
 #   Arch/Manjaro: sudo pacman -S --needed rust gtk4    Debian/Ubuntu: sudo apt install cargo libgtk-4-dev    Fedora: sudo dnf install cargo gtk4-devel
@@ -137,7 +141,7 @@ rokast ui              # or launch from the menu; `rokast ui --tray` to start in
 ```
 
 Without passwordless sudo, it asks for your password in a dialog (`zenity` or `kdialog`).
-Your last choices are remembered in `~/.config/rokast/ui.json`.
+Your last choices, the window size and whether Details is open are remembered in `~/.config/rokast/ui.json`.
 
 ## Usage
 
@@ -147,6 +151,7 @@ scripts/rokast start "Living Room"   # or just `scripts/rokast start` with TARGE
 # Ctrl+C to stop
 scripts/rokast selftest              # capture + encode 5 s to a file and check it (no TV needed); --seconds N, --out FILE
 scripts/rokast doctor --report       # all checks + system info + selftest, for a hardware report
+scripts/rokast monitors              # X11 monitors, for MONITOR= (--json for scripts)
 ```
 
 On first use the TV may ask whether to allow the device. It shows this computer's name (the pretty
@@ -174,6 +179,7 @@ Environment variables with the same names override the file.
 | `ENCODER` | `auto` | `auto`, `h264_nvenc`, `h264_vaapi` or `libx264` |
 | `AUDIO` | `1` | Send desktop audio (default PulseAudio/PipeWire sink monitor) |
 | `CAPTURE` | `auto` | `auto` (Wayland session → `wayland`, else `x11`), `x11` or `wayland` |
+| `MONITOR` | primary monitor | Monitor to mirror, as `rokast monitors` names it (X11 only; on Wayland the screen-sharing dialog asks) |
 | `DISPLAY` | `:0` | X display to capture (X11 only) |
 
 Every key can also be set as an environment variable, e.g. `BITRATE=12M scripts/rokast start`.
@@ -221,6 +227,7 @@ The full write-up, including what did *not* work and why, is in
 ```bash
 python3 -I -m unittest discover -s tests   # RTSP handshake vs a fake Roku sink, IE bytes, command builders, allowlist, paths, selftest checks
 bash tests/test_install.sh                 # installer: upgrade, rollback, uninstall in a throwaway HOME
+bash tests/test_monitor_capture.sh         # MONITOR= captures the right monitor (Xvfb + ffmpeg + ImageMagick; not in CI)
 ```
 
 Releases: add a `## X.Y.Z` section to `CHANGELOG.md`, then `scripts/release X.Y.Z`; GitHub Actions builds and publishes

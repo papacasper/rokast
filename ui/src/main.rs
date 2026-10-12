@@ -3,10 +3,12 @@
 //! `status: <state> [detail]` lines. All networking stays in the CLI, so both behave identically.
 #![allow(deprecated)] // CssProvider::load_from_data / style_context_add_provider_for_display (kept for GTK 4.6)
 
+mod autostart;
 mod config;
+mod monitors;
 mod tray;
 
-use config::{conf_target, load_prefs, rokast_cmd, rokast_script, save_prefs, Prefs};
+use config::{conf_target, load_prefs, rokast_cmd, rokast_script, save_prefs, update_prefs, Prefs};
 
 use gtk::prelude::*;
 use gtk::{gio, glib};
@@ -49,6 +51,7 @@ struct Ui {
     window: gtk::ApplicationWindow,
     tv_model: gtk::StringList,
     tv_drop: gtk::DropDown,
+    monitor: monitors::Picker,
     refresh: gtk::Button,
     res_drop: gtk::DropDown,
     rate_drop: gtk::DropDown,
@@ -139,6 +142,13 @@ fn build(app: &gtk::Application) {
     name.set_width_chars(18);
     name.set_tooltip_text(Some("What the TV calls this computer in its screen-mirroring prompt and device list"));
 
+    let prefs = load_prefs();
+    let monitor = monitors::Picker::new(|l, w| row(l, w), prefs.monitor.clone());
+    let boot = gtk::Switch::new();
+    boot.set_valign(gtk::Align::Center);
+    boot.set_active(autostart::enabled());
+    boot.set_tooltip_text(Some("Open rokast as a tray icon (no window) when you log in"));
+
     let frame = gtk::Frame::new(None);
     let form = gtk::Box::new(gtk::Orientation::Vertical, 10);
     form.set_margin_top(12);
@@ -146,10 +156,12 @@ fn build(app: &gtk::Application) {
     form.set_margin_start(12);
     form.set_margin_end(12);
     form.append(&row("TV", &tv_drop));
+    form.append(&monitor.row);
     form.append(&row("Name on TV", &name));
     form.append(&row("Quality", &res_drop));
     form.append(&row("Bitrate", &rate_drop));
     form.append(&row("Send audio", &audio));
+    form.append(&row("Start with my computer, in the tray", &boot));
     frame.set_child(Some(&form));
     root.append(&frame);
 
@@ -171,7 +183,11 @@ fn build(app: &gtk::Application) {
     root.append(&expander);
     window.set_child(Some(&root));
 
-    let prefs = load_prefs();
+    if prefs.width > 0 && prefs.height > 0 {
+        window.set_default_size(prefs.width, prefs.height);
+    }
+    expander.set_expanded(prefs.details);
+    expander.connect_expanded_notify(|e| update_prefs(|p| p.details = e.is_expanded()));
     res_drop.set_selected(prefs.res.min(RES.len() as u32 - 1));
     rate_drop.set_selected(prefs.bitrate.min(BITRATES.len() as u32 - 1));
     audio.set_active(prefs.audio);
@@ -181,7 +197,7 @@ fn build(app: &gtk::Application) {
     let (tray, tray_rx) = tray::spawn();
 
     let ui = Rc::new(Ui {
-        window, tv_model, tv_drop, refresh, res_drop, rate_drop, audio, name, title, detail, spinner, button, log, tray,
+        window, tv_model, tv_drop, monitor, refresh, res_drop, rate_drop, audio, name, title, detail, spinner, button, log, tray,
     });
     let st = Rc::new(RefCell::new(State::default()));
     let (tx, rx) = async_channel::unbounded::<Ev>();
@@ -228,9 +244,22 @@ fn build(app: &gtk::Application) {
         });
     }
     {
+        let ui2 = ui.clone();
+        boot.connect_state_set(move |sw, on| {
+            if let Err(e) = autostart::set(on) {
+                set_status(&ui2, "Couldn't change autostart", &format!("{}: {e}", autostart::path().display()), false);
+                sw.set_active(autostart::enabled());
+                return glib::Propagation::Stop;
+            }
+            glib::Propagation::Proceed
+        });
+    }
+    {
         let st = st.clone();
         let ui2 = ui.clone();
         ui.window.connect_close_request(move |w| {
+            let (width, height) = w.default_size();
+            update_prefs(|p| (p.width, p.height) = (width, height));
             // With a tray icon, closing only hides the window (mirroring carries on); Quit is in the tray menu.
             if ui2.tray.is_some() && !st.borrow().quit_after {
                 w.set_visible(false);
@@ -279,7 +308,8 @@ fn set_status(ui: &Ui, title: &str, detail: &str, busy: bool) {
 }
 
 fn set_running(ui: &Ui, running: bool) {
-    for w in [ui.tv_drop.upcast_ref::<gtk::Widget>(), ui.res_drop.upcast_ref(), ui.rate_drop.upcast_ref(),
+    for w in [ui.tv_drop.upcast_ref::<gtk::Widget>(), ui.monitor.drop.upcast_ref(), ui.res_drop.upcast_ref(),
+              ui.rate_drop.upcast_ref(),
               ui.audio.upcast_ref(), ui.name.upcast_ref(), ui.refresh.upcast_ref()] {
         w.set_sensitive(!running);
     }
@@ -322,6 +352,8 @@ fn start(ui: &Ui, st: &Rc<RefCell<State>>, tx: &async_channel::Sender<Ev>) {
         bitrate: ui.rate_drop.selected(),
         audio: ui.audio.is_active(),
         name: ui.name.text().trim().to_string(),
+        monitor: ui.monitor.selected(),
+        ..load_prefs()
     };
     save_prefs(&prefs);
 
@@ -332,6 +364,9 @@ fn start(ui: &Ui, st: &Rc<RefCell<State>>, tx: &async_channel::Sender<Ev>) {
     }
     if !prefs.name.is_empty() {
         cmd.env("NAME", &prefs.name);
+    }
+    if ui.monitor.row.is_visible() {
+        cmd.env("MONITOR", &prefs.monitor); // "" = main monitor; hidden picker: rokast.conf decides
     }
     let mut child = match cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn() {
         Ok(c) => c,

@@ -15,6 +15,11 @@ Rename this heading to `## 0.2.0` at release time.
 - CI runs the tests, shell checks and desktop app build on every push.
 - `rokast selftest`: captures and encodes 5 seconds to a file and checks it with ffprobe, no TV needed.
   `rokast doctor --report` adds system info and the selftest, for the new hardware report issue template.
+- **X11 now mirrors one monitor**, the primary one by default, instead of the whole X screen (with two monitors
+  that was both side by side, squeezed onto the TV). `MONITOR=HDMI-1` picks another; `rokast monitors` lists them,
+  and the desktop app has a Monitor dropdown when there are two or more.
+- Desktop app: **Start with my computer, in the tray** (off by default) adds a login autostart entry that starts in
+  the tray. The window size and the Details pane state are remembered.
 - Fixed: VAAPI encoding (Intel/AMD) failed: ffmpeg's h264_vaapi needs `constrained_baseline` and a numeric level.
 
 ### Upgrading from 0.1.0

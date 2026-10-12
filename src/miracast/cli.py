@@ -1,5 +1,5 @@
 """rokast CLI: list [--json] | start [name] | name | config | doctor [--report] | selftest [--seconds N] [--out FILE]
-| ui [--tray] | version.  Foreground; Ctrl+C stops and tears the link down."""
+| monitors [--json] | ui [--tray] | version.  Foreground; Ctrl+C stops and tears the link down."""
 import asyncio
 import json
 import os
@@ -21,7 +21,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 
 def load_conf():
     conf = {"TARGET": "", "BITRATE": "8M", "ENCODER": "auto", "AUDIO": "1",
-            "DISPLAY": ":0", "RES": "1080p30,720p60,720p30", "NAME": "", "CAPTURE": "auto"}
+            "DISPLAY": ":0", "RES": "1080p30,720p60,720p30", "NAME": "", "CAPTURE": "auto",
+            "MONITOR": ""}
     path, legacy = paths.config_file()
     if legacy:
         paths.migrate_config(path, legacy)
@@ -63,6 +64,13 @@ def capture_mode(conf):
     return mode
 
 
+def capture_geometry(conf, mode):
+    """X11: the MONITOR to capture (empty = primary), or None for the whole screen. Wayland: the portal picks."""
+    if mode != "x11":
+        return None
+    return capture.monitor_geometry(capture.x11_monitors(conf["DISPLAY"]), conf["MONITOR"])
+
+
 def status(state, detail=""):
     """Machine-readable progress line (the UI keys off these):
     scanning, sharing (Wayland screen picker), joining, waiting, streaming, stopped, error."""
@@ -84,7 +92,7 @@ async def stream(conf, iface, cast=None):
     async def on_play(n, ip, server_port):
         cmd = capture.build_cmd(n, ip, server_port, conf["DISPLAY"], conf["ENCODER"], conf["BITRATE"],
                                 conf["AUDIO"] == "1" and n.audio == "AAC", capture.default_monitor(),
-                                source="raw" if cast else "x11")
+                                source="raw" if cast else "x11", geometry=conf.get("_geometry"))
         feeder = wayland.gst_cmd(cast.fd, cast.node, n.width, n.height, n.fps) if cast else None
         if feeder:
             print("gst:", " ".join(feeder), flush=True)
@@ -126,7 +134,10 @@ def cmd_start(name=None):
         conf["ENCODER"] = capture.pick_encoder(conf["ENCODER"])   # probe before joining: the TV's RTSP window is short
         print(f"encoder: {conf['ENCODER']}", flush=True)
         mode = capture_mode(conf)
-        print(f"capture: {mode}, name on TV: {conf['NAME']}", flush=True)
+        conf["_geometry"] = capture_geometry(conf, mode)   # unknown MONITOR fails here, before joining
+        g = conf["_geometry"]
+        print(f"capture: {mode}" + (f" monitor {g['name']} {g['width']}x{g['height']}+{g['x']}+{g['y']}" if g else "")
+              + f", name on TV: {conf['NAME']}", flush=True)
         if mode == "wayland":   # the portal may ask the user to pick a screen: do it before joining
             status("sharing")
             cast = wayland.ScreenCast()
@@ -179,6 +190,12 @@ def cmd_doctor(report=False):
             chk("screen-sharing portal", False, str(e))
     print(f"config: {conf['_file']}" + ("" if os.path.exists(conf["_file"]) else " (not created yet: defaults)"))
     print(f"name on TV: {conf['NAME']}")
+    if mode == "x11":
+        try:
+            g = capture_geometry(conf, mode)
+            chk(f"monitor {g['name']} {g['width']}x{g['height']}" if g else "monitor: whole screen (xrandr found none)", True)
+        except RuntimeError as e:
+            chk("monitor", False, str(e))
     sup = paths.find_supplicant()
     state = paths.supplicant_state(sup)
     chk(f"patched wpa_supplicant {state}" + (f": {sup}" if sup else ""), state in ("ok", "external", "legacy"),
@@ -203,6 +220,17 @@ def cmd_doctor(report=False):
         except (RuntimeError, OSError, subprocess.SubprocessError) as e:
             chk("selftest", False, str(e))
     sys.exit(0 if ok else 1)
+
+
+def cmd_monitors(fmt=None):
+    """X11 monitors for MONITOR= (the desktop app's monitor list). Empty on Wayland: the portal dialog picks there."""
+    conf = load_conf()
+    mons = capture.parse_monitors(capture.x11_monitors(conf["DISPLAY"])) if capture_mode(conf) == "x11" else []
+    if fmt == "--json":
+        print(json.dumps(mons))
+        return
+    for m in mons:
+        print(f"{m['name']:<12} {m['width']}x{m['height']}+{m['x']}+{m['y']}" + ("  (primary)" if m["primary"] else ""))
 
 
 def cmd_selftest(args):
@@ -237,10 +265,10 @@ if __name__ == "__main__":
     a = sys.argv[1:] or ["help"]
     arg = a[1] if len(a) > 1 else None
     {"list": lambda: cmd_list(arg), "doctor": lambda: cmd_doctor(arg == "--report"), "start": lambda: cmd_start(arg),
-     "selftest": lambda: cmd_selftest(a[1:]),
+     "selftest": lambda: cmd_selftest(a[1:]), "monitors": lambda: cmd_monitors(arg),
      "name": lambda: print(load_conf()["NAME"]),
      "config": lambda: print(load_conf()["_file"]),
      "version": lambda: print(open(os.path.join(ROOT, "VERSION")).read().strip()),
      "ui": lambda: cmd_ui(a[1:])}.get(
         a[0], lambda: sys.exit("usage: rokast {list [--json]|start [name]|name|config|doctor [--report]|selftest [--seconds N] [--out FILE]|"
-                          "ui [--tray]|version}"))()
+                          "monitors [--json]|ui [--tray]|version}"))()

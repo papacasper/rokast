@@ -1,5 +1,6 @@
 """Screen capture -> H.264(+audio) -> RTP/MPEG-TS, parameterised by the negotiated WFD format."""
 import os
+import re
 import subprocess
 
 LEVEL_FLAG = {"3.1": "3.1", "3.2": "3.2", "4.0": "4.0", "4.1": "4.1", "4.2": "4.2"}
@@ -11,6 +12,44 @@ def default_monitor():
         return sink + ".monitor" if sink else None
     except (OSError, subprocess.CalledProcessError):
         return None
+
+
+MONITOR_RE = re.compile(r"^\s*\d+:\s+([+*]*)(\S+)\s+(\d+)/\d+x(\d+)/\d+\+(\d+)\+(\d+)")
+
+
+def parse_monitors(xrandr_output):
+    """Pure: `xrandr --listmonitors` -> [{name, width, height, x, y, primary}]. Unit-tested."""
+    out = []
+    for ln in xrandr_output.splitlines():
+        m = MONITOR_RE.match(ln)
+        if m:
+            flags, name, w, h, x, y = m.groups()
+            out.append({"name": name, "width": int(w), "height": int(h), "x": int(x), "y": int(y),
+                        "primary": "*" in flags})
+    return out
+
+
+def monitor_geometry(xrandr_output, name=""):
+    """Pure: the monitor to capture. `name` empty = the primary one (else the first). None when xrandr listed no
+    monitors (capture the whole X screen, as before). Unknown name -> RuntimeError naming the choices."""
+    mons = parse_monitors(xrandr_output)
+    if not mons:
+        return None
+    if not name:
+        return next((m for m in mons if m["primary"]), mons[0])
+    for m in mons:
+        if m["name"] == name:
+            return m
+    raise RuntimeError(f"MONITOR={name!r} not found; monitors: {', '.join(m['name'] for m in mons)}")
+
+
+def x11_monitors(display=":0", xauth=None):
+    """`xrandr --listmonitors` output for `display` ("" if xrandr is missing or fails)."""
+    env = dict(os.environ, DISPLAY=display, XAUTHORITY=xauth or os.environ.get("XAUTHORITY") or os.path.expanduser("~/.Xauthority"))
+    try:
+        return subprocess.run(["xrandr", "--listmonitors"], capture_output=True, text=True, env=env, timeout=10).stdout
+    except (OSError, subprocess.SubprocessError):
+        return ""
 
 
 ENCODERS = ("h264_nvenc", "h264_vaapi", "libx264")   # auto-detect order: NVIDIA, Intel/AMD (VAAPI), software
@@ -38,12 +77,12 @@ def pick_encoder(wanted="auto"):
 
 
 def build_cmd(n, sink_ip, server_port, display=":0", encoder="h264_nvenc", bitrate="8M", audio=True, monitor=None,
-              source="x11", out=None, seconds=None):
+              source="x11", out=None, seconds=None, geometry=None):
     """Pure function: Negotiated + target -> ffmpeg argv. Unit-tested.
 
     source "x11": x11grab of `display`; "raw": I420 frames of exactly n.width x n.height @ n.fps on stdin
     (the Wayland path, see wayland.gst_cmd). `out`: write MPEG-TS to that file (for `seconds`) instead of RTP
-    (rokast selftest: the same pipeline, minus the TV)."""
+    (rokast selftest: the same pipeline, minus the TV). `geometry`: x11grab only that monitor (monitor_geometry())."""
     gop = n.fps  # 1s GOP: sink can resync/IDR-request cheaply
     display = display.split(".")[0]  # ":0.0" (inherited $DISPLAY) -> ":0"; the screen suffix is appended below
     cmd = ["ffmpeg", "-hide_banner", "-loglevel", "warning", "-nostdin",
@@ -54,7 +93,9 @@ def build_cmd(n, sink_ip, server_port, display=":0", encoder="h264_nvenc", bitra
         cmd += ["-f", "rawvideo", "-pix_fmt", "yuv420p", "-video_size", f"{n.width}x{n.height}",
                 "-framerate", str(n.fps), "-i", "pipe:0"]
     else:
-        cmd += ["-f", "x11grab", "-framerate", str(n.fps), "-draw_mouse", "1", "-i", f"{display}.0+0,0"]
+        g = geometry or {"x": 0, "y": 0}
+        size = ["-video_size", f"{g['width']}x{g['height']}"] if geometry else []
+        cmd += ["-f", "x11grab", "-framerate", str(n.fps), "-draw_mouse", "1", *size, "-i", f"{display}.0+{g['x']},{g['y']}"]
     use_audio = audio and monitor
     if use_audio:
         cmd += ["-thread_queue_size", "512", "-f", "pulse", "-i", monitor]

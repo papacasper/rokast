@@ -104,14 +104,20 @@ which makes these testable on any machine, VM or live USB.
 
 ## Phase 3: Small features
 
-- [ ] **Autostart toggle** in the app ("Start with my computer, in the tray"): writes/removes
+- [x] **Autostart toggle** in the app ("Start with my computer, in the tray"): writes/removes
       `~/.config/autostart/io.github.papacasper.rokast.desktop` with `Exec=... --tray`. Off by default.
       **Done when:** toggling creates/removes the file; after logout/login the tray icon is there and no window.
-- [ ] **Monitor choice on X11:** `MONITOR=` config key (name from `xrandr --listmonitors`, empty = primary) and a
+- [x] **Monitor choice on X11:** `MONITOR=` config key (name from `xrandr --listmonitors`, empty = primary) and a
       dropdown in the app. Capture that monitor's geometry, scaled/letterboxed to the TV mode. Pure function
       `monitor_geometry(xrandr_output, name)` unit-tested. (Wayland already lets the user pick in the portal dialog.)
       **Done when:** tests pass; selftest output from a second monitor shows that monitor's content (check a frame).
-- [ ] **Remember the window size/position**, and the Details pane open/closed state. Optional.
+- [x] **Remember the window size/position**, and the Details pane open/closed state. Optional.
+      (Size and Details only: GTK 4 cannot place windows; the window manager decides the position.)
+
+Phase 3 status: done. Autostart file on/off, monitor dropdown and remembered size/Details checked in the app
+(isolated config, `dbus-run-session`); `tests/test_monitor_capture.sh` checks that each monitor's own content is captured;
+live mirror to the Living Room TV with the new monitor capture works. Not yet checked: an actual logout/login with
+autostart on.
 
 ## Phase 4: Release v0.2.0
 

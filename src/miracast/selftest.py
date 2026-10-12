@@ -77,15 +77,16 @@ def run(conf, mode, seconds=5, out=None, log=lambda m: print(m, flush=True)):
     if not keep:
         fd, out = tempfile.mkstemp(prefix="rokast-selftest-", suffix=".ts")
         os.close(fd)
-    log(f"selftest: {mode} capture, {encoder}, {n.width}x{n.height}@{n.fps}, "
+    log(f"selftest: {mode} capture{' of ' + conf['MONITOR'] if conf['MONITOR'] else ''}, {encoder}, {n.width}x{n.height}@{n.fps}, "
         f"audio {'from ' + monitor if monitor else 'off'}, {seconds}s -> {out}")
     cast = None
     try:
         if mode == "wayland":
             cast = wayland.ScreenCast()
             cast.open()
+        geometry = None if cast else capture.monitor_geometry(capture.x11_monitors(conf["DISPLAY"]), conf["MONITOR"])
         cmd = capture.build_cmd(n, None, None, conf["DISPLAY"], encoder, conf["BITRATE"], bool(monitor), monitor,
-                                source="raw" if cast else "x11", out=out, seconds=seconds)
+                                source="raw" if cast else "x11", out=out, seconds=seconds, geometry=geometry)
         feeder = wayland.gst_cmd(cast.fd, cast.node, n.width, n.height, n.fps) if cast else None
         pipe = capture.start(cmd, conf["DISPLAY"], feeder=feeder, fd=cast.fd if cast else None)
         ff = pipe.procs[-1]

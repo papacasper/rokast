@@ -170,6 +170,35 @@ class Capture(unittest.TestCase):
                                         "-framerate", "60", "-i", "pipe:0"])
 
 
+XRANDR = """Monitors: 2
+ 0: +*eDP-1 1920/344x1200/215+0+0  eDP-1
+ 1: +HDMI-1 2560/597x1440/336+1920+0  HDMI-1
+"""
+
+
+class Monitors(unittest.TestCase):
+    def test_parse(self):
+        m = capture.parse_monitors(XRANDR)
+        self.assertEqual([x["name"] for x in m], ["eDP-1", "HDMI-1"])
+        self.assertEqual(m[1], {"name": "HDMI-1", "width": 2560, "height": 1440, "x": 1920, "y": 0, "primary": False})
+        self.assertTrue(m[0]["primary"])
+
+    def test_geometry_choice(self):
+        self.assertEqual(capture.monitor_geometry(XRANDR)["name"], "eDP-1")             # empty -> primary
+        self.assertEqual(capture.monitor_geometry(XRANDR.replace("+*", "+"))["name"], "eDP-1")   # no primary -> first
+        self.assertEqual(capture.monitor_geometry(XRANDR, "HDMI-1")["x"], 1920)
+        self.assertIsNone(capture.monitor_geometry(""))                                   # xrandr missing: whole screen
+        with self.assertRaisesRegex(RuntimeError, "eDP-1, HDMI-1"):
+            capture.monitor_geometry(XRANDR, "DP-3")
+
+    def test_x11grab_captures_only_that_monitor(self):
+        n = wfd.Negotiated(1920, 1080, 30, "high", "4.0", "AAC", 19000)
+        cmd = capture.build_cmd(n, "1.2.3.4", 1, display=":0.0", geometry=capture.monitor_geometry(XRANDR, "HDMI-1"))
+        i = cmd.index("-video_size")
+        self.assertEqual(cmd[i:i + 4], ["-video_size", "2560x1440", "-i", ":0.0+1920,0"])
+        self.assertIn("scale=1920:1080:force_original_aspect_ratio=decrease", cmd[cmd.index("-vf") + 1])
+
+
 class Wayland(unittest.TestCase):
     def test_gst_delivers_exact_negotiated_frames(self):
         cmd = wayland.gst_cmd(7, 42, 1920, 1080, 30)
