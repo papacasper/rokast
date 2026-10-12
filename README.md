@@ -100,14 +100,22 @@ Limitations:
 A small GTK 4 window (written in Rust) for people who'd rather click: pick the TV, quality,
 bitrate and audio, then press **Start mirroring**. It shows live progress (finding the TV,
 connecting, waiting for the TV, mirroring), lets you set the **Name on TV**, has a Details pane with the full log, and cleans the
-connection up when you press Stop or close the window. It drives the same `rokast` command
+connection up when you press Stop or quit. It drives the same `rokast` command
 underneath, so it behaves exactly like the CLI.
+
+It also puts an icon in the **system tray**: grey when idle, amber while connecting, green while
+mirroring, red on an error. Left-click shows or hides the window; right-click has Start/Stop mirroring,
+Show/Hide window and Quit. Closing the window just hides it to the tray (mirroring keeps going), and
+**Quit** stops mirroring and exits. `rokast ui --tray` starts straight into the tray, handy for autostart.
+The tray works on desktops with StatusNotifierItem support (KDE, XFCE, Cinnamon, MATE, LXQt, Budgie,
+waybar/sway/Hyprland bars). GNOME needs the *AppIndicator and KStatusNotifierItem Support* extension.
+Without a tray, closing the window stops mirroring and quits.
 
 ```bash
 # needs Rust (cargo) and GTK 4 development files:
 #   Arch/Manjaro: sudo pacman -S --needed rust gtk4    Debian/Ubuntu: sudo apt install cargo libgtk-4-dev    Fedora: sudo dnf install cargo gtk4-devel
 scripts/install-ui     # builds it and adds "rokast" to your applications menu
-rokast ui              # or launch from the menu
+rokast ui              # or launch from the menu; `rokast ui --tray` to start in the tray
 ```
 
 Without passwordless sudo, it asks for your password in a dialog (`zenity` or `kdialog`).

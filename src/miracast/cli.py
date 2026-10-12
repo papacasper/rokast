@@ -183,11 +183,11 @@ def cmd_doctor():
     sys.exit(0 if ok else 1)
 
 
-def cmd_ui():
+def cmd_ui(args=()):
     exe = os.path.join(ROOT, "ui", "target", "release", "rokast-ui")
     if not os.access(exe, os.X_OK):
         sys.exit("desktop UI not built: run scripts/install-ui (needs cargo and GTK 4 dev files)")
-    os.execv(exe, [exe])
+    os.execv(exe, [exe, *args])  # e.g. --tray: start hidden in the system tray
 
 
 if __name__ == "__main__":
@@ -195,5 +195,5 @@ if __name__ == "__main__":
     arg = a[1] if len(a) > 1 else None
     {"list": lambda: cmd_list(arg), "doctor": cmd_doctor, "start": lambda: cmd_start(arg),
      "name": lambda: print(load_conf()["NAME"]),
-     "ui": cmd_ui}.get(
-        a[0], lambda: sys.exit("usage: rokast {list [--json]|start [name]|name|doctor|ui}"))()
+     "ui": lambda: cmd_ui(a[1:])}.get(
+        a[0], lambda: sys.exit("usage: rokast {list [--json]|start [name]|name|doctor|ui [--tray]}"))()

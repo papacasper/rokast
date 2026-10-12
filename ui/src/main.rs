@@ -3,13 +3,17 @@
 //! `status: <state> [detail]` lines. All networking stays in the CLI, so both behave identically.
 #![allow(deprecated)] // CssProvider::load_from_data / style_context_add_provider_for_display (kept for GTK 4.6)
 
+mod config;
+mod tray;
+
+use config::{conf_target, load_prefs, rokast_cmd, rokast_script, save_prefs, Prefs};
+
 use gtk::prelude::*;
 use gtk::{gio, glib};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::cell::RefCell;
 use std::io::{BufRead, BufReader};
-use std::path::PathBuf;
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::rc::Rc;
 
 const APP_ID: &str = "io.github.papacasper.rokast";
@@ -34,16 +38,6 @@ struct Tv {
     model: String,
 }
 
-#[derive(Serialize, Deserialize, Default)]
-struct Prefs {
-    target: String,
-    res: u32,
-    bitrate: u32,
-    audio: bool,
-    #[serde(default)]
-    name: String,
-}
-
 enum Ev {
     Tvs(Result<Vec<Tv>, String>),
     DefaultName(String),
@@ -65,6 +59,7 @@ struct Ui {
     spinner: gtk::Spinner,
     button: gtk::Button,
     log: gtk::TextView,
+    tray: Option<ksni::blocking::Handle<tray::Tray>>,
 }
 
 #[derive(Default)]
@@ -74,54 +69,6 @@ struct State {
     stopping: bool,
     quit_after: bool,
     last_error: Option<String>,
-}
-
-fn rokast_script() -> PathBuf {
-    if let Ok(p) = std::env::var("ROKAST") {
-        return p.into();
-    }
-    let exe = std::env::current_exe().and_then(|p| p.canonicalize()).unwrap_or_default();
-    exe.ancestors()
-        .map(|d| d.join("scripts/rokast"))
-        .find(|p| p.is_file())
-        .unwrap_or_else(|| "rokast".into())
-}
-
-fn rokast_cmd(args: &[&str]) -> Command {
-    let script = rokast_script();
-    let mut c = Command::new(&script);
-    c.args(args).stdin(Stdio::null());
-    // No terminal to type a sudo password into: prompt graphically (no-op with NOPASSWD sudo).
-    if std::env::var_os("SUDO_ASKPASS").is_none() {
-        if let Some(askpass) = script.parent().map(|d| d.join("askpass")).filter(|p| p.is_file()) {
-            c.env("SUDO_ASKPASS", askpass);
-        }
-    }
-    c
-}
-
-fn prefs_path() -> PathBuf {
-    let base = std::env::var_os("XDG_CONFIG_HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(std::env::var_os("HOME").unwrap_or_default()).join(".config"));
-    base.join("rokast/ui.json")
-}
-
-fn load_prefs() -> Prefs {
-    std::fs::read_to_string(prefs_path())
-        .ok()
-        .and_then(|s| serde_json::from_str(&s).ok())
-        .unwrap_or(Prefs { bitrate: 1, audio: true, ..Default::default() })
-}
-
-fn save_prefs(p: &Prefs) {
-    let path = prefs_path();
-    if let Some(d) = path.parent() {
-        let _ = std::fs::create_dir_all(d);
-    }
-    if let Ok(s) = serde_json::to_string_pretty(p) {
-        let _ = std::fs::write(path, s);
-    }
 }
 
 fn row(label: &str, widget: &impl IsA<gtk::Widget>) -> gtk::Box {
@@ -230,11 +177,30 @@ fn build(app: &gtk::Application) {
     audio.set_active(prefs.audio);
     name.set_text(&prefs.name);
 
+    // Tray icon; None when the desktop has no StatusNotifier host (then closing the window quits, as before).
+    let (tray, tray_rx) = tray::spawn();
+
     let ui = Rc::new(Ui {
-        window, tv_model, tv_drop, refresh, res_drop, rate_drop, audio, name, title, detail, spinner, button, log,
+        window, tv_model, tv_drop, refresh, res_drop, rate_drop, audio, name, title, detail, spinner, button, log, tray,
     });
     let st = Rc::new(RefCell::new(State::default()));
     let (tx, rx) = async_channel::unbounded::<Ev>();
+
+    {
+        let (ui, st) = (ui.clone(), st.clone());
+        glib::spawn_future_local(async move {
+            while let Ok(cmd) = tray_rx.recv().await {
+                tray::command(&ui, &st, cmd);
+            }
+        });
+    }
+    // Keep the tray menu in step with the window without touching every call site.
+    {
+        let u = ui.clone();
+        ui.button.connect_sensitive_notify(move |_| tray::sync(&u));
+        let u = ui.clone();
+        ui.window.connect_visible_notify(move |_| tray::sync(&u));
+    }
 
     // Event loop: all child/scan output arrives here on the GTK main thread.
     {
@@ -264,7 +230,12 @@ fn build(app: &gtk::Application) {
     {
         let st = st.clone();
         let ui2 = ui.clone();
-        ui.window.connect_close_request(move |_| {
+        ui.window.connect_close_request(move |w| {
+            // With a tray icon, closing only hides the window (mirroring carries on); Quit is in the tray menu.
+            if ui2.tray.is_some() && !st.borrow().quit_after {
+                w.set_visible(false);
+                return glib::Propagation::Stop;
+            }
             // Never leave the Wi-Fi Direct link half up: stop the child and close once it has cleaned up.
             if st.borrow().child.is_some() {
                 st.borrow_mut().quit_after = true;
@@ -285,18 +256,10 @@ fn build(app: &gtk::Application) {
         });
     }
     scan(&ui, &st, &tx);
-    ui.window.present();
-}
-
-/// TARGET from config/rokast.conf, used until the UI has remembered a choice of its own.
-fn conf_target() -> String {
-    let conf = rokast_script().parent().map(|d| d.join("../config/rokast.conf")).unwrap_or_default();
-    std::fs::read_to_string(conf)
-        .unwrap_or_default()
-        .lines()
-        .filter_map(|l| l.split('#').next()?.trim().strip_prefix("TARGET")?.trim_start().strip_prefix('=').map(|v| v.trim().to_string()))
-        .last()
-        .unwrap_or_default()
+    // `--tray`: start hidden in the tray (e.g. from autostart); only when there is a tray to come back from.
+    if !(ui.tray.is_some() && std::env::args().any(|a| a == "--tray")) {
+        ui.window.present();
+    }
 }
 
 fn append_log(ui: &Ui, line: &str) {
@@ -312,6 +275,7 @@ fn set_status(ui: &Ui, title: &str, detail: &str, busy: bool) {
     ui.detail.set_text(detail);
     ui.spinner.set_spinning(busy);
     ui.spinner.set_visible(busy);
+    tray::sync(ui);
 }
 
 fn set_running(ui: &Ui, running: bool) {
@@ -327,6 +291,7 @@ fn set_running(ui: &Ui, running: bool) {
         ui.button.remove_css_class("destructive-action");
         ui.button.add_css_class("suggested-action");
     }
+    tray::sync(ui);
 }
 
 fn scan(ui: &Ui, st: &Rc<RefCell<State>>, tx: &async_channel::Sender<Ev>) {
@@ -484,5 +449,5 @@ fn handle(ui: &Ui, st: &Rc<RefCell<State>>, ev: Ev, preferred: &str) {
 fn main() -> glib::ExitCode {
     let app = gtk::Application::builder().application_id(APP_ID).flags(gio::ApplicationFlags::empty()).build();
     app.connect_activate(build);
-    app.run()
+    app.run_with_args(&std::env::args().take(1).collect::<Vec<_>>()) // our own flags (--tray) are read in build()
 }

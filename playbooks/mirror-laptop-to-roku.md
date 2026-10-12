@@ -28,7 +28,10 @@ Native Miracast (Wi-Fi Display), same as Windows/Android "Cast":
 
 Desktop app: `scripts/install-ui` once (cargo build + menu entry), then `rokast ui`. It runs `rokast list --json` and
 `rokast start <tv>` (settings passed as RES/BITRATE/AUDIO env), follows the `status: <state>` lines, and stops with SIGTERM
-(also on window close, waiting for teardown). Keep the status line names stable: the UI keys off them.
+(also on Quit, waiting for teardown). Keep the status line names stable: the UI keys off them.
+Tray icon (ui/src/tray.rs, ksni StatusNotifierItem, icon drawn in code: grey idle, amber connecting, green mirroring, red error):
+left click toggles the window; menu = status, Start/Stop, Show/Hide, Quit. With a tray, closing the window only hides it
+(mirroring continues); without a StatusNotifier host the tray is skipped and close stops+quits as before. `rokast ui --tray` starts hidden.
 
 ## Verify
 
@@ -57,6 +60,9 @@ Desktop app: `scripts/install-ui` once (cargo build + menu entry), then `rokast 
   xdg-desktop-portal-wlr `chooser_type=none output_name=HEADLESS-1`, start xdg-desktop-portal-wlr + xdg-desktop-portal, put a Wayland window up
   (swaybg is not a dependency: an empty output captures black), then `rokast start`. Portal open happens BEFORE the join (status `sharing`).
 - UI test without clicking by hand: launch with DISPLAY=:0, `xdotool search --name '^rokast$'`, `import -window` for screenshots, `xdotool mousemove --window W x y click 1`.
+- Tray test without clicking: bus name `org.kde.StatusNotifierItem-<pid>-1`; `gdbus call --session -d $N -o /StatusNotifierItem -m org.kde.StatusNotifierItem.Activate 0 0`
+  (left click); menu: `... -o /MenuBar -m com.canonical.dbusmenu.GetLayout -- 0 -1 '["label"]'` and `... Event -- <id> clicked '<0>' 0`.
+  Close the window with `wmctrl -i -c <id>` (a real close request); `xdotool windowclose` destroys the X window and breaks GTK.
 
 - Do not derive the LAN from the default route (a VPN may own it). Use the Wi-Fi interface address.
 - P2P address of a Roku = its wifi MAC with first octet |= 0x02 (4c: -> 4e:). The allowlist relies on this. Group BSSID comes from `p2p_peer` `interface_addr`.
