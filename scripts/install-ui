@@ -13,5 +13,5 @@ fi
 apps="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 mkdir -p "$apps"
 sed "s|@BIN@|$bin|" "$root/assets/rokast.desktop" > "$apps/io.github.papacasper.rokast.desktop"
-command -v update-desktop-database >/dev/null && update-desktop-database "$apps" || true
+if command -v update-desktop-database >/dev/null; then update-desktop-database "$apps" || true; fi
 echo "installed: $apps/io.github.papacasper.rokast.desktop (run: rokast ui, or 'rokast' in the app menu)"
