@@ -51,4 +51,5 @@ check() {
 package() {
   cd rokast
   packaging/stage "$pkgdir" "$srcdir/supplicant"
+  mv "$pkgdir/usr/share/licenses/rokast" "$pkgdir/usr/share/licenses/$pkgname"   # namcap wants it under $pkgname
 }
