@@ -2,9 +2,7 @@
 
 Each `## <version>` section becomes the GitHub release notes for that tag (see `playbooks/release.md`).
 
-## Unreleased
-
-Rename this heading to `## 0.2.0` at release time.
+## 0.2.0
 
 - `scripts/install`: installs for your user into `~/.local/share/rokast/versions/<version>/` with a `current` link,
   puts `rokast` on your PATH and in the app menu, and keeps the previous version for `scripts/install --rollback`.
@@ -24,8 +22,13 @@ Rename this heading to `## 0.2.0` at release time.
 
 ### Upgrading from 0.1.0
 
-Run `scripts/install` from the new release. Your `config/rokast.conf` is moved to `~/.config/rokast/rokast.conf`
-(the old file is renamed `rokast.conf.moved`), and an existing `vendor/hostap-src` build tree is reused.
+1. Extract the new tarball anywhere and run `scripts/install` from it. It needs the same build packages as
+   `scripts/build-supplicant` did, because it rebuilds the patched `wpa_supplicant` in its new location.
+2. Run `rokast doctor`.
+
+Your `config/rokast.conf` is moved to `~/.config/rokast/rokast.conf` (the old file is renamed `rokast.conf.moved`).
+The hostap source checkout from the old folder is reused, so nothing is downloaded again. The app menu entry and
+`~/.local/bin/rokast` now point at the new install. After that, the old rokast folder is no longer used and can be deleted.
 
 ## 0.1.0
 

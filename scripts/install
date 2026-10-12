@@ -13,6 +13,7 @@ bindir="$HOME/.local/bin"
 apps="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 desktop="$apps/io.github.papacasper.rokast.desktop"
 conf="${XDG_CONFIG_HOME:-$HOME/.config}/rokast/rokast.conf"
+hostap="${XDG_CACHE_HOME:-$HOME/.cache}/rokast/hostap-src"   # build-supplicant's checkout
 ui_rel=ui/target/release/rokast-ui
 say() { echo "install: $*"; }
 die() { echo "install: $*" >&2; exit 1; }
@@ -74,7 +75,8 @@ if [ "$src" != "$dest" ]; then
     rm -rf "$dest"; mv "$tmp" "$dest"
 fi
 
-# 3. Settings from older installs -> ~/.config/rokast/rokast.conf (first one found wins).
+# 3. Settings from older installs -> ~/.config/rokast/rokast.conf (first one found wins); their hostap checkout
+#    (vendor/hostap-src) -> the build cache, so build-supplicant reuses it instead of cloning again.
 old_roots=("$src")
 if [ -L "$bindir/rokast" ]; then old_roots+=("$(dirname "$(dirname "$(readlink -f "$bindir/rokast")")")"); fi
 if [ -f "$desktop" ]; then
@@ -86,6 +88,10 @@ for r in "${old_roots[@]}"; do
         mkdir -p "$(dirname "$conf")"
         cp -p "$r/config/rokast.conf" "$conf" && mv "$r/config/rokast.conf" "$r/config/rokast.conf.moved"
         say "settings moved from $r/config/rokast.conf to $conf"
+    fi
+    if [ ! -d "$hostap/.git" ] && [ -d "$r/vendor/hostap-src/.git" ]; then
+        mkdir -p "$(dirname "$hostap")"
+        mv "$r/vendor/hostap-src" "$hostap" && say "reusing the hostap checkout from $r/vendor"
     fi
 done
 

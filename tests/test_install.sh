@@ -27,6 +27,7 @@ ver() { "$HOME/.local/bin/rokast" version; }
 # A v0.1.0-style install: run from its own folder, config inside it, menu entry + PATH link pointing into it.
 old="$(release 0.1.0)"
 echo "TARGET=Den" > "$old/config/rokast.conf"
+mkdir -p "$old/vendor/hostap-src/.git"   # v0.1.0 built the supplicant in-tree
 mkdir -p "$HOME/.local/bin" "$(dirname "$desktop")"
 ln -s "$old/scripts/rokast" "$HOME/.local/bin/rokast"
 sed "s|@BIN@|$old/ui/target/release/rokast-ui|" "$old/assets/rokast.desktop" > "$desktop"
@@ -37,6 +38,7 @@ check "upgrade: settings moved out of the old folder" 'grep -qx "TARGET=Den" "$H
 check "upgrade: CLI sees the moved settings" '[ "$("$HOME/.local/bin/rokast" config 2>/dev/null)" = "$HOME/.config/rokast/rokast.conf" ]'
 check "menu entry points at current/" 'grep -qx "Exec=$base/current/ui/target/release/rokast-ui" "$desktop"'
 check "menu entry target runs" '[ "$("$base/current/ui/target/release/rokast-ui")" = "stub-ui 0.2.0" ]'
+check "upgrade: old hostap checkout moved to the build cache" '[ -d "$HOME/.cache/rokast/hostap-src/.git" ] && [ ! -e "$old/vendor/hostap-src" ]'
 check "no local config copied into the install" '[ ! -e "$base/versions/0.2.0/config/rokast.conf" ]'
 
 r3="$(release 0.3.0)"; inst "$r3" --no-supplicant
