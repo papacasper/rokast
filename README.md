@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/rokast-logo.svg" alt="Rokast — Linux to Roku screen mirroring" width="700">
+</p>
+
 # rokast
 
 [![ci](https://github.com/papacasper/rokast/actions/workflows/ci.yml/badge.svg)](https://github.com/papacasper/rokast/actions/workflows/ci.yml)
