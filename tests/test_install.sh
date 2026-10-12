@@ -57,7 +57,19 @@ check "rollback again -> 0.4.0" '[ "$(ver)" = 0.4.0 ]'
 inst "$r4" --no-supplicant
 check "reinstall same version is fine" '[ "$(ver)" = 0.4.0 ] && [ -L "$base/previous" ]'
 
-inst "$r4" --uninstall
+# The supplicant is built before current moves: a failed build leaves everything as it was.
+r5="$(release 0.5.0)"
+printf '#!/bin/sh\necho "build failed" >&2; exit 1\n' > "$r5/scripts/build-supplicant"
+if PATH="/usr/bin:/bin" "$r5/scripts/install" > "$t/out" 2>&1; then st=0; else st=$?; fi; export st
+check "failed supplicant build: install fails" '[ "$st" != 0 ] && grep -q "nothing changed" "$t/out"'
+check "failed supplicant build: still 0.4.0, 0.5.0 removed" '[ "$(ver)" = 0.4.0 ] && [ ! -e "$base/versions/0.5.0" ]'
+printf '#!/bin/sh\nd="$HOME/.local/share/rokast/supplicant"; mkdir -p "$d"; printf "#!/bin/sh\\n" > "$d/wpa_supplicant"; chmod +x "$d/wpa_supplicant"\ncat "$(dirname "$0")/../patches/hostap-2.11-roku.patch" "$(dirname "$0")/../patches/hostap.config" | sha256sum | cut -d" " -f1 > "$d/patch.sha256"\n' > "$r5/scripts/build-supplicant"
+inst "$r5"
+check "supplicant built, then switched to 0.5.0" '[ "$(ver)" = 0.5.0 ] && [ -x "$base/supplicant/wpa_supplicant" ]'
+inst "$r5"
+check "same patch: no rebuild" '! grep -q "building the patched" "$t/out"'
+
+inst "$r5" --uninstall
 check "uninstall removes install, link, menu entry, icon" '[ ! -e "$base" ] && [ ! -e "$HOME/.local/bin/rokast" ] && [ ! -e "$desktop" ] && [ ! -e "$icon" ]'
 check "uninstall keeps settings" '[ -f "$HOME/.config/rokast/rokast.conf" ]'
 

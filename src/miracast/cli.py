@@ -1,5 +1,5 @@
 """rokast CLI: list [--json] | start [name] | name | config | doctor [--report] | selftest [--seconds N] [--out FILE]
-| monitors [--json] | ui [--tray] | version [--check [--json]].  Foreground; Ctrl+C stops and tears the link down."""
+| monitors [--json] | ui [--tray] | version [--check [--json]] | update [--check|--yes|--rollback|--auto].  Foreground; Ctrl+C stops and tears the link down."""
 import asyncio
 import json
 import os
@@ -14,6 +14,7 @@ import joinlog  # noqa: E402
 import p2p  # noqa: E402
 import paths  # noqa: E402
 import selftest  # noqa: E402
+import selfupdate  # noqa: E402
 import update  # noqa: E402
 import wayland  # noqa: E402
 import wfd  # noqa: E402
@@ -24,7 +25,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 def load_conf():
     conf = {"TARGET": "", "BITRATE": "8M", "ENCODER": "auto", "AUDIO": "1",
             "DISPLAY": ":0", "RES": "1080p30,720p60,720p30", "NAME": "", "CAPTURE": "auto",
-            "MONITOR": "", "CHECK_UPDATES": "1"}
+            "MONITOR": "", "CHECK_UPDATES": "1", "AUTO_UPDATE": "0"}
     path, legacy = paths.config_file()
     if legacy:
         paths.migrate_config(path, legacy)
@@ -286,9 +287,14 @@ def cmd_selftest(args):
     sys.exit(0 if ok else 1)
 
 
+def version():
+    with open(os.path.join(ROOT, "VERSION")) as f:
+        return f.read().strip()
+
+
 def cmd_version(args=()):
     """version: print it.  --check: also say whether a newer release is out (update.py; daily, CHECK_UPDATES=0 = off)."""
-    v = open(os.path.join(ROOT, "VERSION")).read().strip()
+    v = version()
     if "--check" not in args:
         return print(v)
     res = update.check(v, load_conf()["CHECK_UPDATES"] != "0")
@@ -316,6 +322,8 @@ if __name__ == "__main__":
      "name": lambda: print(load_conf()["NAME"]),
      "config": lambda: print(load_conf()["_file"]),
      "version": lambda: cmd_version(a[1:]),
+     "update": lambda: sys.exit(selfupdate.main(ROOT, version(), a[1:], load_conf())),
      "ui": lambda: cmd_ui(a[1:])}.get(
         a[0], lambda: sys.exit("usage: rokast {list [--json]|start [name]|name|config|doctor [--report]|selftest [--seconds N] [--out FILE]|"
-                          "monitors [--json]|ui [--tray]|version [--check [--json]]}"))()
+                          "monitors [--json]|ui [--tray]|version [--check [--json]]|"
+                          "update [--check] [--yes] [--rollback] [--auto]}"))()

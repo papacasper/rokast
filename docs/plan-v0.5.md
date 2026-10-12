@@ -1,6 +1,6 @@
 # Plan: v0.5.0, self-updater
 
-Status: decisions approved 2026-10-12; phase 8 done (key created, CI checks it). Follows `docs/plan-v0.2.md` (phases 0-6). Same rules as there (compatibility, tests,
+Status: decisions approved 2026-10-12; phases 8 and 9 done. Follows `docs/plan-v0.2.md` (phases 0-6). Same rules as there (compatibility, tests,
 files under 500 lines, live check after `p2p`/`wfd`/`capture`/`cli` changes, no AI attribution). Each task has a
 **Done when** check that must pass by running it, not by eye. Tick tasks off here as they land.
 
@@ -78,7 +78,7 @@ starting a feature that changes the release pipeline.
 
 ## Phase 9: `rokast update` (user installs)
 
-- [ ] **`rokast update [--check] [--yes] [--rollback]`** in a new `src/miracast/selfupdate.py`:
+- [x] **`rokast update [--check] [--yes] [--rollback]`** in a new `src/miracast/selfupdate.py`:
       1. Latest release from the GitHub API (reuse `update.fetch`, now returning the assets); skip drafts and
          prereleases; do nothing unless it is newer. `--check` stops here and prints what it would do.
       2. Refuse while mirroring (session lock), and for `git`/`arch`/`other` installs (print their update path).
@@ -93,13 +93,14 @@ starting a feature that changes the release pipeline.
       Without `--yes` it asks before step 3. Progress goes out as `update: <step> ...` lines (new prefix; `status:`
       lines are unchanged) so the app can show them. `--rollback` runs `scripts/install --rollback`.
       **Done when:** `tests/test_self_update.sh` (below) passes.
-- [ ] **Installer: build before switching.** Today `scripts/install` switches `current`, then builds the supplicant;
+- [x] **Installer: build before switching.** Today `scripts/install` switches `current`, then builds the supplicant;
       a failed build leaves the new version active with an outdated supplicant. Build into the new version's slot
       first, switch only on success.
       **Done when:** `tests/test_install.sh` has a case with a failing build stub: `current` still points at the old
       version and the exit code is non-zero.
-- [ ] **AUTO_UPDATE=1** (default off, `rokast.conf`): the app runs `rokast update --yes` at start when an update is
-      known, nothing is mirroring and the kind is `user`. Never for packages.
+- [x] **AUTO_UPDATE=1** (default off, `rokast.conf`): the app runs `rokast update --yes` at start when an update is
+      known, nothing is mirroring and the kind is `user`. Never for packages. Done as `rokast update --auto`
+      (`selfupdate.auto_reason`), so the app only has to call it at start.
       **Done when:** a unit test covers the decision (on/off x mirroring x kind); README config table lists it.
 
 ## Phase 10: the app, and package installs
@@ -119,7 +120,7 @@ starting a feature that changes the release pipeline.
 
 ## Phase 11: tests, rehearsal, release
 
-- [ ] **`tests/test_self_update.sh`** (no docker; scratch `HOME`; runs in CI): build two release tarballs from the
+- [x] **`tests/test_self_update.sh`** (no docker; scratch `HOME`; runs in CI): build two release tarballs from the
       working tree (`VERSION` A and B), sign `SHA256SUMS` with a throwaway key listed in a test
       `config/release-signers`, serve them from a local HTTP server (`ROKAST_UPDATE_URL`), install A, then check:
       - `rokast update --yes` -> `current` is B, `previous` is A, settings unchanged, the download dir is gone;

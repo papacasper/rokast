@@ -97,7 +97,23 @@ for r in "${old_roots[@]}"; do
     fi
 done
 
-# 4. Switch current (remember the old one for --rollback), entry points, prune.
+# 4. Patched wpa_supplicant: build if missing or built from a different patch, BEFORE switching current. A failed
+#    build changes nothing (build-supplicant replaces the binary only after make succeeds): the old version stays
+#    active with the supplicant it was built for, and this half-installed version is removed.
+if [ "${1:-}" != --no-supplicant ]; then
+    stamp="$base/supplicant/patch.sha256"
+    want="$(cat "$dest/patches/hostap-2.11-roku.patch" "$dest/patches/hostap.config" | sha256sum | cut -d' ' -f1)"
+    if [ ! -x "$base/supplicant/wpa_supplicant" ] || [ "$(cat "$stamp" 2>/dev/null)" != "$want" ]; then
+        say "building the patched wpa_supplicant (needs: git, make, gcc, libnl, openssl headers)"
+        if ! "$dest/scripts/build-supplicant"; then
+            case "$dest" in "$(readlink "$base/current" 2>/dev/null)"|"$(readlink "$base/previous" 2>/dev/null)") ;;
+                            *) rm -rf "$dest" ;; esac
+            die "wpa_supplicant build failed, nothing changed; fix the build deps and run scripts/install again"
+        fi
+    fi
+fi
+
+# 5. Switch current (remember the old one for --rollback), entry points, prune.
 old="$(readlink "$base/current" 2>/dev/null || true)"
 link "$dest" "$base/current"
 if [ -n "$old" ] && [ "$old" != "$dest" ]; then link "$old" "$base/previous"; fi
@@ -112,13 +128,4 @@ done
 say "rokast $v installed: $bindir/rokast -> $dest"
 case ":$PATH:" in *":$bindir:"*) ;; *) say "note: $bindir is not on your PATH" ;; esac
 
-# 5. Patched wpa_supplicant: build if missing or built from a different patch.
-if [ "${1:-}" != --no-supplicant ]; then
-    stamp="$base/supplicant/patch.sha256"
-    want="$(cat "$dest/patches/hostap-2.11-roku.patch" "$dest/patches/hostap.config" | sha256sum | cut -d' ' -f1)"
-    if [ ! -x "$base/supplicant/wpa_supplicant" ] || [ "$(cat "$stamp" 2>/dev/null)" != "$want" ]; then
-        say "building the patched wpa_supplicant (needs: git, make, gcc, libnl, openssl headers)"
-        "$dest/scripts/build-supplicant" || die "wpa_supplicant build failed; fix the build deps and run: $dest/scripts/build-supplicant"
-    fi
-fi
 say "done. Check with: rokast doctor"

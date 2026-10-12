@@ -109,8 +109,9 @@ Then run `rokast doctor`. Update with your package manager (or a newer package).
    ```
 
    Installed files live in `~/.local/share/rokast/` (one folder per version), settings in `~/.config/rokast/`.
-   To upgrade, run `scripts/install` from the newer release; your settings are kept, and the supplicant is only
-   rebuilt when its patch changed. `scripts/install --rollback` goes back to the previous version,
+   To upgrade, run `rokast update` (from v0.5.0 on: downloads the latest release, checks its signature, installs
+   it; see [Updating](#updating)), or run `scripts/install` from the newer release yourself. Your settings are kept,
+   and the supplicant is only rebuilt when its patch changed. `scripts/install --rollback` goes back to the previous version,
    `scripts/install --uninstall` removes everything except your settings. Upgrading from v0.1.0 moves your old
    `config/rokast.conf` to `~/.config/rokast/rokast.conf` automatically.
 
@@ -170,6 +171,7 @@ scripts/rokast start "Living Room"   # or just `scripts/rokast start` with TARGE
 scripts/rokast selftest              # capture + encode 5 s to a file and check it (no TV needed); --seconds N, --out FILE
 scripts/rokast doctor --report       # all checks + system info + selftest, for a hardware report
 scripts/rokast monitors              # X11 monitors, for MONITOR= (--json for scripts)
+scripts/rokast update                # install the latest release (see Updating); --check, --rollback
 ```
 
 On first use the TV may ask whether to allow the device. It shows this computer's name (the pretty
@@ -199,9 +201,24 @@ Environment variables with the same names override the file.
 | `CAPTURE` | `auto` | `auto` (Wayland session → `wayland`, else `x11`), `x11` or `wayland` |
 | `MONITOR` | primary monitor | Monitor to mirror, as `rokast monitors` names it (X11 only; on Wayland the screen-sharing dialog asks) |
 | `DISPLAY` | `:0` | X display to capture (X11 only) |
-| `CHECK_UPDATES` | `1` | Once a day, ask GitHub for the latest release and show a notice if it is newer (`rokast version --check`); `0` turns it off. Never downloads anything |
+| `CHECK_UPDATES` | `1` | Once a day, ask GitHub for the latest release and show a notice if it is newer (`rokast version --check`); `0` turns it off. Only `rokast update` (or the app's **Update** button) downloads anything |
+| `AUTO_UPDATE` | `0` | `1`: the desktop app installs a new release by itself when it starts (`rokast update --auto`), only for installs made by `scripts/install` and never while mirroring |
 
 Every key can also be set as an environment variable, e.g. `BITRATE=12M scripts/rokast start`.
+
+### Updating
+
+How you update depends on how you installed:
+
+| Installed with | Update with |
+|---|---|
+| a release tarball or git clone + `scripts/install` | `rokast update` (or **Update** in the app). It downloads the latest release, refuses it unless its signature checks out against the key your install already has (`config/release-signers`), installs it next to the old version and switches over; `rokast update --rollback` goes back. It won't update while you are mirroring |
+| the .deb or .rpm | `rokast update` downloads and checks the new package, then installs it through your package manager (it asks for your password) |
+| the AUR | your AUR helper, e.g. `yay -Syu rokast` |
+| running from a git clone without installing | `git pull` |
+
+`rokast update --check` only says whether there is something newer. Updating from v0.4.0 or older: install the new
+release by hand once (step 2 above); `rokast update` exists from v0.5.0 on.
 
 ## Safety
 
