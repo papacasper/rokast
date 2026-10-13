@@ -1,7 +1,8 @@
-//! `rokast`: the command line (src/miracast/cli.py). Phase R2 runs everything here except `start` and `update`,
-//! which go to the Python cli.py (as does Wayland capture in doctor/selftest, until R4). `ROKAST_PY=1` sends every
+//! `rokast`: the command line (src/miracast/cli.py). Phase R3 runs everything here except `update`,
+//! which goes to the Python cli.py (as does Wayland capture in start/doctor/selftest, until R4). `ROKAST_PY=1` sends every
 //! command to Python, an escape hatch until R6.
 mod doctor;
+mod start;
 
 use rokast_core::conf::{self, Conf};
 use rokast_core::pyfmt::dumps;
@@ -202,7 +203,8 @@ fn main() {
         "config" => println!("{}", ctx.load_conf()["_file"]),
         "version" => cmd_version(&ctx, &args[1..]),
         "ui" => cmd_ui(&ctx, &args[1..]),
-        "start" | "update" => python(&ctx.root, &args),
+        "start" => start::run(&ctx, &args),
+        "update" => python(&ctx.root, &args),
         _ => die(USAGE),
     }
 }

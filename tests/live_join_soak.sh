@@ -16,7 +16,7 @@ ok=0
 for i in $(seq "$n"); do
     [ "$i" = 1 ] || { echo "run $i: idle ${idle} min"; sleep "$((idle * 60))"; }
     f="$log/run-$i.log"
-    "$repo/scripts/rokast" start "${tv[@]}" > "$f" 2>&1 & pid=$!   # scripts/rokast execs python: $! is the CLI
+    "$repo/scripts/rokast" start "${tv[@]}" > "$f" 2>&1 & pid=$!   # scripts/rokast execs the CLI: $! is it
     for _ in $(seq 180); do grep -qE '^status: (streaming|error|stopped)' "$f" && break; sleep 1; done
     kill -TERM "$pid" 2>/dev/null; wait "$pid" 2>/dev/null; pid=""
     sleep 2

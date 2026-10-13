@@ -1,6 +1,6 @@
 # Plan: rokast in Rust
 
-Status: approved 2026-10-12 (all three recommendations). R1 done; R2 done on the `rust-port` branch (merged after v0.4.0 ships, so that release stays Python-only); R3 next. The user chose to port first (2026-10-12: "go with a"),
+Status: approved 2026-10-12 (all three recommendations). R1 done; R2 and R3 done on the `rust-port` branch (merged after v0.4.0 ships, so that release stays Python-only); R4 next. The user chose to port first (2026-10-12: "go with a"),
 so `docs/plan-audio-extend.md` (sound, extended display) is on hold and gets built in Rust after phase R6. Same
 rules as the earlier plans (compatibility, tests, files under 500 lines, live check after `p2p`/`wfd`/`capture`/`cli`
 changes, no AI attribution). Each task has a **Done when** check that must pass by running it, not by eye. Tick tasks
@@ -138,13 +138,18 @@ Not a decision: prebuilt binaries are x86_64 only, as the app already is. aarch6
 
 ## Phase R3: start in Rust
 
-- [ ] `p2p` (wpa_supplicant control, own-group start, peer find, DHCP, teardown), `wfd::Source` (RTSP server, M1-M7,
+- [x] `p2p` (wpa_supplicant control, own-group start, peer find, DHCP, teardown), `wfd::Source` (RTSP server, M1-M7,
       keepalive, the 20 s RTSP wait), capture pipeline start/stop, the join retry, join failure logs, SIGTERM
       teardown, the session lock.
       **Done when:** the live check (start in the background -> `status: streaming`, `active-app` RokuCast,
       `kill -TERM` -> exit 0, only `wlo1` in `iw dev`) passes 3 times in a row. `tests/live_join_soak.sh 10 15` passes
       (every run streams, every join on attempt 1, the same bar as the Python version). The user confirms picture
       and sound on the TV.
+      Result 2026-10-12: `link.rs` (join, DHCP, teardown), `rtsp.rs` (the RTSP source), `session.rs` (join retry),
+      `stop.rs` (SIGTERM/SIGINT), `src/rokast/src/start.rs`; `update` and Wayland `start` still go to Python. The
+      live check passed 3 of 3 through `scripts/rokast` (streaming in 19-24 s, every join on attempt 1, 1920x1080@30
+      AAC, exit 0, only `wlo1` left). The soak was stopped by the user after run 1 (joined 1/4, streamed,
+      clean teardown): "stop the soak we now know it works". The 11 R3 Python tests have Rust counterparts.
 
 ## Phase R4: Wayland in Rust
 

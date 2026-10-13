@@ -75,6 +75,19 @@ pub fn run(argv: &[&str], envs: &[(&str, &str)], timeout: Duration) -> Option<Ou
     Some(Output { status: status?, stdout, stderr })
 }
 
+/// SIGTERM `child`, then SIGKILL if it is still there after `grace` (ffmpeg at the end of a session).
+pub fn terminate(child: &mut Child, grace: Duration) {
+    if !matches!(child.try_wait(), Ok(None)) {
+        return;
+    }
+    // SAFETY: signalling our own child, not yet reaped, by its pid.
+    unsafe { libc::kill(child.id() as libc::pid_t, libc::SIGTERM) };
+    if wait_for(child, grace).is_none() {
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -87,6 +100,17 @@ mod tests {
         assert_eq!(env.stdout, "v\n");
         assert!(run(&["sleep", "5"], &[], Duration::from_millis(100)).is_none());
         assert!(run(&["/nonexistent/x"], &[], Duration::from_secs(1)).is_none());
+    }
+
+    #[test]
+    fn terminate_ends_a_child_that_ignores_sigterm() {
+        let mut c = Command::new("sh").args(["-c", "trap '' TERM; sleep 5"]).spawn().unwrap();
+        let t0 = Instant::now();
+        terminate(&mut c, Duration::from_millis(200));
+        assert!(c.try_wait().unwrap().is_some() && t0.elapsed() < Duration::from_secs(2));
+        let mut c = Command::new("sleep").arg("5").spawn().unwrap();
+        terminate(&mut c, Duration::from_secs(5));
+        assert_eq!(c.try_wait().unwrap().and_then(|s| std::os::unix::process::ExitStatusExt::signal(&s)), Some(15));
     }
 
     #[test]

@@ -1,32 +1,38 @@
 //! Finding Rokus on our own LAN over ECP (:8060), and the shell helpers the p2p side uses (src/miracast/p2p.py:
 //! sh, p2p_dev_iface, wifi_iface, lan_rokus, tv_state).
 use crate::p2p::{p2p_mac_of, Roku, CTRL};
-use crate::Env;
+use crate::{proc, Env};
 use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpStream};
-use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 use std::time::Duration;
 
 const ECP_TIMEOUT: Duration = Duration::from_millis(1500);
 
-/// Run a command; stdout trimmed. `sudo` gets -A when $SUDO_ASKPASS is set (the app: no terminal for a password).
+/// Run a command (at most 30 s, as p2p.py's sh); stdout trimmed. `sudo` gets -A when $SUDO_ASKPASS is set (the app:
+/// no terminal for a password).
 pub fn sh(argv: &[&str], check: bool, env: &Env) -> Result<String, String> {
+    sh_t(argv, check, Duration::from_secs(30), env)
+}
+
+/// `sh` with its own time limit.
+pub fn sh_t(argv: &[&str], check: bool, timeout: Duration, env: &Env) -> Result<String, String> {
     let mut argv: Vec<&str> = argv.to_vec();
     if argv.first() == Some(&"sudo") && env.get("SUDO_ASKPASS").is_some_and(|v| !v.is_empty()) {
         argv.insert(1, "-A");
     }
-    let out = Command::new(argv[0])
-        .args(&argv[1..])
-        .stdin(Stdio::null())
-        .output()
-        .map_err(|e| format!("{}: {e}", argv.join(" ")))?;
-    let stdout = String::from_utf8_lossy(&out.stdout).trim().to_string();
-    if check && !out.status.success() {
-        let err = String::from_utf8_lossy(&out.stderr).trim().to_string();
-        let code = out.status.code().unwrap_or(-1);
-        return Err(format!("{} -> {code}: {}", argv.join(" "), if err.is_empty() { &stdout } else { &err }));
+    let cmd = argv.join(" ");
+    let out = proc::run(&argv, &[], timeout)
+        .ok_or_else(|| format!("{cmd}: did not start or ran over {} s", timeout.as_secs()))?;
+    let stdout = out.stdout.trim().to_string();
+    if check && !out.ok() {
+        let err = out.stderr.trim();
+        return Err(format!(
+            "{cmd} -> {}: {}",
+            proc::returncode(&out.status),
+            if err.is_empty() { &stdout } else { err }
+        ));
     }
     Ok(stdout)
 }
