@@ -1,16 +1,20 @@
 # Plan: TV-only sound, picking the sound, extended display
 
-Status: approved 2026-10-12 (all three recommendations). On hold: built in Rust after `docs/plan-rust.md` R6 (`src/miracast/audio.py` + tests are the spec for phase 12). Comes after the self-updater (`docs/plan-v0.5.md`) and ships
-in the release after it. Same rules as the earlier plans (compatibility, tests, files under 500 lines, live check
+Status: approved 2026-10-12 (all three recommendations). Built in Rust after the port (`docs/plan-rust.md`, v0.5.0).
+Split on 2026-10-13 (user: "start now" on the recommendation): **v0.6.0 = sound (phases 12-13)**, **v0.7.0 = extended
+display (phases 14-15)**, so the sound fix ships without waiting on the root/debugfs and Wayland work. The routing
+itself already exists: `src/rokast-core/src/audio.rs` (`Router::route`/`restore`, `recover`, `listing`, the
+`pactl subscribe` watcher; ported in R1 with its unit tests and `src/rokast-core/tests/audio_routing.rs` against
+`rokast-fake-pactl`). What v0.6.0 adds is the wiring, the CLI, the app menu, live tests and docs. Same rules as the earlier plans (compatibility, tests, files under 500 lines, live check
 after `p2p`/`wfd`/`capture`/`cli` changes, no AI attribution). Each task has a **Done when** check that must pass by
 running it, not by eye. Tick tasks off here as they land.
 
-| Phase | What | Who |
-|---|---|---|
-| 12 | Sound on the TV only (no echo), restored on stop or crash | Claude |
-| 13 | Pick what goes to the TV: one output device, or one app | Claude |
-| 14 | Extended display on X11 (a real second monitor the TV shows) | Claude, user confirms on the TV |
-| 15 | Extended display on Wayland (GNOME/KDE virtual monitor), app controls, docs, release | Claude, user confirms on the TV |
+| Phase | Release | What | Who |
+|---|---|---|---|
+| 12 | v0.6.0 | Sound on the TV only (no echo), restored on stop or crash | Claude, user confirms on the TV |
+| 13 | v0.6.0 | Pick what goes to the TV: one output device, or one app; app menu; docs; release | Claude |
+| 14 | v0.7.0 | Extended display on X11 (a real second monitor the TV shows) | Claude, user confirms on the TV |
+| 15 | v0.7.0 | Extended display on Wayland (GNOME/KDE virtual monitor), app controls, docs, release | Claude, user confirms on the TV |
 
 ## What the user asked for (2026-10-12)
 
@@ -69,7 +73,7 @@ capture it (tested), but GTK ignores monitors with no output, so windows don't o
 them over by hand. The app calls this "basic". XFCE may pop up its "display connected" dialog when the port
 appears; Phase 14 checks for that and suppresses it if so.
 
-**Wayland.** The screen-sharing portal that `wayland.py` already uses can make a virtual monitor instead of sharing
+**Wayland.** The screen-sharing portal that `rokast-core::wayland` already uses can make a virtual monitor instead of sharing
 an existing one: source type `VIRTUAL` (4) instead of `MONITOR` (1). It's supported by GNOME (Mutter) and KDE
 (KWin). The compositor creates the monitor and streams it; no root needed. The headless GNOME CI job can check
 it.
@@ -89,35 +93,45 @@ it.
 
 ---
 
-## Phase 12: sound on the TV only
+## Phase 12 (v0.6.0): sound on the TV only
 
-- [ ] **`src/miracast/audio.py`:** `route(mode, ...)` -> state, `restore(state)`, `parse_sinks(json)`,
-      `parse_inputs(json)`, built on `pactl -f json`. Pure parts unit-tested (`tests/test_audio.py`) with recorded
-      pactl JSON from PulseAudio and from PipeWire.
-- [ ] **`cli.py`:** route before ffmpeg starts and restore in every exit path (normal stop, SIGTERM, a failed join,
-      the outer retry). Leftover state is restored at the next start.
-      **Done when:** `tests/test_audio_live.sh` (local, real sound server, no TV): records a test tone played with
-      `paplay` during a fake session. The tone is in `rokast.monitor`, and the old default sink's input count drops
-      to zero during the session. After stop: default output, stream sinks and module list match the snapshot
-      taken before. Plus the live check: TV plays sound, laptop silent (`pactl list sink-inputs` shows the player on
-      `rokast`), and after SIGTERM the player is back on the speakers.
+- [x] **Routing** (`rokast-core::audio`): `parse_mode`, `Router::route` -> the pulse source to record, `restore`,
+      `recover`, state in `$XDG_RUNTIME_DIR/rokast/audio.json`; unit tests + `tests/audio_routing.rs`. Done in R1.
+- [ ] **Wiring** (`src/rokast/src/start.rs`): `recover()` at start (leftover from a crash, said in the log); route when
+      the TV starts playing (only when the negotiated audio is AAC and AUDIO != off), record the returned source
+      instead of `capture::default_monitor()`, restore after ffmpeg stops, in every exit path (normal stop, SIGTERM,
+      a failed join, the retry; a `Drop` guard so an early return can't skip it). A bad `AUDIO=` fails before joining.
+      `selftest` uses the same source choice. Config default `AUDIO=tv` (`1` still means tv, decision 1).
+      **Done when:** `cargo test --workspace` green, parity (`tests/parity/run.sh`, `cli.sh`) unchanged or its
+      expected files updated on purpose (the `AUDIO=1` meaning is the one intended change), and
+      `tests/test_audio_live.sh` (local, real sound server, no TV) passes: a `paplay` tone during a session started
+      with a fake TV is in `rokast.monitor`, the old default sink has no inputs during it; after stop and after
+      SIGTERM, default output, stream sinks and module list match the snapshot from before. Then the live check:
+      TV plays sound, laptop silent (`pactl list sink-inputs` shows the player on `rokast`), after SIGTERM the
+      player is back on the speakers. The user confirms on the TV.
 
-## Phase 13: pick what goes to the TV
+## Phase 13 (v0.6.0): pick what goes to the TV, app, docs, release
 
-- [ ] **`AUDIO=device:<sink>` and `AUDIO=app:<binary>`**, `rokast audio [--json]` (outputs + apps playing now),
-      `pactl subscribe` watcher for new streams of the chosen app.
-      **Done when:** `tests/test_audio_live.sh` gains cases. Two `paplay` streams with different
-      `application.name`: only the chosen one reaches `rokast.monitor`, the other stays on the speakers. A new stream
-      from the chosen app started mid-session is moved within 1 s. `device:` records that sink's monitor.
-- [ ] **App:** "Sound" dropdown: On the TV only / On the TV and the laptop / Not sent / One app (submenu from
-      `rokast audio --json`) / One output. Rust unit tests for building the menu from that JSON.
+- [ ] **`rokast audio [--json]`** (outputs + apps playing now, from `audio::listing`), and `rokast doctor` reports
+      leftover routing (`--fix` restores it).
+      **Done when:** `tests/test_audio_live.sh` gains cases: two `paplay` streams with different
+      `application.name`, `AUDIO=app:<one>`: only that one reaches `rokast.monitor`, the other stays on the
+      speakers; a new stream from it started mid-session is moved within 1 s; `AUDIO=device:<sink>` records that
+      sink's monitor and moves nothing.
+- [ ] **App:** "Sound" dropdown replacing the on/off switch: On the TV only / On the TV and the laptop / Not sent /
+      One app (submenu from `rokast audio --json`) / One output. Old saved `audio: true/false` maps to tv/off. Rust
+      unit tests for building the menu from that JSON and for the AUDIO value it sets. `test_ui_starts.sh` green.
+- [ ] **Docs:** README (Sound section, settings table `AUDIO` values), `docs/how-it-works.md` (the null sink),
+      `config/rokast.conf.example`, CHANGELOG (the `AUDIO=1` change: the laptop goes quiet while mirroring;
+      `AUDIO=both` for the old behaviour).
+- [ ] **Release v0.6.0** by `playbooks/release.md`; the installed 0.5.0 updates itself (`rokast update`).
 
-## Phase 14: extended display on X11
+## Phase 14 (v0.7.0): extended display on X11
 
-- [ ] **`src/miracast/extend.py`:** EDID builder (pure, unit-tested against `edid-decode` when present), free-port
+- [ ] **`src/rokast-core/src/extend.rs`:** EDID builder (pure, unit-tested against `edid-decode` when present), free-port
       finder (debugfs + `xrandr` name mapping, pure parts unit-tested on recorded listings), `start(res, side)` ->
       state, `stop(state)`, fallback `--setmonitor`. Crash safety via `$XDG_RUNTIME_DIR/rokast/extend.json`.
-- [ ] **`cli.py`:** `SCREEN=extend` creates the monitor before capture and captures it, then removes it in every
+- [ ] **`start.rs`:** `SCREEN=extend` creates the monitor before capture and captures it, then removes it in every
       exit path. `rokast doctor` reports whether extend is "full", "basic" or unavailable, and why.
       **Done when:** `tests/test_extend_live.sh` (this laptop, no TV): after start, `xrandr --listmonitors` has 2
       monitors, the new one at the expected position. GDK lists it, and an `x11grab` of its area works. After stop,
@@ -125,9 +139,9 @@ it.
       `SCREEN=extend`: a window dragged right shows on the TV and only there; SIGTERM -> back to one monitor, exit
       0, only `wlo1`. The user confirms on the TV.
 
-## Phase 15: Wayland, the app, release
+## Phase 15 (v0.7.0): Wayland, the app, release
 
-- [ ] **Wayland virtual monitor:** `wayland.py` asks for source type `VIRTUAL` when `SCREEN=extend` (and when the
+- [ ] **Wayland virtual monitor:** `rokast-core::wayland` asks for source type `VIRTUAL` when `SCREEN=extend` (and when the
       portal's `AvailableSourceTypes` has it). If not, it falls back to mirror with a clear message.
       **Done when:** the `wayland` CI job's GNOME run gains an extend case: the selftest encodes a frame from the
       virtual monitor, and `gdbus` shows Mutter with 2 monitors during it.
