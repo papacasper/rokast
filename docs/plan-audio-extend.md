@@ -192,10 +192,10 @@ User confirmation on the TV: pending.
 
 ## Phase 14 (v0.7.0): extended display on X11
 
-- [ ] **`src/rokast-core/src/extend.rs`:** EDID builder (pure, unit-tested against `edid-decode` when present), free-port
+- [x] **`src/rokast-core/src/extend.rs`:** EDID builder (pure, unit-tested against `edid-decode` when present), free-port
       finder (debugfs + `xrandr` name mapping, pure parts unit-tested on recorded listings), `start(res, side)` ->
       state, `stop(state)`, fallback `--setmonitor`. Crash safety via `$XDG_RUNTIME_DIR/rokast/extend.json`.
-- [ ] **`start.rs`:** `SCREEN=extend` creates the monitor before capture and captures it, then removes it in every
+- [x] **`start.rs`:** `SCREEN=extend` creates the monitor before capture and captures it, then removes it in every
       exit path. `rokast doctor` reports whether extend is "full", "basic" or unavailable, and why.
       **Done when:** `tests/test_extend_live.sh` (this laptop, no TV): after start, `xrandr --listmonitors` has 2
       monitors, the new one at the expected position. GDK lists it, and an `x11grab` of its area works. After stop,
@@ -203,17 +203,27 @@ User confirmation on the TV: pending.
       `SCREEN=extend`: a window dragged right shows on the TV and only there; SIGTERM -> back to one monitor, exit
       0, only `wlo1`. The user confirms on the TV.
 
-## Phase 15 (v0.7.0): Wayland, the app, release
+Results (2026-10-13): `tests/test_extend_live.sh` ok; live on Living Room "extend: the TV is screen HDMI-1
+1920x1080+1920+0 (full)", streamed, back to one monitor and wlo1; again with `FPS=60` (Phase 13c). The user went
+ahead with the release ("Okay lets do this") without reporting the window-drag check on the TV.
+
+## Phase 15 (v0.7.0): the app, release
+
+Decided 2026-10-13: v0.7.0 ships X11-only extend; the Wayland virtual monitor moves to Phase 16 (v0.8.0).
+
+- [x] **App:** done in Phase 14 ("TV as a second screen" switch, remembered; Fill and Smooth motion beside it).
+- [x] **Docs:** README (Picture size, Smooth motion, Second screen, settings table), `docs/how-it-works.md` (picture
+      options), CHANGELOG.
+- [ ] **Release** by `playbooks/release.md`.
+
+## Phase 16 (v0.8.0): Wayland second screen
 
 - [ ] **Wayland virtual monitor:** `rokast-core::wayland` asks for source type `VIRTUAL` when `SCREEN=extend` (and when the
       portal's `AvailableSourceTypes` has it). If not, it falls back to mirror with a clear message.
       **Done when:** the `wayland` CI job's GNOME run gains an extend case: the selftest encodes a frame from the
       virtual monitor, and `gdbus` shows Mutter with 2 monitors during it.
-- [ ] **App:** "Screen: Mirror / Extend" switch (disabled with the reason when doctor says unavailable). Remembered
-      like the other choices. Rust unit tests.
-- [ ] **Docs:** README (Sound and Screen sections, settings table: `AUDIO` values, `SCREEN`, `EXTEND_SIDE`),
-      `docs/how-it-works.md` (null sink, debugfs EDID, portal virtual monitor), CHANGELOG with the `AUDIO=1` change.
-- [ ] **Release** by `playbooks/release.md`.
+- [ ] **App + docs:** the switch says when the portal has no virtual monitor; README and how-it-works on Wayland.
+- [ ] **Release** v0.8.0 by `playbooks/release.md`.
 
 ## Not planned
 

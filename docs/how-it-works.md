@@ -119,6 +119,19 @@ the phone-style IEs in the association request on a P2P-client interface, and th
    which writes raw I420 frames at exactly the negotiated size and rate into ffmpeg's stdin. The
    encode and RTP side is unchanged. `keepalive-time` makes PipeWire repeat the last frame on a static
    screen, so the TV keeps getting a steady stream.
+7. **Picture options (X11).** All change the screen only once the TV plays, save what they changed in
+   `$XDG_RUNTIME_DIR/rokast/` first (`fit.json`, `extend.json`) and undo it on stop, SIGTERM, the next start after a
+   crash (before the screen is measured, or the capture area would be wrong) or `rokast doctor --fix`.
+   - `FIT=match` (`fit.rs`): `xrandr --output <laptop> --mode <TV size>`, so a 16:10 laptop fills a 16:9 TV.
+   - `SCREEN=extend` (`extend.rs`, `edid.rs`): a free Intel/AMD video port (HDMI first) is made to look connected by
+     writing a generated EDID of the TV's size to its debugfs `edid_override` and `on` to `force`
+     (`/sys/kernel/debug/dri/<n>/<port>/`, as root), then a hotplug; `xrandr` puts the new output beside the laptop
+     and ffmpeg captures its area. No free port, or debugfs blocked by lockdown: `--fb` plus `--setmonitor` makes a
+     "basic" area of the framebuffer instead (shown, but windows don't open or maximise there by themselves).
+   - `FPS=60` (`capture::smooth`): Roku TVs offer HD only up to 30 fps (CEA bitmap `0x0001d4bf`) but play 60. The
+     negotiated mode is kept, ffmpeg captures and encodes at 60 and labels the stream with the H.264 level that rate
+     needs (1080p60: 4.2; nvenc refuses 60 at 4.0). When mirroring, the laptop goes to its ~60 Hz rate so frames are
+     evenly spaced (165 Hz does not divide by 60).
 
 Stopping removes everything: the supplicant gets `terminate`, the DHCP client is released and the
 interface is deleted.
@@ -156,7 +169,8 @@ It doesn't replace or touch the system `wpa_supplicant`.
 
 ## 8. Known gaps / ideas
 
-- Wayland: tested on sway; GNOME/KDE portals untested.
+- Wayland: tested on sway; GNOME/KDE portals untested. `FIT`, `SCREEN=extend` and the 60 Hz switch are X11 only
+  (planned: the portal's `VIRTUAL` source for a second screen).
 - Test VAAPI on real Intel/AMD hardware; test non-Roku sinks.
 - UIBC (remote input from the TV) is not implemented.
 - If a future Roku OS rejects these IEs, re-capture a working phone and update `assoc_ies()`.
