@@ -150,6 +150,8 @@ Not a decision: prebuilt binaries are x86_64 only, as the app already is. aarch6
       live check passed 3 of 3 through `scripts/rokast` (streaming in 19-24 s, every join on attempt 1, 1920x1080@30
       AAC, exit 0, only `wlo1` left). The soak was stopped by the user after run 1 (joined 1/4, streamed,
       clean teardown): "stop the soak we now know it works". The 11 R3 Python tests have Rust counterparts.
+      Sound confirmed 2026-10-12 (after R5, `a668ec9`): Rust `rokast start` streamed 1920x1080@30 AAC in 24 s, a
+      4 s tone played 8 times, the user: "I hear the tone on the TV". Exit 0, only `wlo1` left.
 
 ## Phase R4: Wayland in Rust
 
