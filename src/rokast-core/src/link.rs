@@ -46,8 +46,8 @@ pub fn tv_state(ip: &str) -> Map<String, Value> {
     st
 }
 
-/// `sudo tee path` with `text` on stdin (our supplicant's config in its root-owned folder).
-fn sudo_write(path: &str, text: &str, env: &Env) -> Result<(), String> {
+/// `sudo tee path` with `data` on stdin (our supplicant's config in its root-owned folder, debugfs files).
+pub fn sudo_write(path: &str, data: impl AsRef<[u8]>, env: &Env) -> Result<(), String> {
     let askpass = env.get("SUDO_ASKPASS").is_some_and(|v| !v.is_empty());
     let mut c = Command::new("sudo");
     if askpass {
@@ -60,7 +60,7 @@ fn sudo_write(path: &str, text: &str, env: &Env) -> Result<(), String> {
         .stderr(Stdio::piped())
         .spawn()
         .map_err(|e| format!("sudo tee {path}: {e}"))?;
-    child.stdin.take().expect("piped").write_all(text.as_bytes()).map_err(|e| format!("sudo tee {path}: {e}"))?;
+    child.stdin.take().expect("piped").write_all(data.as_ref()).map_err(|e| format!("sudo tee {path}: {e}"))?;
     let out = child.wait_with_output().map_err(|e| format!("sudo tee {path}: {e}"))?;
     if !out.status.success() {
         return Err(format!("sudo tee {path}: {}", String::from_utf8_lossy(&out.stderr).trim()));
@@ -150,7 +150,7 @@ pub trait Radio {
         self.sh(&["sudo", "rm", "-rf", OWN], true, SH)?;
         self.sh(&["sudo", "mkdir", "-p", "-m", "0700", OWN], true, SH)?;
         let conf = format!("{OWN}/wpa.conf");
-        sudo_write(&conf, &format!("ctrl_interface={OWN}/ctrl\nupdate_config=0\np2p_disabled=1\n"), self.env())?;
+        sudo_write(&conf, format!("ctrl_interface={OWN}/ctrl\nupdate_config=0\np2p_disabled=1\n"), self.env())?;
         let (log, pid, sup) =
             (format!("{OWN}/supplicant.log"), format!("{OWN}/pid"), sup.to_string_lossy().into_owned());
         // WPA_FORCE_P2P_GROUP: patched behaviour, keep the iface in P2P-client mode at association

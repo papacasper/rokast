@@ -20,6 +20,9 @@ pub struct Prefs {
     /// FIT=match ("Fill the TV")
     #[serde(default)]
     pub fill: bool,
+    /// SCREEN=extend ("TV as a second screen")
+    #[serde(default)]
+    pub extend: bool,
     /// Window size and the Details pane, as the user left them (0 = default size).
     #[serde(default)]
     pub width: i32,

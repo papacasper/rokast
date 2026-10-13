@@ -203,6 +203,8 @@ Environment variables with the same names override the file.
 | `CAPTURE` | `auto` | `auto` (Wayland session → `wayland`, else `x11`), `x11` or `wayland` |
 | `MONITOR` | primary monitor | Monitor to mirror, as `rokast monitors` names it (X11 only; on Wayland the screen-sharing dialog asks) |
 | `FIT` | `bars` | How the picture fits the TV (see [Picture size](#picture-size)): `bars` (scaled in, black bars when the shapes differ) or `match` (this computer's screen takes the TV's size while mirroring; X11 only) |
+| `SCREEN` | `mirror` | `mirror` (the TV shows this screen) or `extend` (the TV is a second screen; see [Second screen](#second-screen); X11 only) |
+| `EXTEND_SIDE` | `right` | Where the second screen sits: `right`, `left`, `above` or `below` |
 | `DISPLAY` | `:0` | X display to capture (X11 only) |
 | `CHECK_UPDATES` | `1` | Once a day, ask GitHub for the latest release and show a notice if it is newer (`rokast version --check`); `0` turns it off. Only `rokast update` (or the app's **Update** button) downloads anything |
 | `AUTO_UPDATE` | `0` | `1`: the desktop app installs a new release by itself when it starts (`rokast update --auto`), only for installs made by `scripts/install` and never while mirroring |
@@ -234,6 +236,20 @@ the TV exactly, with nothing cut off or stretched; the laptop itself shows the T
 mirroring stops it switches back; after a crash the next `rokast start` or `rokast doctor --fix` does. X11 only (on
 Wayland the bars stay), and only when the screen offers a mode of that size (`xrandr` lists them); otherwise rokast
 says so and keeps the bars.
+
+### Second screen
+
+With `SCREEN=extend` (the app's **TV as a second screen** switch) the TV becomes an extra screen beside the laptop
+instead of a copy of it: drag a window (or a video) to the right edge and it shows on the TV only, while the laptop
+keeps its own desktop. `EXTEND_SIDE` puts it `left`, `above` or `below` instead. When mirroring stops the screen goes
+away and windows on it come back to the laptop; after a crash the next `rokast start` or `rokast doctor --fix` removes it.
+
+How: on X11 rokast makes a free video port of the laptop's Intel or AMD graphics look connected, with a screen
+description of the TV's size (a kernel debug setting, written as root through the same `sudo` used for Wi-Fi), so
+the desktop treats it like a real monitor. `rokast doctor` (with `SCREEN=extend`) says whether this works here:
+**full**, or **basic** when there is no free port (NVIDIA-only laptops) or the kernel blocks debug settings
+(lockdown under some Secure Boot setups). In basic mode the TV area exists and is shown, but windows don't open or
+maximise there by themselves; drag them over. Wayland support is planned; there rokast mirrors for now.
 
 ### Updating
 
@@ -298,6 +314,7 @@ tests/parity/run.sh; tests/parity/cli.sh  # same answers and output as before th
 bash tests/test_install.sh                 # installer: upgrade, rollback, uninstall in a throwaway HOME
 bash tests/test_monitor_capture.sh         # MONITOR= captures the right monitor (Xvfb + ffmpeg + ImageMagick; not in CI)
 bash tests/test_fit_live.sh                # FIT=match on the real screen: switch, restore on stop and after a crash (not in CI)
+bash tests/test_extend_live.sh             # SCREEN=extend on the real screen: second screen added, GDK + grab, removed on stop and after a crash (sudo; not in CI)
 bash tests/test_pkg_deb.sh <deb>; bash tests/test_pkg_rpm.sh <rpm>   # packages in clean containers (docker; CI runs both)
 bash tests/live_join_soak.sh 10 15         # 10 cold-start joins with the real TV idle 15 min between (not in CI)
 ```
@@ -305,7 +322,7 @@ bash tests/live_join_soak.sh 10 15         # 10 cold-start joins with the real T
 Releases: add a `## X.Y.Z` section to `CHANGELOG.md`, then `scripts/release X.Y.Z`; GitHub Actions builds and publishes
 the release (see `playbooks/release.md`).
 
-Layout: `src/rokast-core/` (the library: p2p, link, wfd, rtsp, capture, wayland, audio, fit, paths, selftest, update),
+Layout: `src/rokast-core/` (the library: p2p, link, wfd, rtsp, capture, wayland, audio, fit, extend, edid, paths, selftest, update),
 `src/rokast/` (the `rokast` command), `ui/` (Rust GTK 4 desktop app),
 `patches/` (wpa_supplicant patch + build config), `scripts/` (entry points), `playbooks/` (operational runbook).
 

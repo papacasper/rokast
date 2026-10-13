@@ -3,7 +3,7 @@
 //! and screen mode a crashed session left behind.
 use crate::Ctx;
 use rokast_core::pyfmt::repr;
-use rokast_core::{audio, capture, fit, joinlog, lan, paths, proc, selftest, update, wayland};
+use rokast_core::{audio, capture, extend, fit, joinlog, lan, paths, proc, selftest, update, wayland};
 use std::path::Path;
 use std::time::Duration;
 
@@ -99,6 +99,21 @@ pub fn run(ctx: &Ctx, args: &[String]) -> ! {
             c.chk("screen mode a crashed session left behind: put back", true, "");
         } else {
             c.chk("screen mode", false, "a crashed session left the screen at the TV's size: run rokast doctor --fix");
+        }
+    }
+    match (extend::parse_screen(&conf["SCREEN"]), extend::parse_side(&conf["EXTEND_SIDE"])) {
+        (Err(e), _) | (_, Err(e)) => c.chk("SCREEN setting", false, &e),
+        (Ok("extend"), _) if mode == "x11" => match extend::probe(&conf["DISPLAY"], env) {
+            Ok(port) => c.chk(&format!("extend: full, on {port}"), true, ""),
+            Err(e) => c.chk(&format!("extend: basic (windows are dragged over by hand): {e}"), true, ""),
+        },
+        _ => {}
+    }
+    if extend::state_file(env).exists() && !update::mirroring(env) {
+        if fix && extend::recover(env) {
+            c.chk("TV screen a crashed session left behind: removed", true, "");
+        } else {
+            c.chk("TV screen", false, "a crashed session left the TV screen in place: run rokast doctor --fix");
         }
     }
     match lan::p2p_dev_iface(env) {

@@ -1,9 +1,13 @@
-//! "Fill the TV": FIT=match makes the laptop take the TV's size while mirroring, so the picture fills it (no black
-//! bars when the laptop is 16:10 and the TV 16:9). X11 only; the CLI says so on Wayland and keeps the bars.
+//! The picture settings: "Fill the TV" (FIT=match: the laptop takes the TV's size while mirroring, so a 16:10 laptop
+//! fills a 16:9 TV) and "TV as a second screen" (SCREEN=extend: the TV is an extra screen beside the laptop instead
+//! of a copy; EXTEND_SIDE in rokast.conf picks the side). X11 only; the CLI says so on Wayland and mirrors.
+use crate::config::Prefs;
 use gtk::prelude::*;
 
 pub const TOOLTIP: &str = "While mirroring, the laptop screen switches to the TV's size so the picture fills the TV \
                            with no black bars. It switches back when you stop.";
+pub const EXTEND_TOOLTIP: &str = "The TV becomes a second screen to the right of the laptop (EXTEND_SIDE in \
+                                  rokast.conf for left, above or below): drag windows onto it. Gone when you stop.";
 
 /// A switch for a form row.
 pub fn switch(active: bool, tooltip: &str) -> gtk::Switch {
@@ -19,11 +23,51 @@ pub fn value(fill: bool) -> &'static str {
     if fill { "match" } else { "bars" }
 }
 
+/// The SCREEN value for the switch's state.
+pub fn screen(extend: bool) -> &'static str {
+    if extend { "extend" } else { "mirror" }
+}
+
+pub struct Screen {
+    pub fill: gtk::Switch,
+    pub extend: gtk::Switch,
+}
+
+impl Screen {
+    pub fn new(prefs: &Prefs) -> Self {
+        let s = Screen { fill: switch(prefs.fill, TOOLTIP), extend: switch(prefs.extend, EXTEND_TOOLTIP) };
+        s.fill.set_sensitive(!prefs.extend); // a second screen is the TV's size already
+        let fill = s.fill.clone();
+        s.extend.connect_active_notify(move |e| fill.set_sensitive(e.is_sensitive() && !e.is_active()));
+        s
+    }
+
+    pub fn rows(&self, form: &gtk::Box, row: impl Fn(&str, &gtk::Switch) -> gtk::Box) {
+        form.append(&row("Fill the TV (laptop takes its size)", &self.fill));
+        form.append(&row("TV as a second screen (extend)", &self.extend));
+    }
+
+    pub fn set_sensitive(&self, on: bool) {
+        self.extend.set_sensitive(on);
+        self.fill.set_sensitive(on && !self.extend.is_active());
+    }
+
+    pub fn save(&self, p: &mut Prefs) {
+        (p.fill, p.extend) = (self.fill.is_active(), self.extend.is_active());
+    }
+
+    pub fn env(prefs: &Prefs, cmd: &mut std::process::Command) {
+        cmd.env("FIT", value(prefs.fill)).env("SCREEN", screen(prefs.extend));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #[test]
     fn values() {
         assert_eq!(super::value(true), "match");
         assert_eq!(super::value(false), "bars");
+        assert_eq!(super::screen(true), "extend");
+        assert_eq!(super::screen(false), "mirror");
     }
 }

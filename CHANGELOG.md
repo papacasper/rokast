@@ -7,6 +7,11 @@ Each `## <version>` section becomes the GitHub release notes for that tag (see `
 - **Fill the TV:** `FIT=match` (the app's **Fill the TV** switch) makes the laptop screen take the TV's size while
   mirroring, so a 16:10 laptop fills a 16:9 TV with no black bars and nothing cut off. It switches back when you
   stop, and after a crash on the next start or with `rokast doctor --fix`. X11 only; `FIT=bars` (default) is unchanged.
+- **TV as a second screen:** `SCREEN=extend` (the app's **TV as a second screen** switch) makes the TV an extra
+  screen beside the laptop (`EXTEND_SIDE=right|left|above|below`) instead of a copy. On X11 a free Intel/AMD video
+  port is made to look connected with a screen description of the TV's size, so windows open and maximise on it;
+  `rokast doctor` says whether that works here ("full") or only "basic" (drag windows over). Removed when you stop,
+  after a crash on the next start or with `rokast doctor --fix`.
 
 ## 0.6.0
 

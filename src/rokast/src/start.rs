@@ -3,6 +3,7 @@ use crate::{die, Ctx};
 use rokast_core::audio::{self, Router};
 use rokast_core::capture::{self, Monitor, Opts, Pipeline};
 use rokast_core::conf::Conf;
+use rokast_core::extend::{self, Extender};
 use rokast_core::fit::{self, Fitter};
 use rokast_core::link::{self, Radio, Wpa};
 use rokast_core::rtsp::{self, Source};
@@ -32,8 +33,9 @@ struct RealLink<'a> {
     conf: &'a Conf,
     geometry: Option<Monitor>,
     cast: Option<&'a ScreenCast>,
-    router: Router, // its Drop restores the sound in any exit path
-    fitter: Fitter, // and this one the screen mode
+    router: Router,     // its Drop restores the sound in any exit path
+    fitter: Fitter,     // and this one the screen mode
+    extender: Extender, // and this one the TV screen (SCREEN=extend)
 }
 
 impl Link for RealLink<'_> {
@@ -75,7 +77,7 @@ impl Link for RealLink<'_> {
         };
         let mut ff: Option<Pipeline> = None;
         let (conf, geometry, env, cast) = (self.conf, self.geometry.clone(), &self.radio.env, self.cast);
-        let (router, fitter) = (&mut self.router, &mut self.fitter);
+        let (router, fitter, extender) = (&mut self.router, &mut self.fitter, &mut self.extender);
         let mut on_play = |n: &Negotiated, ip: &str, port: u16| -> Result<(), String> {
             // route only now: the laptop keeps its sound until the TV actually plays
             let source = if n.audio == "AAC" { router.route()? } else { None };
@@ -83,9 +85,23 @@ impl Link for RealLink<'_> {
                 say(&format!("audio: AUDIO={} recording {s}", router.kind));
             }
             let audio = source.is_some();
-            // FIT=match: the laptop takes the TV's size, so the picture fills it (never fatal: bars instead)
+            // SCREEN=extend: a second screen of the TV's size beside this one, captured instead (never fatal: mirror)
             let mut geometry = geometry.clone();
+            let mut extended = false;
             if let (None, Some(g)) = (cast, &geometry) {
+                match extender.apply(g, n.width, n.height) {
+                    Ok(Some((new, kind))) => {
+                        let at = format!("{}x{}+{}+{}", new.width, new.height, new.x, new.y);
+                        say(&format!("extend: the TV is screen {} {at} ({kind})", new.name));
+                        geometry = Some(new);
+                        extended = true;
+                    }
+                    Ok(None) => {}
+                    Err(e) => say(&format!("extend: mirroring instead: {e}")),
+                }
+            }
+            // FIT=match: the laptop takes the TV's size, so the picture fills it (never fatal: bars instead)
+            if let (None, false, Some(g)) = (cast, extended, &geometry) {
                 match fitter.apply(g, n.width, n.height) {
                     Ok(Some(new)) => {
                         say(&format!("fit: {} switched to {}x{} for the TV", new.name, new.width, new.height));
@@ -128,6 +144,7 @@ impl Link for RealLink<'_> {
         }
         self.router.restore(); // before a retry joins again, and so the laptop has its sound back at once
         self.fitter.restore();
+        self.extender.restore();
         res
     }
 
@@ -167,6 +184,13 @@ fn steps(ctx: &Ctx, conf: &mut Conf, mode: &str, name: &str, dev: &mut Option<St
     if fitter.mode == "match" && mode == "wayland" {
         say("fit: FIT=match works on X11 only; on Wayland the picture keeps black bars");
     }
+    let extender = Extender::new(&conf["SCREEN"], &conf["EXTEND_SIDE"], &conf["DISPLAY"], &ctx.env)?;
+    if extend::recover(&ctx.env) {
+        say("extend: removed the TV screen a previous session left behind");
+    }
+    if extender.screen == "extend" && mode == "wayland" {
+        say("extend: SCREEN=extend works on X11 only for now; mirroring");
+    }
     let mut cast = None;
     if mode == "wayland" {
         // the portal may ask the user to pick a screen: do it before joining
@@ -180,8 +204,17 @@ fn steps(ctx: &Ctx, conf: &mut Conf, mode: &str, name: &str, dev: &mut Option<St
     *dev = Some(d.clone());
     stop::check()?;
     let radio = Wpa { env: ctx.env.clone(), root: ctx.root.clone() };
-    let mut real =
-        RealLink { radio, dev: d, target: target.clone(), conf, geometry, cast: cast.as_ref(), router, fitter };
+    let mut real = RealLink {
+        radio,
+        dev: d,
+        target: target.clone(),
+        conf,
+        geometry,
+        cast: cast.as_ref(),
+        router,
+        fitter,
+        extender,
+    };
     session::join_and_stream(&mut real, &target.name, &say, 2)
 }
 
