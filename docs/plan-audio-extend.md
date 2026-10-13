@@ -1,6 +1,6 @@
 # Plan: TV-only sound, picking the sound, extended display
 
-Status: approved 2026-10-12 (all three recommendations). Phase 12 in progress. Comes after the self-updater (`docs/plan-v0.5.md`) and ships
+Status: approved 2026-10-12 (all three recommendations). On hold: built in Rust after `docs/plan-rust.md` R6 (`src/miracast/audio.py` + tests are the spec for phase 12). Comes after the self-updater (`docs/plan-v0.5.md`) and ships
 in the release after it. Same rules as the earlier plans (compatibility, tests, files under 500 lines, live check
 after `p2p`/`wfd`/`capture`/`cli` changes, no AI attribution). Each task has a **Done when** check that must pass by
 running it, not by eye. Tick tasks off here as they land.
