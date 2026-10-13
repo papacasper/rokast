@@ -65,6 +65,8 @@ jobs:
         run: tests/parity/run.sh
       - name: every Python test has a Rust twin (or a phase that ports it)
         run: tests/parity/coverage.sh
+      - name: the Rust rokast prints what the Python one does (commands that need no TV)
+        run: tests/parity/cli.sh
       - name: app build + test
         working-directory: ui
         run: |

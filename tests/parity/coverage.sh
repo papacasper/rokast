@@ -16,7 +16,6 @@ test_failure_after_streaming_is_not_retried R3
 test_first_round_works R3
 test_gives_up_after_the_second_round R3
 test_no_rtsp_is_retried R3
-test_newer_tag_shows_notice_once_a_day R2
 test_allowed_hosts R5
 test_auto_update_decision R5
 test_good_tarball R5

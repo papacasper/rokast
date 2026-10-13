@@ -86,6 +86,22 @@ pub fn check(
     out
 }
 
+/// (tag, page url) of the latest release, or None on any failure (offline, rate-limited, bad JSON: no notice, try
+/// again tomorrow).
+pub fn fetch(url: &str) -> Option<(String, String)> {
+    let d: Value = ureq::get(url)
+        .set("Accept", "application/vnd.github+json")
+        .set("User-Agent", "rokast")
+        .timeout(std::time::Duration::from_secs(5))
+        .call()
+        .ok()?
+        .into_json()
+        .ok()?;
+    let tag = d.get("tag_name")?.as_str()?.to_string();
+    let page = d.get("html_url").and_then(Value::as_str).filter(|s| !s.is_empty()).unwrap_or(RELEASES);
+    Some((tag, page.into()))
+}
+
 pub fn packaged(root: &str) -> bool {
     root.starts_with("/usr/")
 }

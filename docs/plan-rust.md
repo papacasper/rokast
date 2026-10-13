@@ -1,6 +1,6 @@
 # Plan: rokast in Rust
 
-Status: approved 2026-10-12 (all three recommendations). R1 done; R2 next. The user chose to port first (2026-10-12: "go with a"),
+Status: approved 2026-10-12 (all three recommendations). R1 done; R2 done on the `rust-port` branch (merged after v0.4.0 ships, so that release stays Python-only); R3 next. The user chose to port first (2026-10-12: "go with a"),
 so `docs/plan-audio-extend.md` (sound, extended display) is on hold and gets built in Rust after phase R6. Same
 rules as the earlier plans (compatibility, tests, files under 500 lines, live check after `p2p`/`wfd`/`capture`/`cli`
 changes, no AI attribution). Each task has a **Done when** check that must pass by running it, not by eye. Tick tasks
@@ -122,12 +122,19 @@ Not a decision: prebuilt binaries are x86_64 only, as the app already is. aarch6
 
 ## Phase R2: Rust `rokast` for everything except start and update
 
-- [ ] `rokast` binary: `list [--json]`, `doctor [--report]`, `monitors [--json]`, `selftest`, `version [--check]`,
-      `ui`, `audio [--json]`; anything else is exec'd to `cli.py`. `scripts/rokast` runs the binary (built by
-      `cargo` in a clone, prebuilt in releases).
+- [x] `rokast` binary: `list [--json]`, `doctor [--report]`, `monitors [--json]`, `selftest`, `version [--check
+      [--json]]`, `name`, `config`, `ui`; `start` and `update` are exec'd to `cli.py`, and so are `doctor`/`selftest`
+      when capture is Wayland (the portal comes in R4). `scripts/rokast` runs `target/release/rokast` when it is built
+      (`scripts/install` builds it with cargo, like the app), else Python; in a clone whose Rust sources are newer than
+      the binary it says so and uses Python, so a stale build never hides a change. `--json` output is Python's
+      `json.dumps` byte for byte (`pyfmt::dumps`). `audio` is not here: Python has no such command yet, it comes with
+      sound in v0.6.0.
       **Done when:** the shell tests are green with the Rust binary, and `tests/parity/cli.sh` matches Python's
       output for each ported command on this laptop (`list --json` against the real TV, `doctor`, `monitors`,
       `selftest` file checks). `test_ui_starts.sh` is green.
+      Result 2026-10-12: `cli.sh --live` 22/22 (three TVs, doctor, doctor --report, selftest); CI runs the 17 that
+      need no hardware. `test_install`, `test_self_update`, `test_monitor_capture`, `test_ui_starts` green locally
+      with the binary built. `src/rokast/tests/cli.rs` ports the version-check CLI tests (fake GitHub, real fetch).
 
 ## Phase R3: start in Rust
 

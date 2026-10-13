@@ -1,7 +1,11 @@
 //! Screen capture -> H.264(+audio) -> RTP/MPEG-TS, parameterised by the negotiated WFD format
-//! (src/miracast/capture.py). Pure parts: monitor parsing and the ffmpeg command line. Starting the pipeline: R3.
+//! (src/miracast/capture.py): monitor parsing, the encoder probe, the ffmpeg command line, starting it.
+use crate::proc;
 use crate::pyfmt::repr;
 use crate::wfd::Negotiated;
+use crate::Env;
+use std::process::{Child, Command};
+use std::time::Duration;
 
 /// Auto-detect order: NVIDIA, Intel/AMD (VAAPI), software; libopenh264 is the software encoder Fedora's
 /// ffmpeg-free has.
@@ -86,6 +90,48 @@ pub fn probe_args(encoder: &str) -> Vec<String> {
     }
     a.extend(["-c:v", encoder]);
     a.into_iter().map(String::from).collect()
+}
+
+/// The default sink's monitor, the sound to send (None without PulseAudio/PipeWire-pulse).
+pub fn default_monitor() -> Option<String> {
+    let o = proc::run(&["pactl", "get-default-sink"], &[], Duration::from_secs(10)).filter(proc::Output::ok)?;
+    let sink = o.stdout.trim();
+    (!sink.is_empty()).then(|| format!("{sink}.monitor"))
+}
+
+fn home(env: &Env) -> String {
+    env.get("HOME").cloned().unwrap_or_default()
+}
+
+/// `xrandr --listmonitors` output for `display` ("" if xrandr is missing or fails).
+pub fn x11_monitors(display: &str, env: &Env) -> String {
+    let xauth =
+        env.get("XAUTHORITY").filter(|v| !v.is_empty()).cloned().unwrap_or(format!("{}/.Xauthority", home(env)));
+    let envs = [("DISPLAY", display), ("XAUTHORITY", xauth.as_str())];
+    proc::run(&["xrandr", "--listmonitors"], &envs, Duration::from_secs(10)).map(|o| o.stdout).unwrap_or_default()
+}
+
+/// `wanted` itself, or for "auto" the first encoder that actually encodes here.
+pub fn pick_encoder(wanted: &str) -> Result<String, String> {
+    if wanted != "auto" {
+        return Ok(wanted.into());
+    }
+    for enc in ENCODERS {
+        let args = probe_args(enc);
+        let mut argv = vec!["ffmpeg", "-hide_banner", "-loglevel", "error"];
+        argv.extend(args.iter().map(String::as_str));
+        argv.extend(["-f", "null", "-"]);
+        if proc::run(&argv, &[], Duration::from_secs(30)).is_some_and(|o| o.ok()) {
+            return Ok(enc.into());
+        }
+    }
+    Err("no working H.264 encoder (install ffmpeg with libx264; Fedora: ffmpeg from RPM Fusion)".into())
+}
+
+/// Start ffmpeg on the X display (the Wayland feeder comes with phase R4).
+pub fn start(cmd: &[String], display: &str, env: &Env) -> std::io::Result<Child> {
+    let xauth = format!("{}/.Xauthority", home(env)); // as capture.py: the session's own cookie file
+    Command::new(&cmd[0]).args(&cmd[1..]).env("DISPLAY", display).env("XAUTHORITY", xauth).spawn()
 }
 
 /// Where the frames come from and where the stream goes.
