@@ -5,9 +5,10 @@
 root="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 bin="$root/target/release/rokast"
 if [ "${ROKAST_PY:-0}" = 0 ] && [ -x "$bin" ]; then
-    # a git clone with Rust sources newer than the binary: a stale build would hide the change, so use Python
-    if [ -d "$root/.git" ] && [ -n "$(find "$root/src/rokast" "$root/src/rokast-core/src" "$root/Cargo.lock" \
-            -newer "$bin" -print -quit 2>/dev/null)" ]; then
+    # a git clone with Rust sources newer than the binary: a stale build would hide the change, so use Python.
+    # Only the crates' src/ (any change there relinks the binary; tests, examples and Cargo.lock may not).
+    if [ -d "$root/.git" ] && [ -n "$(find "$root/src/rokast/src" "$root/src/rokast-core/src" -newer "$bin" \
+            -print -quit 2>/dev/null)" ]; then
         echo "rokast: $bin is older than the source; using Python (cargo build --release -p rokast)" >&2
     else
         ROKAST_ROOT="$root" exec "$bin" "$@"
