@@ -1,8 +1,9 @@
-//! `rokast doctor [--report]`: checks everything `start` needs. --report: plus
-//! system info, the last join failure and a selftest, for a hardware report issue.
+//! `rokast doctor [--report] [--fix]`: checks everything `start` needs. --report: plus
+//! system info, the last join failure and a selftest, for a hardware report issue. --fix: put back sound routing a
+//! crashed session left behind.
 use crate::Ctx;
 use rokast_core::pyfmt::repr;
-use rokast_core::{capture, joinlog, lan, paths, proc, selftest, wayland};
+use rokast_core::{audio, capture, joinlog, lan, paths, proc, selftest, update, wayland};
 use std::path::Path;
 use std::time::Duration;
 
@@ -19,7 +20,8 @@ impl Checks {
 }
 
 pub fn run(ctx: &Ctx, args: &[String]) -> ! {
-    let report = args.get(1).is_some_and(|a| a == "--report");
+    let report = args[1..].iter().any(|a| a == "--report");
+    let fix = args[1..].iter().any(|a| a == "--fix");
     let conf = ctx.load_conf();
     let mode = ctx.capture_mode(&conf);
     let env = &ctx.env;
@@ -77,6 +79,17 @@ pub fn run(ctx: &Ctx, args: &[String]) -> ! {
             }
         }
         Err(e) => c.chk("H.264 encoder", false, &e),
+    }
+    if let Err(e) = audio::parse_mode(&conf["AUDIO"]) {
+        c.chk("AUDIO setting", false, &e);
+    }
+    // a running session has a state file too; only a leftover one is a problem
+    if audio::state_file(env).exists() && !update::mirroring(env) {
+        if fix && audio::recover(env) {
+            c.chk("sound routing a crashed session left behind: put back", true, "");
+        } else {
+            c.chk("sound routing", false, "a crashed session left the sound on rokast: run rokast doctor --fix");
+        }
     }
     match lan::p2p_dev_iface(env) {
         Ok(_) => c.chk("p2p-dev interface", true, ""),

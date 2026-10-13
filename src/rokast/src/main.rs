@@ -4,14 +4,14 @@ mod start;
 
 use rokast_core::conf::{self, Conf};
 use rokast_core::pyfmt::dumps;
-use rokast_core::{capture, lan, paths, proc, selftest, selfupdate, update, Env};
+use rokast_core::{audio, capture, lan, paths, proc, selftest, selfupdate, update, Env};
 use serde_json::json;
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{exit, Command};
 use std::time::Duration;
 
-const USAGE: &str = "usage: rokast {list [--json]|start [name]|name|config|doctor [--report]|selftest [--seconds N] \
+const USAGE: &str = "usage: rokast {list [--json]|start [name]|name|config|doctor [--report] [--fix]|audio [--json]|selftest [--seconds N] \
                      [--out FILE]|monitors [--json]|ui [--tray]|version [--check [--json]]|update [--check] [--yes] \
                      [--rollback] [--auto]}";
 
@@ -101,6 +101,34 @@ fn cmd_monitors(ctx: &Ctx, fmt: Option<&str>) {
     }
 }
 
+/// What AUDIO=device:<output> and AUDIO=app:<app> can name: the outputs, and the apps playing sound now.
+fn cmd_audio(ctx: &Ctx, fmt: Option<&str>) {
+    let p = audio::Pactl { env: ctx.env.clone() };
+    if proc::which("pactl", &ctx.env).is_none() {
+        die("pactl not found (install pulseaudio-utils / libpulse)");
+    }
+    let l = audio::listing(&p);
+    if fmt == Some("--json") {
+        return println!("{}", dumps(&l));
+    }
+    let default = p.default_sink();
+    println!("Outputs (AUDIO=device:<name>):");
+    for o in l["outputs"].as_array().into_iter().flatten() {
+        let name = o["name"].as_str().unwrap_or("");
+        let mark = if name == default { "  (default)" } else { "" };
+        println!("  {name}  {}{mark}", o["description"].as_str().unwrap_or(""));
+    }
+    let apps = l["apps"].as_array().cloned().unwrap_or_default();
+    println!("Apps playing sound now (AUDIO=app:<app>):");
+    if apps.is_empty() {
+        println!("  none");
+    }
+    for a in apps {
+        let media = a["media"].as_str().filter(|m| !m.is_empty()).map(|m| format!("  ({m})")).unwrap_or_default();
+        println!("  {}{media}", a["app"].as_str().unwrap_or(""));
+    }
+}
+
 fn cmd_selftest(ctx: &Ctx, all: &[String]) {
     let (mut seconds, mut out): (i64, Option<String>) = (5, None);
     let mut it = all[1..].iter();
@@ -184,6 +212,7 @@ fn main() {
         "doctor" => doctor::run(&ctx, &args),
         "selftest" => cmd_selftest(&ctx, &args),
         "monitors" => cmd_monitors(&ctx, arg),
+        "audio" => cmd_audio(&ctx, arg),
         "name" => println!("{}", ctx.load_conf()["NAME"]),
         "config" => println!("{}", ctx.load_conf()["_file"]),
         "version" => cmd_version(&ctx, &args[1..]),

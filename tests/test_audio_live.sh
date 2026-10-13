@@ -68,6 +68,16 @@ grep -qx "source: none" "$t/hold.out" || fail "crash: off should record nothing"
 stop_hold TERM
 [ "$(snapshot)" = "$before" ] || fail "crash: not restored: $(snapshot) vs $before"
 
+# 2b. the same leftover, found and fixed by rokast doctor; rokast audio lists the playing app
+cargo build -q --manifest-path "$repo/Cargo.toml" -p rokast
+rokast="$repo/target/debug/rokast"
+start_hold tv; wait_for '[ "$(streams)" = "rokast-test-a=rokast" ]' || fail "doctor: stream not moved"
+stop_hold KILL
+out="$(timeout 60 "$rokast" doctor || true)"; grep -q "^FAIL  sound routing" <<< "$out" || fail "doctor: leftover not reported"
+out="$(timeout 60 "$rokast" doctor --fix || true)"; grep -q "^ok    sound routing .*put back" <<< "$out" || fail "doctor --fix: not put back"
+[ "$(snapshot)" = "$before" ] || fail "doctor --fix: not restored: $(snapshot) vs $before"
+grep -q '"app": "rokast-test-a"' <<< "$("$rokast" audio --json)" || fail "rokast audio --json: app missing"
+
 # 3. AUDIO=app:rokast-test-a: only that app moves, a new stream of it moves within 1 s, the other stays
 play rokast-test-b; wait_for 'streams | grep -q rokast-test-b'
 before="$(snapshot)"
@@ -92,4 +102,4 @@ stop_hold TERM
 start_hold device:nope; grep -q "no such output" "$t/hold.out" || fail "device: bad sink accepted"
 stop_hold TERM
 
-[ "$fails" = 0 ] && echo "test_audio_live: ok (tv, SIGTERM, crash+recover, app, device)" || exit 1
+[ "$fails" = 0 ] && echo "test_audio_live: ok (tv, SIGTERM, crash+recover, doctor --fix, audio --json, app, device)" || exit 1
