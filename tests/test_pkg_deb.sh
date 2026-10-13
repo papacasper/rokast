@@ -20,7 +20,7 @@ docker run --rm -v "$deb:/rokast.deb:ro" "$image" bash -c '
     apt-get remove -s python3-minimal > /tmp/rm.log 2>&1 || true
     echo "python_removal_listed=$(grep -c "^Remv python3-minimal " /tmp/rm.log)"
     echo "python_needed_by_rokast=$(grep -c "^Remv rokast " /tmp/rm.log)"
-    [ "$(grep -c "^ *python3[ -]" /tmp/rm.log)" -gt 0 ] || sed "s/^/removal: /" /tmp/rm.log | head -15
+    [ "$(grep -c "^Remv python3" /tmp/rm.log)" -gt 0 ] || sed "s/^/removal: /" /tmp/rm.log | head -15
     echo "python_files=$(grep -rIli python /usr/lib/rokast | wc -l)"
     echo "which=$(readlink -f "$(command -v rokast)")"
     echo "version=$(rokast version)"
