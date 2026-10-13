@@ -130,7 +130,7 @@ it.
 - [x] **TV check** (2026-10-13, Living Room): `tests/live_sound_tv.sh "Living Room" 6` -> ok: 6 chimes on `rokast`,
       heard on the TV with the laptop silent; restored after SIGTERM. (The TV had stopped advertising Wi-Fi Direct after
       3.7 days up; Home and ECP PowerOff/PowerOn did not help, a System restart did.)
-- [ ] **Release v0.6.0** by `playbooks/release.md`; the installed 0.5.0 updates itself (`rokast update`).
+- [x] **Release v0.6.0** by `playbooks/release.md`; the installed 0.5.0 updates itself (`rokast update`). Done 2026-10-13: run 38479760533 green, 6 assets, signature + sums OK; laptop updated 0.5.0 -> 0.6.0.
 
 ## Phase 14 (v0.7.0): extended display on X11
 
