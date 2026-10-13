@@ -1,0 +1,4223 @@
+[
+{
+"fn": "parse_video_formats",
+"args": {
+"s": "00 00 03 10 0001ffff 1fffffff 00000fff 00 0000 0000 11 none none"
+},
+"exact_err": true
+},
+{
+"fn": "parse_video_formats",
+"args": {
+"s": "00 00 01 02 00000080 00000000 00000000 00 0000 0000 00 none none"
+},
+"exact_err": true
+},
+{
+"fn": "parse_video_formats",
+"args": {
+"s": "none"
+},
+"exact_err": true
+},
+{
+"fn": "parse_video_formats",
+"args": {
+"s": "00 00 zz"
+},
+"exact_err": true
+},
+{
+"fn": "parse_video_formats",
+"args": {
+"s": ""
+},
+"exact_err": true
+},
+{
+"fn": "choose_video",
+"args": {
+"caps": "00 00 03 10 0001ffff 1fffffff 00000fff 00 0000 0000 11 none none",
+"prefs": []
+},
+"exact_err": true
+},
+{
+"fn": "choose_video",
+"args": {
+"caps": "00 00 03 10 0001ffff 1fffffff 00000fff 00 0000 0000 11 none none",
+"prefs": [
+"720p60"
+]
+},
+"exact_err": true
+},
+{
+"fn": "choose_video",
+"args": {
+"caps": "00 00 03 10 0001ffff 1fffffff 00000fff 00 0000 0000 11 none none",
+"prefs": [
+"1080p60"
+]
+},
+"exact_err": true
+},
+{
+"fn": "choose_video",
+"args": {
+"caps": "00 00 03 10 0001ffff 1fffffff 00000fff 00 0000 0000 11 none none",
+"prefs": [
+"4k"
+]
+},
+"exact_err": true
+},
+{
+"fn": "choose_video",
+"args": {
+"caps": "00 00 03 10 0001ffff 1fffffff 00000fff 00 0000 0000 11 none none",
+"prefs": [
+"480p60",
+"1080p30"
+]
+},
+"exact_err": true
+},
+{
+"fn": "choose_video",
+"args": {
+"caps": "00 00 01 02 00000080 00000000 00000000 00 0000 0000 00 none none",
+"prefs": []
+},
+"exact_err": true
+},
+{
+"fn": "choose_video",
+"args": {
+"caps": "00 00 01 02 00000080 00000000 00000000 00 0000 0000 00 none none",
+"prefs": [
+"720p60"
+]
+},
+"exact_err": true
+},
+{
+"fn": "choose_video",
+"args": {
+"caps": "00 00 01 02 00000080 00000000 00000000 00 0000 0000 00 none none",
+"prefs": [
+"1080p60"
+]
+},
+"exact_err": true
+},
+{
+"fn": "choose_video",
+"args": {
+"caps": "00 00 01 02 00000080 00000000 00000000 00 0000 0000 00 none none",
+"prefs": [
+"4k"
+]
+},
+"exact_err": true
+},
+{
+"fn": "choose_video",
+"args": {
+"caps": "00 00 01 02 00000080 00000000 00000000 00 0000 0000 00 none none",
+"prefs": [
+"480p60",
+"1080p30"
+]
+},
+"exact_err": true
+},
+{
+"fn": "choose_video",
+"args": {
+"caps": "00 00 02 00 00000001 00000000 00000000 00 0000 0000 00 none none",
+"prefs": []
+},
+"exact_err": true
+},
+{
+"fn": "choose_video",
+"args": {
+"caps": "00 00 02 00 00000001 00000000 00000000 00 0000 0000 00 none none",
+"prefs": [
+"720p60"
+]
+},
+"exact_err": true
+},
+{
+"fn": "choose_video",
+"args": {
+"caps": "00 00 02 00 00000001 00000000 00000000 00 0000 0000 00 none none",
+"prefs": [
+"1080p60"
+]
+},
+"exact_err": true
+},
+{
+"fn": "choose_video",
+"args": {
+"caps": "00 00 02 00 00000001 00000000 00000000 00 0000 0000 00 none none",
+"prefs": [
+"4k"
+]
+},
+"exact_err": true
+},
+{
+"fn": "choose_video",
+"args": {
+"caps": "00 00 02 00 00000001 00000000 00000000 00 0000 0000 00 none none",
+"prefs": [
+"480p60",
+"1080p30"
+]
+},
+"exact_err": true
+},
+{
+"fn": "choose_video",
+"args": {
+"caps": "00 00 01 04 00000004 00000000 00000000 00 0000 0000 00 none none",
+"prefs": []
+},
+"exact_err": true
+},
+{
+"fn": "choose_video",
+"args": {
+"caps": "00 00 01 04 00000004 00000000 00000000 00 0000 0000 00 none none",
+"prefs": [
+"720p60"
+]
+},
+"exact_err": true
+},
+{
+"fn": "choose_video",
+"args": {
+"caps": "00 00 01 04 00000004 00000000 00000000 00 0000 0000 00 none none",
+"prefs": [
+"1080p60"
+]
+},
+"exact_err": true
+},
+{
+"fn": "choose_video",
+"args": {
+"caps": "00 00 01 04 00000004 00000000 00000000 00 0000 0000 00 none none",
+"prefs": [
+"4k"
+]
+},
+"exact_err": true
+},
+{
+"fn": "choose_video",
+"args": {
+"caps": "00 00 01 04 00000004 00000000 00000000 00 0000 0000 00 none none",
+"prefs": [
+"480p60",
+"1080p30"
+]
+},
+"exact_err": true
+},
+{
+"fn": "format_video_param",
+"args": {
+"bit": 7,
+"prof": 1,
+"level": 4
+}
+},
+{
+"fn": "format_video_param",
+"args": {
+"bit": 8,
+"prof": 2,
+"level": 16
+}
+},
+{
+"fn": "format_video_param",
+"args": {
+"bit": 0,
+"prof": 1,
+"level": 1
+}
+},
+{
+"fn": "parse_params",
+"args": {
+"body": "wfd_video_formats: 00 00\r\nwfd_audio_codecs: AAC 00000001 00\r\nnot a param\n"
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_nvenc",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_nvenc",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_nvenc",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_nvenc",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_nvenc",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_nvenc",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_nvenc",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_nvenc",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_nvenc",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_nvenc",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_nvenc",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_nvenc",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_nvenc",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_nvenc",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_nvenc",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_nvenc",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_nvenc",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "raw",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_nvenc",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "raw",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_nvenc",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "raw",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_nvenc",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "raw",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_nvenc",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "raw",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_nvenc",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "raw",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_nvenc",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "raw",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_nvenc",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "raw",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_vaapi",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_vaapi",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_vaapi",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_vaapi",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_vaapi",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_vaapi",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_vaapi",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_vaapi",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_vaapi",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_vaapi",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_vaapi",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_vaapi",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_vaapi",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_vaapi",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_vaapi",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_vaapi",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_vaapi",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "raw",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_vaapi",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "raw",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_vaapi",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "raw",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_vaapi",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "raw",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_vaapi",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "raw",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_vaapi",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "raw",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_vaapi",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "raw",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "h264_vaapi",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "raw",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "libx264",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "libx264",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "libx264",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "libx264",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "libx264",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "libx264",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "libx264",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "libx264",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "libx264",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "libx264",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "libx264",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "libx264",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "libx264",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "libx264",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "libx264",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "libx264",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "libx264",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "raw",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "libx264",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "raw",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "libx264",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "raw",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "libx264",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "raw",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "libx264",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "raw",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "libx264",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "raw",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "libx264",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "raw",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "libx264",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "raw",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "libopenh264",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "libopenh264",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "libopenh264",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "libopenh264",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "libopenh264",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "libopenh264",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "libopenh264",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "libopenh264",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "libopenh264",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "libopenh264",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "libopenh264",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "libopenh264",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": null,
+"seconds": null,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "libopenh264",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "libopenh264",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "libopenh264",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "libopenh264",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "x11",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": {
+"name": "HDMI-1-0",
+"width": 2560,
+"height": 1440,
+"x": 1920,
+"y": 0,
+"primary": false
+}
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "libopenh264",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "raw",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "libopenh264",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "raw",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "libopenh264",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "raw",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "libopenh264",
+"bitrate": "6M",
+"audio": true,
+"monitor": "rokast.monitor",
+"source": "raw",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "libopenh264",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "raw",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": "192.168.49.1",
+"server_port": 5000,
+"opts": {
+"display": ":0.0",
+"encoder": "libopenh264",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "raw",
+"out": null,
+"seconds": null,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1920,
+"height": 1080,
+"fps": 30,
+"profile": "high",
+"level": "4.0",
+"audio": "AAC",
+"rtp_port": 1028
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "libopenh264",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "raw",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "build_cmd",
+"args": {
+"n": {
+"width": 1280,
+"height": 720,
+"fps": 60,
+"profile": "baseline",
+"level": "4.2",
+"audio": "LPCM",
+"rtp_port": 16384
+},
+"sink_ip": null,
+"server_port": null,
+"opts": {
+"display": ":0.0",
+"encoder": "libopenh264",
+"bitrate": "6M",
+"audio": false,
+"monitor": null,
+"source": "raw",
+"out": "/tmp/x.ts",
+"seconds": 5,
+"geometry": null
+}
+}
+},
+{
+"fn": "probe_args",
+"args": {
+"encoder": "h264_nvenc"
+}
+},
+{
+"fn": "probe_args",
+"args": {
+"encoder": "h264_vaapi"
+}
+},
+{
+"fn": "probe_args",
+"args": {
+"encoder": "libx264"
+}
+},
+{
+"fn": "probe_args",
+"args": {
+"encoder": "libopenh264"
+}
+},
+{
+"fn": "parse_monitors",
+"args": {
+"text": "Monitors: 2\n 0: +*eDP-1 1920/344x1080/194+0+0  eDP-1\n 1: +HDMI-1-0 2560/597x1440/336+1920+0  HDMI-1-0\n"
+}
+},
+{
+"fn": "parse_monitors",
+"args": {
+"text": ""
+}
+},
+{
+"fn": "parse_monitors",
+"args": {
+"text": "Monitors: 1\n 0: +DP-1 3840/600x2160/340+0+0  DP-1\n"
+}
+},
+{
+"fn": "parse_monitors",
+"args": {
+"text": "garbage\n 0: nope\n"
+}
+},
+{
+"fn": "monitor_geometry",
+"args": {
+"text": "Monitors: 2\n 0: +*eDP-1 1920/344x1080/194+0+0  eDP-1\n 1: +HDMI-1-0 2560/597x1440/336+1920+0  HDMI-1-0\n",
+"name": ""
+},
+"exact_err": true
+},
+{
+"fn": "monitor_geometry",
+"args": {
+"text": "Monitors: 2\n 0: +*eDP-1 1920/344x1080/194+0+0  eDP-1\n 1: +HDMI-1-0 2560/597x1440/336+1920+0  HDMI-1-0\n",
+"name": "HDMI-1-0"
+},
+"exact_err": true
+},
+{
+"fn": "monitor_geometry",
+"args": {
+"text": "Monitors: 2\n 0: +*eDP-1 1920/344x1080/194+0+0  eDP-1\n 1: +HDMI-1-0 2560/597x1440/336+1920+0  HDMI-1-0\n",
+"name": "DP-9"
+},
+"exact_err": true
+},
+{
+"fn": "monitor_geometry",
+"args": {
+"text": "",
+"name": "x"
+},
+"exact_err": true
+},
+{
+"fn": "monitor_geometry",
+"args": {
+"text": "Monitors: 1\n 0: +DP-1 3840/600x2160/340+0+0  DP-1\n",
+"name": ""
+},
+"exact_err": true
+},
+{
+"fn": "clean_name",
+"args": {
+"name": "  Casper's Laptop\n"
+}
+},
+{
+"fn": "clean_name",
+"args": {
+"name": "éééééééééééééééééééééééééééééééééééééééé"
+}
+},
+{
+"fn": "clean_name",
+"args": {
+"name": "\u0000\u0007"
+}
+},
+{
+"fn": "clean_name",
+"args": {
+"name": "Den PC"
+}
+},
+{
+"fn": "clean_name",
+"args": {
+"name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaé"
+}
+},
+{
+"fn": "clean_name",
+"args": {
+"name": "tab\there"
+}
+},
+{
+"fn": "parse_version",
+"args": {
+"v": "v0.10.2"
+}
+},
+{
+"fn": "parse_version",
+"args": {
+"v": "0.4.0"
+}
+},
+{
+"fn": "parse_version",
+"args": {
+"v": "0.4.0-rc1"
+}
+},
+{
+"fn": "parse_version",
+"args": {
+"v": ""
+}
+},
+{
+"fn": "parse_version",
+"args": {
+"v": "garbage"
+}
+},
+{
+"fn": "parse_version",
+"args": {
+"v": "v1"
+}
+},
+{
+"fn": "is_newer",
+"args": {
+"latest": "v0.5.0",
+"current": "0.4.0"
+}
+},
+{
+"fn": "is_newer",
+"args": {
+"latest": "0.4.0",
+"current": "0.4.0"
+}
+},
+{
+"fn": "is_newer",
+"args": {
+"latest": "0.10.0",
+"current": "0.9.9"
+}
+},
+{
+"fn": "is_newer",
+"args": {
+"latest": "x",
+"current": "0.1.0"
+}
+},
+{
+"fn": "is_newer",
+"args": {
+"latest": "0.1.0",
+"current": ""
+}
+},
+{
+"fn": "is_newer",
+"args": {
+"latest": "1.0",
+"current": "0.9.9"
+}
+},
+{
+"fn": "update_message",
+"args": {
+"res": {
+"current": "0.4.0",
+"latest": "0.5.0",
+"newer": true,
+"checked": true,
+"enabled": true,
+"url": "https://github.com/papacasper/rokast/releases/latest"
+},
+"root": "/usr/share/rokast"
+}
+},
+{
+"fn": "update_message",
+"args": {
+"res": {
+"current": "0.4.0",
+"latest": "0.5.0",
+"newer": true,
+"checked": true,
+"enabled": true,
+"url": "https://github.com/papacasper/rokast/releases/latest"
+},
+"root": "/home/u/.local/share/rokast"
+}
+},
+{
+"fn": "update_message",
+"args": {
+"res": {
+"current": "0.4.0",
+"latest": "0.5.0",
+"newer": false,
+"checked": true,
+"enabled": true,
+"url": "https://github.com/papacasper/rokast/releases/latest"
+},
+"root": "/usr/share/rokast"
+}
+},
+{
+"fn": "update_message",
+"args": {
+"res": {
+"current": "0.4.0",
+"latest": "0.5.0",
+"newer": false,
+"checked": true,
+"enabled": true,
+"url": "https://github.com/papacasper/rokast/releases/latest"
+},
+"root": "/home/u/.local/share/rokast"
+}
+},
+{
+"fn": "negotiated",
+"args": {
+"res": "1080p30"
+},
+"exact_err": true
+},
+{
+"fn": "negotiated",
+"args": {
+"res": "4k, 720p60,1080p30"
+},
+"exact_err": true
+},
+{
+"fn": "negotiated",
+"args": {
+"res": "1080p60"
+},
+"exact_err": true
+},
+{
+"fn": "negotiated",
+"args": {
+"res": "4k"
+},
+"exact_err": true
+},
+{
+"fn": "negotiated",
+"args": {
+"res": ""
+},
+"exact_err": true
+},
+{
+"fn": "selftest_check",
+"args": {
+"probe": {
+"streams": [
+{
+"codec_type": "video",
+"codec_name": "h264",
+"width": 1920,
+"height": 1080,
+"nb_read_frames": "150"
+},
+{
+"codec_type": "audio",
+"codec_name": "aac"
+}
+]
+},
+"res": "1080p30",
+"seconds": 5,
+"audio": true
+}
+},
+{
+"fn": "selftest_summary",
+"args": {
+"probe": {
+"streams": [
+{
+"codec_type": "video",
+"codec_name": "h264",
+"width": 1920,
+"height": 1080,
+"nb_read_frames": "150"
+},
+{
+"codec_type": "audio",
+"codec_name": "aac"
+}
+]
+}
+}
+},
+{
+"fn": "selftest_check",
+"args": {
+"probe": {
+"streams": [
+{
+"codec_type": "video",
+"codec_name": "h264",
+"width": 1920,
+"height": 1080,
+"nb_read_frames": "119"
+},
+{
+"codec_type": "audio",
+"codec_name": "aac"
+}
+]
+},
+"res": "1080p30",
+"seconds": 5,
+"audio": true
+}
+},
+{
+"fn": "selftest_summary",
+"args": {
+"probe": {
+"streams": [
+{
+"codec_type": "video",
+"codec_name": "h264",
+"width": 1920,
+"height": 1080,
+"nb_read_frames": "119"
+},
+{
+"codec_type": "audio",
+"codec_name": "aac"
+}
+]
+}
+}
+},
+{
+"fn": "selftest_check",
+"args": {
+"probe": {
+"streams": [
+{
+"codec_type": "video",
+"codec_name": "hevc",
+"width": 1280,
+"height": 720,
+"nb_read_frames": "150"
+}
+]
+},
+"res": "1080p30",
+"seconds": 5,
+"audio": true
+}
+},
+{
+"fn": "selftest_summary",
+"args": {
+"probe": {
+"streams": [
+{
+"codec_type": "video",
+"codec_name": "hevc",
+"width": 1280,
+"height": 720,
+"nb_read_frames": "150"
+}
+]
+}
+}
+},
+{
+"fn": "selftest_check",
+"args": {
+"probe": {
+"streams": []
+},
+"res": "1080p30",
+"seconds": 5,
+"audio": false
+}
+},
+{
+"fn": "selftest_summary",
+"args": {
+"probe": {
+"streams": []
+}
+}
+},
+{
+"fn": "selftest_check",
+"args": {
+"probe": {
+"streams": [
+{
+"codec_type": "video",
+"codec_name": "h264",
+"width": 1920,
+"height": 1080,
+"nb_read_frames": "150"
+}
+]
+},
+"res": "1080p30",
+"seconds": 5,
+"audio": false
+}
+},
+{
+"fn": "selftest_summary",
+"args": {
+"probe": {
+"streams": [
+{
+"codec_type": "video",
+"codec_name": "h264",
+"width": 1920,
+"height": 1080,
+"nb_read_frames": "150"
+}
+]
+}
+}
+},
+{
+"fn": "probe_cmd",
+"args": {
+"path": "/tmp/out.ts"
+}
+},
+{
+"fn": "parse_mode",
+"args": {
+"value": "1"
+},
+"exact_err": true
+},
+{
+"fn": "parse_mode",
+"args": {
+"value": ""
+},
+"exact_err": true
+},
+{
+"fn": "parse_mode",
+"args": {
+"value": "TV"
+},
+"exact_err": true
+},
+{
+"fn": "parse_mode",
+"args": {
+"value": "0"
+},
+"exact_err": true
+},
+{
+"fn": "parse_mode",
+"args": {
+"value": "off"
+},
+"exact_err": true
+},
+{
+"fn": "parse_mode",
+"args": {
+"value": "both"
+},
+"exact_err": true
+},
+{
+"fn": "parse_mode",
+"args": {
+"value": "app:Firefox"
+},
+"exact_err": true
+},
+{
+"fn": "parse_mode",
+"args": {
+"value": "device: alsa_output.hdmi "
+},
+"exact_err": true
+},
+{
+"fn": "parse_mode",
+"args": {
+"value": "yes"
+},
+"exact_err": true
+},
+{
+"fn": "parse_mode",
+"args": {
+"value": "app:"
+},
+"exact_err": true
+},
+{
+"fn": "parse_mode",
+"args": {
+"value": "2"
+},
+"exact_err": true
+},
+{
+"fn": "app_of",
+"args": {
+"inp": {
+"index": 1,
+"sink": 7,
+"properties": {
+"application.name": "mpv"
+}
+}
+}
+},
+{
+"fn": "matches",
+"args": {
+"inp": {
+"index": 1,
+"sink": 7,
+"properties": {
+"application.name": "mpv"
+}
+},
+"app": "firefox"
+}
+},
+{
+"fn": "matches",
+"args": {
+"inp": {
+"index": 1,
+"sink": 7,
+"properties": {
+"application.name": "mpv"
+}
+},
+"app": "MPV"
+}
+},
+{
+"fn": "matches",
+"args": {
+"inp": {
+"index": 1,
+"sink": 7,
+"properties": {
+"application.name": "mpv"
+}
+},
+"app": "fire"
+}
+},
+{
+"fn": "app_of",
+"args": {
+"inp": {
+"index": 2,
+"sink": 9,
+"properties": {
+"application.name": "Firefox"
+}
+}
+}
+},
+{
+"fn": "matches",
+"args": {
+"inp": {
+"index": 2,
+"sink": 9,
+"properties": {
+"application.name": "Firefox"
+}
+},
+"app": "firefox"
+}
+},
+{
+"fn": "matches",
+"args": {
+"inp": {
+"index": 2,
+"sink": 9,
+"properties": {
+"application.name": "Firefox"
+}
+},
+"app": "MPV"
+}
+},
+{
+"fn": "matches",
+"args": {
+"inp": {
+"index": 2,
+"sink": 9,
+"properties": {
+"application.name": "Firefox"
+}
+},
+"app": "fire"
+}
+},
+{
+"fn": "app_of",
+"args": {
+"inp": {
+"index": 3,
+"sink": 7,
+"properties": {
+"application.process.binary": "firefox"
+}
+}
+}
+},
+{
+"fn": "matches",
+"args": {
+"inp": {
+"index": 3,
+"sink": 7,
+"properties": {
+"application.process.binary": "firefox"
+}
+},
+"app": "firefox"
+}
+},
+{
+"fn": "matches",
+"args": {
+"inp": {
+"index": 3,
+"sink": 7,
+"properties": {
+"application.process.binary": "firefox"
+}
+},
+"app": "MPV"
+}
+},
+{
+"fn": "matches",
+"args": {
+"inp": {
+"index": 3,
+"sink": 7,
+"properties": {
+"application.process.binary": "firefox"
+}
+},
+"app": "fire"
+}
+},
+{
+"fn": "app_of",
+"args": {
+"inp": {
+"index": 4,
+"sink": 7,
+"properties": {}
+}
+}
+},
+{
+"fn": "matches",
+"args": {
+"inp": {
+"index": 4,
+"sink": 7,
+"properties": {}
+},
+"app": "firefox"
+}
+},
+{
+"fn": "matches",
+"args": {
+"inp": {
+"index": 4,
+"sink": 7,
+"properties": {}
+},
+"app": "MPV"
+}
+},
+{
+"fn": "matches",
+"args": {
+"inp": {
+"index": 4,
+"sink": 7,
+"properties": {}
+},
+"app": "fire"
+}
+},
+{
+"fn": "to_move",
+"args": {
+"inputs": [
+{
+"index": 1,
+"sink": 7,
+"properties": {
+"application.name": "mpv"
+}
+},
+{
+"index": 2,
+"sink": 9,
+"properties": {
+"application.name": "Firefox"
+}
+},
+{
+"index": 3,
+"sink": 7,
+"properties": {
+"application.process.binary": "firefox"
+}
+},
+{
+"index": 4,
+"sink": 7,
+"properties": {}
+}
+],
+"kind": "tv",
+"app": "",
+"sink_index": 9
+}
+},
+{
+"fn": "to_move",
+"args": {
+"inputs": [
+{
+"index": 1,
+"sink": 7,
+"properties": {
+"application.name": "mpv"
+}
+},
+{
+"index": 2,
+"sink": 9,
+"properties": {
+"application.name": "Firefox"
+}
+},
+{
+"index": 3,
+"sink": 7,
+"properties": {
+"application.process.binary": "firefox"
+}
+},
+{
+"index": 4,
+"sink": 7,
+"properties": {}
+}
+],
+"kind": "app",
+"app": "firefox",
+"sink_index": 9
+}
+},
+{
+"fn": "to_move",
+"args": {
+"inputs": [
+{
+"index": 1,
+"sink": 7,
+"properties": {
+"application.name": "mpv"
+}
+},
+{
+"index": 2,
+"sink": 9,
+"properties": {
+"application.name": "Firefox"
+}
+},
+{
+"index": 3,
+"sink": 7,
+"properties": {
+"application.process.binary": "firefox"
+}
+},
+{
+"index": 4,
+"sink": 7,
+"properties": {}
+}
+],
+"kind": "both",
+"app": "",
+"sink_index": 9
+}
+},
+{
+"fn": "to_move",
+"args": {
+"inputs": [
+{
+"index": 1,
+"sink": 7,
+"properties": {
+"application.name": "mpv"
+}
+},
+{
+"index": 2,
+"sink": 9,
+"properties": {
+"application.name": "Firefox"
+}
+},
+{
+"index": 3,
+"sink": 7,
+"properties": {
+"application.process.binary": "firefox"
+}
+},
+{
+"index": 4,
+"sink": 7,
+"properties": {}
+}
+],
+"kind": "device",
+"app": "x",
+"sink_index": 9
+}
+},
+{
+"fn": "parse_short",
+"args": {
+"text": "61\talsa_output.x\tPipeWire\ts32le 2ch 48000Hz\tIDLE\n",
+"what": "sinks"
+}
+},
+{
+"fn": "parse_short",
+"args": {
+"text": "10148\t61\t10147\tPipeWire\ts16le 2ch 48000Hz\n\nx\ty\n",
+"what": "sink-inputs"
+}
+},
+{
+"fn": "parse_short",
+"args": {
+"text": "",
+"what": "sinks"
+}
+},
+{
+"fn": "restore_target",
+"args": {
+"moved_from": "alsa_output.hdmi",
+"default": "alsa_output.speakers",
+"sinks": [
+"alsa_output.speakers",
+"alsa_output.hdmi",
+"rokast"
+]
+}
+},
+{
+"fn": "restore_target",
+"args": {
+"moved_from": "alsa_output.speakers",
+"default": "alsa_output.speakers",
+"sinks": [
+"alsa_output.speakers",
+"alsa_output.hdmi",
+"rokast"
+]
+}
+},
+{
+"fn": "restore_target",
+"args": {
+"moved_from": "gone",
+"default": "alsa_output.speakers",
+"sinks": [
+"alsa_output.speakers",
+"alsa_output.hdmi",
+"rokast"
+]
+}
+},
+{
+"fn": "restore_target",
+"args": {
+"moved_from": null,
+"default": "alsa_output.speakers",
+"sinks": [
+"alsa_output.speakers",
+"alsa_output.hdmi",
+"rokast"
+]
+}
+},
+{
+"fn": "restore_target",
+"args": {
+"moved_from": "rokast",
+"default": "alsa_output.speakers",
+"sinks": [
+"alsa_output.speakers",
+"alsa_output.hdmi",
+"rokast"
+]
+}
+},
+{
+"fn": "restore_target",
+"args": {
+"moved_from": "",
+"default": "alsa_output.speakers",
+"sinks": [
+"alsa_output.speakers",
+"alsa_output.hdmi",
+"rokast"
+]
+}
+},
+{
+"fn": "p2p_mac_of",
+"args": {
+"wifi_mac": "4c:50:dd:21:8b:c4"
+}
+},
+{
+"fn": "iface_mac",
+"args": {
+"dev_addr": "4c:50:dd:21:8b:c4"
+}
+},
+{
+"fn": "assoc_ies",
+"args": {
+"dev_addr": "4c:50:dd:21:8b:c4",
+"name": "Casper's ThinkPad"
+}
+},
+{
+"fn": "p2p_mac_of",
+"args": {
+"wifi_mac": "a8:16:9d:d4:b8:c5"
+}
+},
+{
+"fn": "iface_mac",
+"args": {
+"dev_addr": "a8:16:9d:d4:b8:c5"
+}
+},
+{
+"fn": "assoc_ies",
+"args": {
+"dev_addr": "a8:16:9d:d4:b8:c5",
+"name": "Casper's ThinkPad"
+}
+},
+{
+"fn": "p2p_mac_of",
+"args": {
+"wifi_mac": "00:11:22:33:c4:55"
+}
+},
+{
+"fn": "iface_mac",
+"args": {
+"dev_addr": "00:11:22:33:c4:55"
+}
+},
+{
+"fn": "assoc_ies",
+"args": {
+"dev_addr": "00:11:22:33:c4:55",
+"name": "Casper's ThinkPad"
+}
+},
+{
+"fn": "assoc_ies",
+"args": {
+"dev_addr": "02:11:22:33:44:55",
+"name": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+}
+},
+{
+"fn": "pick",
+"args": {
+"rokus": [
+{
+"ip": "192.168.0.63",
+"name": "Living Room",
+"model": "",
+"wifi_mac": "",
+"p2p_mac": ""
+},
+{
+"ip": "192.168.0.64",
+"name": "Den",
+"model": "",
+"wifi_mac": "",
+"p2p_mac": ""
+},
+{
+"ip": "192.168.0.65",
+"name": "Den",
+"model": "",
+"wifi_mac": "",
+"p2p_mac": ""
+}
+],
+"name": "living room"
+},
+"exact_err": true
+},
+{
+"fn": "pick",
+"args": {
+"rokus": [
+{
+"ip": "192.168.0.63",
+"name": "Living Room",
+"model": "",
+"wifi_mac": "",
+"p2p_mac": ""
+},
+{
+"ip": "192.168.0.64",
+"name": "Den",
+"model": "",
+"wifi_mac": "",
+"p2p_mac": ""
+},
+{
+"ip": "192.168.0.65",
+"name": "Den",
+"model": "",
+"wifi_mac": "",
+"p2p_mac": ""
+}
+],
+"name": "Den"
+},
+"exact_err": true
+},
+{
+"fn": "pick",
+"args": {
+"rokus": [
+{
+"ip": "192.168.0.63",
+"name": "Living Room",
+"model": "",
+"wifi_mac": "",
+"p2p_mac": ""
+},
+{
+"ip": "192.168.0.64",
+"name": "Den",
+"model": "",
+"wifi_mac": "",
+"p2p_mac": ""
+},
+{
+"ip": "192.168.0.65",
+"name": "Den",
+"model": "",
+"wifi_mac": "",
+"p2p_mac": ""
+}
+],
+"name": "JERICAS TV"
+},
+"exact_err": true
+},
+{
+"fn": "parse_peer",
+"args": {
+"text": "4e:11:22:33:44:55\ndevice_name=Living Room\nwfd=a=b\n"
+}
+}
+]

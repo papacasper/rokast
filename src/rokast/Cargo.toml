@@ -1,0 +1,9 @@
+[package]
+name = "rokast"
+description = "rokast: native Miracast from Linux to Roku TVs"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+rokast-core = { path = "../rokast-core" }

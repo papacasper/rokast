@@ -1,6 +1,6 @@
 # Plan: rokast in Rust
 
-Status: draft 2026-10-12, waiting on the decisions below. The user chose to port first (2026-10-12: "go with a"),
+Status: approved 2026-10-12 (all three recommendations). R1 done; R2 next. The user chose to port first (2026-10-12: "go with a"),
 so `docs/plan-audio-extend.md` (sound, extended display) is on hold and gets built in Rust after phase R6. Same
 rules as the earlier plans (compatibility, tests, files under 500 lines, live check after `p2p`/`wfd`/`capture`/`cli`
 changes, no AI attribution). Each task has a **Done when** check that must pass by running it, not by eye. Tick tasks
@@ -40,6 +40,12 @@ Expected end state on GitHub: no Python, Rust around 75-85%, shell the rest.
 - `src/rokast-core/` (library: everything that isn't a command line);
 - `src/rokast/` (the `rokast` binary: argument parsing, status lines);
 - `ui/` (unchanged path, so the packaging scripts don't move).
+
+`ui/` is **not** a workspace member: it stays its own Cargo project with its own `Cargo.lock` and `ui/target/`.
+`ui/target/release/rokast-ui` is baked into installs, menu entries, `scripts/install`/`install-ui`, the release and
+packaging scripts and the `test_pkg_*`/`test_install` tests; as a member it would build to the root `target/` instead.
+(The root `Cargo.toml` lists it under `exclude`.) Code formatting: `src/rustfmt.toml` (width 120, like the Python);
+`ui/` keeps rustfmt's defaults.
 
 During the port, `src/miracast/` stays as the reference.
 
@@ -101,13 +107,16 @@ Not a decision: prebuilt binaries are x86_64 only, as the app already is. aarch6
 
 ## Phase R1: workspace, core, parity harness
 
-- [ ] Workspace (`Cargo.toml` at the root, `src/rokast-core`, `src/rokast`, `ui` as a member). CI's `ui` job becomes
-      `rust`: `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test --workspace`.
-- [ ] Port the pure parts with their unit tests: `paths`, `update` (versions, cache, kind, lock), `wfd` (Negotiated,
+- [x] Workspace (`Cargo.toml` at the root, `src/rokast-core`, `src/rokast`; `ui` excluded, see Layout). CI's `ui` job
+      became `rust`: `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test --workspace`, parity, coverage, and
+      the app build/start as before. `scripts/release` bumps both `Cargo.toml`s and runs the workspace tests.
+- [x] Port the pure parts with their unit tests: `paths`, `update` (versions, cache, kind, lock), `wfd` (Negotiated,
       format parsing, choice, messages), `capture` (monitors, `build_cmd`), `joinlog`, `selftest` (checks,
-      summary), `audio` (parse/route/restore logic).
-- [ ] `tests/parity/`: a Python side (`python3 -I` against `src/miracast`) and a Rust side (`rokast-core`'s
-      `parity` test binary) print JSON for the same input set; the test diffs them.
+      summary), `audio` (parse/route/restore logic). Also `conf`, `wayland` (`gst_cmd`) and the pure `p2p` helpers.
+      Sound routing runs against `tests/fake_pactl.py` (`src/rokast-core/tests/audio_routing.rs`).
+- [x] `tests/parity/`: a Python side (`python3 -I` against `src/miracast`) and a Rust side (`rokast-core`'s
+      `parity` example) print JSON for the same input set (`cases.json`, written by `make_cases.py`: 230 cases);
+      `compare.py` diffs them. Errors shown to people must match word for word.
       **Done when:** `cargo test --workspace` and `tests/parity/run.sh` are green in CI. Each ported Python unit test
       has a Rust counterpart (`tests/parity/coverage.sh` maps every `test_*` name and fails on a missing one).
 

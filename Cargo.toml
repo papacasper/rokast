@@ -1,0 +1,15 @@
+# rokast-core (library) and rokast (the command). The desktop app in ui/ stays its own Cargo project so its binary
+# keeps the path installs and packages already point at (ui/target/release/rokast-ui). docs/plan-rust.md
+[workspace]
+members = ["src/rokast-core", "src/rokast"]
+exclude = ["ui"]
+resolver = "2"
+
+[workspace.package]
+version = "0.3.0"
+edition = "2021"
+license = "MIT"
+
+[profile.release]
+strip = true
+lto = "thin"

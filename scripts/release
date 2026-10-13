@@ -18,12 +18,14 @@ grep -qx "## $v" CHANGELOG.md || die "CHANGELOG.md has no '## $v' section"
 
 python3 -I -m unittest discover -s tests
 (cd ui && cargo test --release --locked)
+cargo test --workspace --release --locked
 
 echo "$v" > VERSION
-sed -i "0,/^version = \".*\"/s//version = \"$v\"/" ui/Cargo.toml
+sed -i "0,/^version = \".*\"/s//version = \"$v\"/" ui/Cargo.toml Cargo.toml   # Cargo.toml: [workspace.package]
 (cd ui && cargo update -q --workspace)          # only rokast-ui's own entry in Cargo.lock
+cargo update -q --workspace                     # rokast + rokast-core entries in ./Cargo.lock
 if [ -n "$(git status --porcelain)" ]; then
-  git add VERSION ui/Cargo.toml ui/Cargo.lock
+  git add VERSION ui/Cargo.toml ui/Cargo.lock Cargo.toml Cargo.lock
   git commit -q -m "Release v$v"
 fi
 git tag -a "v$v" -m "rokast $v"

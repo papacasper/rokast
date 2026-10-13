@@ -1,0 +1,15 @@
+[package]
+name = "rokast-core"
+description = "rokast: native Miracast from Linux to Roku TVs (library)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+sha2 = "0.10"
+libc = "0.2"
+
+[dev-dependencies]
+tempfile = "3"

@@ -70,7 +70,7 @@ if [ "$src" != "$dest" ]; then
     if [ -d "$src/.git" ]; then
         git -C "$src" ls-files -z -co --exclude-standard | (cd "$src" && xargs -0 cp --parents -a -t "$tmp" --)
     else
-        tar -C "$src" --exclude=./.git --exclude=./ui/target --exclude=./vendor \
+        tar -C "$src" --exclude=./.git --exclude=./target --exclude=./ui/target --exclude=./vendor \
             --exclude='./config/rokast.conf' --exclude='./config/rokast.conf.moved' -cf - . | tar -C "$tmp" -xf -
     fi
     if [ -x "$src/$ui_rel" ]; then install -Dm755 "$src/$ui_rel" "$tmp/$ui_rel"; fi

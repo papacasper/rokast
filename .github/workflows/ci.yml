@@ -1,4 +1,5 @@
-# Every push and pull request: Python tests on the oldest and newest supported Python, shell checks, desktop app build,
+# Every push and pull request: Python tests on the oldest and newest supported Python, shell checks, the Rust
+# workspace (fmt, clippy, tests, Python parity), desktop app build,
 # and the .deb / .rpm built and installed in clean ubuntu:22.04 / fedora:43 containers.
 name: ci
 
@@ -27,7 +28,7 @@ jobs:
       - name: bash -n + shellcheck
         run: |
           for f in scripts/* packaging/stage packaging/supplicant packaging/deb/build-deb packaging/rpm/build-rpm packaging/aur/update; do bash -n "$f"; done
-          shellcheck scripts/* tests/*.sh packaging/stage packaging/supplicant packaging/deb/build-deb packaging/rpm/build-rpm packaging/aur/update
+          shellcheck scripts/* tests/*.sh tests/parity/*.sh packaging/stage packaging/supplicant packaging/deb/build-deb packaging/rpm/build-rpm packaging/aur/update
       - name: install script test
         run: if [ -f tests/test_install.sh ]; then bash tests/test_install.sh; fi
       - name: self-update test (rokast update against a local fake GitHub)
@@ -41,17 +42,30 @@ jobs:
           if [ -z "$ROKAST_SIGNING_KEY" ]; then echo "no secret (fork PR): skipped"; exit 0; fi
           echo "dry run $GITHUB_SHA" > dry-run.txt && scripts/sign-release dry-run.txt
 
-  ui:
+  rust:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - name: GTK 4 dev files
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-4-dev xvfb xauth dbus
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: ui
-      - name: build + test
+          workspaces: |
+            .
+            ui
+      - name: rokast-core + rokast (fmt, clippy, tests)
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --workspace --all-targets --locked -- -D warnings
+          cargo test --workspace --locked
+      - name: Python and Rust give the same answers
+        run: tests/parity/run.sh
+      - name: every Python test has a Rust twin (or a phase that ports it)
+        run: tests/parity/coverage.sh
+      - name: app build + test
         working-directory: ui
         run: |
           cargo build --locked
