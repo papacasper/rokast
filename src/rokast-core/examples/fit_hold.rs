@@ -14,10 +14,11 @@ fn main() {
     if fit::recover(&env) {
         println!("recovered");
     }
-    let mon = capture::monitor_geometry(&capture::x11_monitors(&display, &env), "").ok().flatten().unwrap_or_else(|| {
-        eprintln!("no monitor");
-        std::process::exit(2)
-    });
+    let mon =
+        capture::monitor_geometry(&capture::x11_monitors(&display, &env), "").ok().flatten().unwrap_or_else(|| {
+            eprintln!("no monitor");
+            std::process::exit(2)
+        });
     let mut f = Fitter::new("match", &display, &env).expect("match is valid");
     match f.apply(&mon, w, h) {
         Ok(Some(g)) => println!("switched: {} {}x{}+{}+{}", g.name, g.width, g.height, g.x, g.y),
