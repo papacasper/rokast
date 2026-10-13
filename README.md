@@ -280,6 +280,7 @@ The full write-up, including what did *not* work and why, is in
 ## Development
 
 ```bash
+bash tests/check.sh                         # before pushing: fmt, clippy, tests, parity, app tests, shellcheck (as CI)
 cargo test --workspace                     # RTSP handshake vs a fake Roku sink, IE bytes, command builders, allowlist, paths, selftest, update
 tests/parity/run.sh; tests/parity/cli.sh  # same answers and output as before the Rust port (frozen in tests/parity)
 (cd ui && cargo test)                      # the desktop app

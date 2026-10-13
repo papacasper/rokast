@@ -97,7 +97,7 @@ it.
 
 - [x] **Routing** (`rokast-core::audio`): `parse_mode`, `Router::route` -> the pulse source to record, `restore`,
       `recover`, state in `$XDG_RUNTIME_DIR/rokast/audio.json`; unit tests + `tests/audio_routing.rs`. Done in R1.
-- [x] **Wiring** (`src/rokast/src/start.rs`): `recover()` at start (leftover from a crash, said in the log); route when
+- [x] **Wiring** (`src/rokast/src/start.rs`; before every push: `bash tests/check.sh`): `recover()` at start (leftover from a crash, said in the log); route when
       the TV starts playing (only when the negotiated audio is AAC and AUDIO != off), record the returned source
       instead of `capture::default_monitor()`, restore after ffmpeg stops, in every exit path (normal stop, SIGTERM,
       a failed join, the retry; a `Drop` guard so an early return can't skip it). A bad `AUDIO=` fails before joining.

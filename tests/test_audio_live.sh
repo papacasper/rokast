@@ -3,6 +3,7 @@
 # playing session until SIGTERM. Quiet test tones (-45 dB) from paplay; checks where each stream plays, that the
 # TV source carries sound, and that everything is put back after stop, SIGTERM and a crash (SIGKILL + recover).
 # Needs pactl, paplay, parecord, sox; skips without them or without a sound server. Not run by CI.
+# shellcheck disable=SC2016  # wait_for takes a condition to eval later: single quotes on purpose
 set -euo pipefail
 repo="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 for c in pactl paplay parecord sox python3; do
