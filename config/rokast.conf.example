@@ -3,7 +3,7 @@ TARGET=                     # exact TV name from `scripts/rokast list`, e.g. 43"
 RES=1080p30,720p60,720p30   # preference order; falls back to whatever the TV supports
 BITRATE=8M
 ENCODER=auto                # auto = first that works of h264_nvenc, h264_vaapi, libx264, libopenh264
-AUDIO=1
+AUDIO=tv                    # tv = sound only on the TV, both = TV and this computer, off, app:<name>, device:<output> (`rokast audio` lists them)
 CAPTURE=auto                # auto = wayland (screen-sharing portal + PipeWire) in a Wayland session, else x11
 DISPLAY=:0
 NAME=                       # name the TV shows for this computer; empty = its hostname (`hostnamectl --pretty`, else `hostname`)

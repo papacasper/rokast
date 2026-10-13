@@ -137,7 +137,7 @@ Then run `rokast doctor`. Update with your package manager (or a newer package).
 ## Desktop app
 
 A small GTK 4 window (written in Rust) for people who'd rather click: pick the TV, quality,
-bitrate and audio, then press **Start mirroring**. It shows live progress (finding the TV,
+bitrate and where the sound goes, then press **Start mirroring**. It shows live progress (finding the TV,
 connecting, waiting for the TV, mirroring), lets you set the **Name on TV**, has a Details pane with the full log, and cleans the
 connection up when you press Stop or quit. It drives the same `rokast` command
 underneath, so it behaves exactly like the CLI.
@@ -199,7 +199,7 @@ Environment variables with the same names override the file.
 | `RES` | `1080p30,720p60,720p30` | Preference order; the best mode the TV supports is used |
 | `BITRATE` | `8M` | Video bitrate |
 | `ENCODER` | `auto` | `auto`, `h264_nvenc`, `h264_vaapi`, `libx264` or `libopenh264` (Fedora's `ffmpeg-free`) |
-| `AUDIO` | `1` | Send desktop audio (default PulseAudio/PipeWire sink monitor) |
+| `AUDIO` | `tv` | Where the sound goes (see [Sound](#sound)): `tv` (only the TV; `1` means the same), `both` (TV and this computer), `off`, `app:<name>` (one app only), `device:<output>` (what plays on that output) |
 | `CAPTURE` | `auto` | `auto` (Wayland session → `wayland`, else `x11`), `x11` or `wayland` |
 | `MONITOR` | primary monitor | Monitor to mirror, as `rokast monitors` names it (X11 only; on Wayland the screen-sharing dialog asks) |
 | `DISPLAY` | `:0` | X display to capture (X11 only) |
@@ -207,6 +207,22 @@ Environment variables with the same names override the file.
 | `AUTO_UPDATE` | `0` | `1`: the desktop app installs a new release by itself when it starts (`rokast update --auto`), only for installs made by `scripts/install` and never while mirroring |
 
 Every key can also be set as an environment variable, e.g. `BITRATE=12M scripts/rokast start`.
+
+### Sound
+
+By default the sound plays **only on the TV** while you mirror: once the TV starts playing, rokast adds a silent
+output called *rokast (TV)*, makes it the default and moves the playing apps onto it, so the laptop speakers go
+quiet and the TV gets no echo. When mirroring stops, everything goes back where it was. If rokast crashes, the next
+`rokast start` puts it back, or run `rokast doctor --fix`.
+
+`rokast audio` lists your outputs and the apps playing sound right now. With those names:
+
+- `AUDIO=both`: the TV and this computer both play (how 0.5 and earlier worked: you hear it twice, slightly out of step)
+- `AUDIO=app:Firefox`: only that app goes to the TV, the rest stays on the speakers (new tabs too)
+- `AUDIO=device:<output>`: send whatever plays on that output, without moving anything
+- `AUDIO=off`: video only
+
+The app's **Sound** menu offers the same choices.
 
 ### Updating
 

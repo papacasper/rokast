@@ -107,6 +107,12 @@ the phone-style IEs in the association request on a P2P-client interface, and th
 6. **RTSP + media.** The TV connects within about 0.5 s. The M1–M7 exchange negotiates (for a
    G512X) 1920x1080p30 H.264 High@4.0 with AAC, and `ffmpeg` streams `x11grab` + PulseAudio
    monitor → H.264 (NVENC/VAAPI/x264) + AAC → RTP/MPEG-TS to the TV's RTP port (1028 on Roku).
+   Sound (`src/rokast-core/src/audio.rs`): only when the TV starts playing, `pactl load-module module-null-sink
+   sink_name=rokast` adds a silent output; `AUDIO=tv` makes it the default and moves every stream onto it,
+   `app:<name>` moves only that app's streams (and, through `pactl subscribe`, each new one), and ffmpeg records
+   `rokast.monitor`. What was changed is saved in `$XDG_RUNTIME_DIR/rokast/audio.json` before changing it, so stop,
+   SIGTERM, and the next start after a crash can undo it. PipeWire accepts a move to a sink it has only just
+   created and then drops it, so moves are checked and retried for a second.
    On Wayland, `src/rokast-core/src/wayland.rs` opens an xdg-desktop-portal ScreenCast session before
    joining (the user may have to pick a screen, and the TV's RTSP window is too short to wait for
    that). It passes the PipeWire fd to GStreamer (`pipewiresrc ! videoconvert ! videoscale ! videorate`),

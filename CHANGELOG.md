@@ -2,6 +2,14 @@
 
 Each `## <version>` section becomes the GitHub release notes for that tag (see `playbooks/release.md`).
 
+## Unreleased
+
+- **Sound plays only on the TV:** while mirroring, the laptop goes quiet and the TV gets no echo (`AUDIO=tv`, the
+  new default; `AUDIO=1` now means this too). The sound goes back when you stop, and after a crash on the next
+  start or with `rokast doctor --fix`. `AUDIO=both` keeps the old behaviour (TV and laptop).
+- **Pick what goes to the TV:** `AUDIO=app:<name>` sends one app only (its new streams too), `AUDIO=device:<output>`
+  one output. `rokast audio` lists both; the app's **Sound** menu replaces the on/off switch.
+
 ## 0.5.0
 
 - **One Rust program, no Python:** `rokast` is now a single Rust binary (prebuilt in releases and packages; a
