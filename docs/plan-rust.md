@@ -155,7 +155,9 @@ Not a decision: prebuilt binaries are x86_64 only, as the app already is. aarch6
 
 - [ ] Portal ScreenCast over `zbus` (session, select sources, start, OpenPipeWireRemote fd), GStreamer feeder.
       **Done when:** the `wayland` CI job (headless GNOME, `tests/portal_click.py` approving the dialog) passes with
-      the Rust binary and no PyGObject installed in the job.
+      the Rust binary and `ROKAST_NO_PY=1` (the launcher and the binary refuse to fall back to Python).
+      Changed from "no PyGObject installed in the job": the dialog clicker itself is PyGObject (AT-SPI), so the job
+      keeps python3-gobject for the test harness only; ROKAST_NO_PY proves rokast never touches Python.
 
 ## Phase R5: update and rollback in Rust
 

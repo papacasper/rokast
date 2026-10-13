@@ -1,15 +1,16 @@
 //! `rokast start [name]`: find the TV, join its Wi-Fi Direct group, stream until stopped (cmd_start and stream in
-//! src/miracast/cli.py). Wayland capture still goes to Python until R4.
+//! src/miracast/cli.py).
 use crate::{die, Ctx};
-use rokast_core::capture::{self, Monitor, Opts};
+use rokast_core::capture::{self, Monitor, Opts, Pipeline};
 use rokast_core::conf::Conf;
 use rokast_core::link::{self, Radio, Wpa};
 use rokast_core::rtsp::{self, Source};
 use rokast_core::session::{self, Link};
 use rokast_core::stop::{self, Fail};
+use rokast_core::wayland::ScreenCast;
 use rokast_core::wfd::Negotiated;
-use rokast_core::{lan, p2p::Roku, proc, update};
-use std::process::{exit, Child};
+use rokast_core::{lan, p2p::Roku, update};
+use std::process::exit;
 use std::sync::mpsc::{channel, Receiver, TryRecvError};
 use std::time::{Duration, Instant};
 
@@ -29,6 +30,7 @@ struct RealLink<'a> {
     target: Roku,
     conf: &'a Conf,
     geometry: Option<Monitor>,
+    cast: Option<&'a ScreenCast>,
 }
 
 impl Link for RealLink<'_> {
@@ -68,8 +70,8 @@ impl Link for RealLink<'_> {
             }
             Ok(())
         };
-        let mut ff: Option<Child> = None;
-        let (conf, geometry, env) = (self.conf, self.geometry.clone(), &self.radio.env);
+        let mut ff: Option<Pipeline> = None;
+        let (conf, geometry, env, cast) = (self.conf, self.geometry.clone(), &self.radio.env, self.cast);
         let mut on_play = |n: &Negotiated, ip: &str, port: u16| -> Result<(), String> {
             let audio = conf["AUDIO"] == "1";
             let opts = Opts {
@@ -78,15 +80,21 @@ impl Link for RealLink<'_> {
                 bitrate: conf["BITRATE"].clone(),
                 audio: audio && n.audio == "AAC",
                 monitor: capture::default_monitor(),
-                source: "x11".into(),
+                source: if cast.is_some() { "raw" } else { "x11" }.into(),
                 out: None,
                 seconds: None,
                 geometry: geometry.clone(),
             };
             let cmd = capture::build_cmd(n, Some(ip), Some(port), &opts);
+            let feeder =
+                cast.map(|c| (rokast_core::wayland::gst_cmd(c.raw_fd(), c.node, n.width, n.height, n.fps), c.raw_fd()));
+            if let Some((argv, _)) = &feeder {
+                say(&format!("gst: {}", argv.join(" ")));
+            }
             say(&format!("ffmpeg: {}", cmd.join(" ")));
             *played = true;
-            ff = Some(capture::start(&cmd, &conf["DISPLAY"], env).map_err(|e| format!("ffmpeg: {e}"))?);
+            let feeder = feeder.as_ref().map(|(argv, fd)| (argv.as_slice(), *fd));
+            ff = Some(capture::start(&cmd, &conf["DISPLAY"], env, feeder).map_err(|e| format!("ffmpeg: {e}"))?);
             let a = if audio { n.audio.as_str() } else { "no audio" };
             status("streaming", &format!("{}x{}@{} {a}", n.width, n.height, n.fps));
             Ok(())
@@ -95,7 +103,7 @@ impl Link for RealLink<'_> {
         let mut src = Source::new(prefs, &say);
         let res = src.serve(&l, &mut poll, &mut on_play);
         if let Some(mut p) = ff {
-            proc::terminate(&mut p, Duration::from_secs(5));
+            p.terminate(Duration::from_secs(5));
         }
         res
     }
@@ -105,7 +113,7 @@ impl Link for RealLink<'_> {
     }
 }
 
-fn steps(ctx: &Ctx, conf: &mut Conf, name: &str, dev: &mut Option<String>) -> Result<(), Fail> {
+fn steps(ctx: &Ctx, conf: &mut Conf, mode: &str, name: &str, dev: &mut Option<String>) -> Result<(), Fail> {
     status("scanning", name);
     let rokus = lan::lan_rokus(None, &ctx.env)?;
     let target = rokast_core::p2p::pick(&rokus, name)?.clone();
@@ -115,18 +123,30 @@ fn steps(ctx: &Ctx, conf: &mut Conf, name: &str, dev: &mut Option<String>) -> Re
     conf.insert("ENCODER".into(), enc.clone());
     say(&format!("encoder: {enc}"));
     stop::check()?;
-    // unknown MONITOR fails here, before joining
-    let geometry = capture::monitor_geometry(&capture::x11_monitors(&conf["DISPLAY"], &ctx.env), &conf["MONITOR"])?;
+    // unknown MONITOR fails here, before joining; on Wayland the portal picks
+    let geometry = match mode {
+        "x11" => capture::monitor_geometry(&capture::x11_monitors(&conf["DISPLAY"], &ctx.env), &conf["MONITOR"])?,
+        _ => None,
+    };
     let shown = geometry
         .as_ref()
         .map(|g| format!(" monitor {} {}x{}+{}+{}", g.name, g.width, g.height, g.x, g.y))
         .unwrap_or_default();
-    say(&format!("capture: x11{shown}, name on TV: {}", conf["NAME"]));
+    say(&format!("capture: {mode}{shown}, name on TV: {}", conf["NAME"]));
+    let mut cast = None;
+    if mode == "wayland" {
+        // the portal may ask the user to pick a screen: do it before joining
+        status("sharing", "");
+        let mut c = ScreenCast::new()?;
+        c.open(&ctx.env)?;
+        say(&format!("pipewire: node {}", c.node));
+        cast = Some(c);
+    }
     let d = lan::p2p_dev_iface(&ctx.env)?;
     *dev = Some(d.clone());
     stop::check()?;
     let radio = Wpa { env: ctx.env.clone(), root: ctx.root.clone() };
-    let mut real = RealLink { radio, dev: d, target: target.clone(), conf, geometry };
+    let mut real = RealLink { radio, dev: d, target: target.clone(), conf, geometry, cast: cast.as_ref() };
     session::join_and_stream(&mut real, &target.name, &say, 2)
 }
 
@@ -137,11 +157,11 @@ pub fn run(ctx: &Ctx, args: &[String]) -> ! {
         status("error", "no TV selected");
         die(&format!("no target: `rokast start \"<name>\"` or set TARGET in {} (see `rokast list`)", conf["_file"]));
     }
-    ctx.x11_or_python(&conf, args);
+    let mode = ctx.capture_mode(&conf);
     stop::install();
     let session = update::hold_session(&ctx.env); // `rokast update` refuses while this is held
     let mut dev = None;
-    let res = steps(ctx, &mut conf, &name, &mut dev);
+    let res = steps(ctx, &mut conf, mode, &name, &mut dev);
     let failed = match res {
         Ok(()) => None,
         Err(Fail::Stop) => {

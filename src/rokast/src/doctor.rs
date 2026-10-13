@@ -2,8 +2,9 @@
 //! system info, the last join failure and a selftest, for a hardware report issue.
 use crate::Ctx;
 use rokast_core::pyfmt::repr;
-use rokast_core::{capture, joinlog, lan, paths, proc, selftest};
+use rokast_core::{capture, joinlog, lan, paths, proc, selftest, wayland};
 use std::path::Path;
+use std::time::Duration;
 
 struct Checks {
     ok: bool,
@@ -20,7 +21,7 @@ impl Checks {
 pub fn run(ctx: &Ctx, args: &[String]) -> ! {
     let report = args.get(1).is_some_and(|a| a == "--report");
     let conf = ctx.load_conf();
-    let mode = ctx.x11_or_python(&conf, args); // the portal checks are Python's until R4
+    let mode = ctx.capture_mode(&conf);
     let env = &ctx.env;
     if report {
         println!("rokast {}", ctx.version());
@@ -33,14 +34,29 @@ pub fn run(ctx: &Ctx, args: &[String]) -> ! {
         c.chk(&format!("{t} installed"), proc::which(t, env).is_some(), "");
     }
     c.chk(&format!("capture: {mode}"), true, "");
+    if mode == "wayland" {
+        c.chk("gst-launch-1.0 installed", proc::which("gst-launch-1.0", env).is_some(), "install gstreamer");
+        let gst = proc::run(&["gst-inspect-1.0", "pipewiresrc"], &[], Duration::from_secs(30));
+        c.chk(
+            "GStreamer pipewiresrc",
+            gst.is_some_and(|o| o.ok()),
+            "install gst-plugin-pipewire / gstreamer1.0-pipewire",
+        );
+        match wayland::ScreenCast::new().and_then(|s| s.prop("version")) {
+            Ok(v) => c.chk(&format!("screen-sharing portal v{v}"), true, ""),
+            Err(e) => c.chk("screen-sharing portal", false, &e),
+        }
+    }
     let file = &conf["_file"];
     let note = if Path::new(file).exists() { "" } else { " (not created yet: defaults)" };
     println!("config: {file}{note}");
     println!("name on TV: {}", conf["NAME"]);
-    match capture::monitor_geometry(&capture::x11_monitors(&conf["DISPLAY"], env), &conf["MONITOR"]) {
-        Ok(Some(g)) => c.chk(&format!("monitor {} {}x{}", g.name, g.width, g.height), true, ""),
-        Ok(None) => c.chk("monitor: whole screen (xrandr found none)", true, ""),
-        Err(e) => c.chk("monitor", false, &e),
+    if mode == "x11" {
+        match capture::monitor_geometry(&capture::x11_monitors(&conf["DISPLAY"], env), &conf["MONITOR"]) {
+            Ok(Some(g)) => c.chk(&format!("monitor {} {}x{}", g.name, g.width, g.height), true, ""),
+            Ok(None) => c.chk("monitor: whole screen (xrandr found none)", true, ""),
+            Err(e) => c.chk("monitor", false, &e),
+        }
     }
     let sup = paths::find_supplicant(env, &ctx.root, paths::is_executable);
     let state = paths::supplicant_state(sup.as_deref(), &ctx.root);

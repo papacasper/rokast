@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # rokast {list [--json]|start [name]|doctor|ui|...}  -- native Miracast to a Roku TV, no app on the TV.
 # Runs the Rust rokast (target/release/rokast) when it is built, else the Python one (src/miracast/cli.py).
-# ROKAST_PY=1 forces Python (the escape hatch during the Rust port, docs/plan-rust.md).
+# ROKAST_PY=1 forces Python (the escape hatch during the Rust port, docs/plan-rust.md); ROKAST_NO_PY=1 refuses
+# Python everywhere (CI proves a path is Rust-only).
 root="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 bin="$root/target/release/rokast"
 if [ "${ROKAST_PY:-0}" = 0 ] && [ -x "$bin" ]; then
@@ -14,4 +15,5 @@ if [ "${ROKAST_PY:-0}" = 0 ] && [ -x "$bin" ]; then
         ROKAST_ROOT="$root" exec "$bin" "$@"
     fi
 fi
+[ "${ROKAST_NO_PY:-0}" = 1 ] && { echo "rokast: no usable $bin and ROKAST_NO_PY=1 is set" >&2; exit 1; }
 exec python3 -I "$root/src/miracast/cli.py" "$@"

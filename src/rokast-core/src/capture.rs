@@ -4,7 +4,8 @@ use crate::proc;
 use crate::pyfmt::repr;
 use crate::wfd::Negotiated;
 use crate::Env;
-use std::process::{Child, Command};
+use std::os::unix::process::CommandExt;
+use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 
 /// Auto-detect order: NVIDIA, Intel/AMD (VAAPI), software; libopenh264 is the software encoder Fedora's
@@ -128,10 +129,51 @@ pub fn pick_encoder(wanted: &str) -> Result<String, String> {
     Err("no working H.264 encoder (install ffmpeg with libx264; Fedora: ffmpeg from RPM Fusion)".into())
 }
 
-/// Start ffmpeg on the X display (the Wayland feeder comes with phase R4).
-pub fn start(cmd: &[String], display: &str, env: &Env) -> std::io::Result<Child> {
+/// ffmpeg, optionally fed by a GStreamer PipeWire capture (the Wayland path).
+pub struct Pipeline {
+    pub procs: Vec<Child>,
+}
+
+impl Pipeline {
+    /// ffmpeg, the last process.
+    pub fn ffmpeg(&mut self) -> &mut Child {
+        self.procs.last_mut().expect("a pipeline has ffmpeg")
+    }
+
+    /// SIGTERM each, ffmpeg first, then SIGKILL what is left after `grace`.
+    pub fn terminate(&mut self, grace: Duration) {
+        for p in self.procs.iter_mut().rev() {
+            proc::terminate(p, grace);
+        }
+    }
+}
+
+/// Start ffmpeg; with `feeder` (gst argv and the PipeWire fd it reads) gst's stdout becomes ffmpeg's stdin.
+pub fn start(cmd: &[String], display: &str, env: &Env, feeder: Option<(&[String], i32)>) -> std::io::Result<Pipeline> {
     let xauth = format!("{}/.Xauthority", home(env)); // as capture.py: the session's own cookie file
-    Command::new(&cmd[0]).args(&cmd[1..]).env("DISPLAY", display).env("XAUTHORITY", xauth).spawn()
+    let mut ff = Command::new(&cmd[0]);
+    ff.args(&cmd[1..]).env("DISPLAY", display).env("XAUTHORITY", xauth);
+    let Some((gst_argv, fd)) = feeder else { return Ok(Pipeline { procs: vec![ff.spawn()?] }) };
+    let mut gst = Command::new(&gst_argv[0]);
+    gst.args(&gst_argv[1..]).stdout(Stdio::piped());
+    // SAFETY: only fcntl between fork and exec (async-signal-safe): keep the portal's fd open in gst (pass_fds).
+    unsafe {
+        gst.pre_exec(move || {
+            if libc::fcntl(fd, libc::F_SETFD, 0) < 0 {
+                return Err(std::io::Error::last_os_error());
+            }
+            Ok(())
+        });
+    }
+    let mut g = gst.spawn()?;
+    let out = g.stdout.take().expect("piped"); // ffmpeg owns the read end; gst gets SIGPIPE if ffmpeg dies
+    match ff.stdin(Stdio::from(out)).spawn() {
+        Ok(f) => Ok(Pipeline { procs: vec![g, f] }),
+        Err(e) => {
+            proc::terminate(&mut g, Duration::from_secs(1));
+            Err(e)
+        }
+    }
 }
 
 /// Where the frames come from and where the stream goes.
@@ -292,6 +334,26 @@ mod tests {
 
     fn at<'a>(cmd: &'a [String], flag: &str) -> &'a str {
         &cmd[cmd.iter().position(|a| a == flag).unwrap() + 1]
+    }
+
+    #[test]
+    fn the_feeder_gets_the_fd_and_feeds_ffmpeg() {
+        use std::os::fd::AsRawFd;
+        let dir = tempfile::tempdir().unwrap();
+        let held = std::fs::File::open("/dev/null").unwrap(); // O_CLOEXEC, like the portal's fd
+        let fd = held.as_raw_fd();
+        let out = dir.path().join("out");
+        let sh = |c: String| vec!["sh".to_string(), "-c".into(), c];
+        let gst = sh(format!("test -e /proc/self/fd/{fd} && echo fd-ok || echo fd-missing"));
+        let ff = sh(format!("cat > {}", out.display()));
+        let mut p = start(&ff, ":0", &crate::Env::new(), Some((&gst, fd))).unwrap();
+        assert_eq!(p.procs.len(), 2);
+        assert!(p.ffmpeg().wait().unwrap().success());
+        p.terminate(Duration::from_secs(1));
+        assert_eq!(std::fs::read_to_string(&out).unwrap(), "fd-ok\n");
+        let mut solo = start(&sh("exit 3".into()), ":0", &crate::Env::new(), None).unwrap();
+        assert_eq!(solo.procs.len(), 1);
+        assert_eq!(solo.ffmpeg().wait().unwrap().code(), Some(3));
     }
 
     fn idx(cmd: &[String], flag: &str) -> usize {

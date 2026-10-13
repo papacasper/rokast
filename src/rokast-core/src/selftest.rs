@@ -1,5 +1,5 @@
 //! rokast selftest + hardware report (src/miracast/selftest.py): which mode to test, capture + encode to a file,
-//! the ffprobe checks, the report helpers. X11 only until phase R4 (the CLI hands Wayland to Python).
+//! the ffprobe checks, the report helpers.
 use crate::capture::{self, Opts};
 use crate::conf::Conf;
 use crate::pyfmt::{py_str, repr};
@@ -131,9 +131,6 @@ pub fn run(
     env: &Env,
     log: &dyn Fn(&str),
 ) -> Result<bool, String> {
-    if mode != "x11" {
-        return Err(format!("selftest: {mode} capture is not in the Rust rokast yet"));
-    }
     if proc::which("ffprobe", env).is_none() {
         return Err("ffprobe not found (it comes with ffmpeg)".into());
     }
@@ -160,24 +157,40 @@ pub fn run(
         "selftest: {mode} capture{of}, {encoder}, {}x{}@{}, audio {sound}, {seconds}s -> {out}",
         n.width, n.height, n.fps
     ));
-    let geometry = capture::monitor_geometry(&capture::x11_monitors(&conf["DISPLAY"], env), &conf["MONITOR"])?;
+    let mut cast = None;
+    if mode == "wayland" {
+        let mut c = wayland::ScreenCast::new()?;
+        c.open(env).map_err(|e| match e {
+            crate::stop::Fail::Err(m) => m,
+            crate::stop::Fail::Stop => "stopped".into(),
+        })?;
+        cast = Some(c);
+    }
+    let geometry = match cast {
+        Some(_) => None,
+        None => capture::monitor_geometry(&capture::x11_monitors(&conf["DISPLAY"], env), &conf["MONITOR"])?,
+    };
     let opts = Opts {
         display: conf["DISPLAY"].clone(),
         encoder: encoder.clone(),
         bitrate: conf["BITRATE"].clone(),
         audio: monitor.is_some(),
         monitor: monitor.clone(),
-        source: "x11".into(),
+        source: if cast.is_some() { "raw" } else { "x11" }.into(),
         out: Some(out.clone()),
         seconds: Some(seconds),
         geometry,
     };
     let cmd = capture::build_cmd(&n, None, None, &opts);
-    let mut ff = capture::start(&cmd, &conf["DISPLAY"], env).map_err(|e| format!("ffmpeg: {e}"))?;
-    let code = match proc::wait_for(&mut ff, Duration::from_secs(u64::from(seconds) + 30)) {
+    let feeder = cast.as_ref().map(|c| (wayland::gst_cmd(c.raw_fd(), c.node, n.width, n.height, n.fps), c.raw_fd()));
+    let feeder = feeder.as_ref().map(|(argv, fd)| (argv.as_slice(), *fd));
+    let mut pipe = capture::start(&cmd, &conf["DISPLAY"], env, feeder).map_err(|e| format!("ffmpeg: {e}"))?;
+    let code = match proc::wait_for(pipe.ffmpeg(), Duration::from_secs(u64::from(seconds) + 30)) {
         Some(st) => proc::returncode(&st).to_string(),
         None => "timeout".into(),
     };
+    pipe.terminate(Duration::from_secs(5));
+    drop(cast); // closes the portal session
     if code != "0" {
         log(&format!("selftest: FAIL ffmpeg exited with {code} (its messages are above)"));
         if encoder == "h264_vaapi" {

@@ -3,7 +3,8 @@
 # `rokast selftest` with CAPTURE=wayland on a headless GNOME (gnome-shell --headless, xdg-desktop-portal-gnome) or
 # KDE (kwin_wayland --virtual, xdg-desktop-portal-kde) session: the real portal ScreenCast + PipeWire + GStreamer
 # path. The share dialog is answered over accessibility (tests/portal_click.py). Runs as root inside a throwaway
-# fedora container (.github/workflows/wayland.yml installs the packages); never run it on your own desktop.
+# fedora container (.github/workflows/wayland.yml installs the packages and builds the Rust rokast); never run it on
+# your own desktop. ROKAST_NO_PY=1: the selftest must be the Rust binary's (Python is only the dialog clicker).
 set -uo pipefail
 desk="${1:?usage: tests/wayland_desktop.sh gnome|kde}"
 repo="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
@@ -41,7 +42,7 @@ exec dbus-run-session -- bash -c '
     QT_FORCE_STDERR_LOGGING=1 QT_LOGGING_RULES="*.debug=true;qt.*.debug=false" "$portal" > "$log/portal-backend.log" 2>&1 &
     sleep 2
     python3 -I "$0/tests/portal_click.py" 90 > "$log/click.log" 2>&1 & click=$!
-    "$0/scripts/rokast" selftest --seconds 3 > "$log/selftest.log" 2>&1; rc=$?
+    ROKAST_NO_PY=1 "$0/scripts/rokast" selftest --seconds 3 > "$log/selftest.log" 2>&1; rc=$?
     kill "$click" 2>/dev/null; wait "$click" 2>/dev/null
     for f in selftest click compositor portal-backend; do echo "== $f"; tail -60 "$log/$f.log"; done
     for f in /tmp/wayland-test/*.log; do grep -il "error\|fail" "$f" >/dev/null && { echo "== $f (errors)"; grep -i "error\|fail" "$f" | tail -15; }; done

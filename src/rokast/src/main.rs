@@ -27,8 +27,11 @@ fn find_root(env: &Env) -> PathBuf {
     exe.ancestors().find(|d| d.join("VERSION").is_file()).map(Path::to_path_buf).unwrap_or_else(|| ".".into())
 }
 
-/// `python3 -I cli.py <args>`, replacing this process.
+/// `python3 -I cli.py <args>`, replacing this process. ROKAST_NO_PY=1 refuses instead (CI proves a path is Rust-only).
 fn python(root: &Path, args: &[String]) -> ! {
+    if std::env::var_os("ROKAST_NO_PY").is_some_and(|v| v == "1") {
+        die(&format!("rokast: `{}` needs the Python rokast (ROKAST_NO_PY=1 is set)", args.join(" ")));
+    }
     let cli = root.join("src/miracast/cli.py");
     let err = Command::new("python3").arg("-I").arg(&cli).args(args).exec();
     die(&format!("rokast: cannot run {}: {err}", cli.display()))
@@ -66,12 +69,9 @@ impl Ctx {
         c
     }
 
-    /// The capture mode, or hand the whole command to Python for what Rust can't do yet (Wayland, until R4).
-    pub fn x11_or_python(&self, conf: &Conf, args: &[String]) -> &'static str {
-        match conf::capture_mode(conf, &self.env) {
-            Ok("x11") => "x11",
-            _ => python(&self.root, args),
-        }
+    /// The capture mode (x11 or wayland); a bad CAPTURE setting ends the command.
+    pub fn capture_mode(&self, conf: &Conf) -> &'static str {
+        conf::capture_mode(conf, &self.env).unwrap_or_else(|e| die(&format!("error: {e}")))
     }
 }
 
@@ -131,7 +131,7 @@ fn cmd_selftest(ctx: &Ctx, all: &[String]) {
         die("--seconds must be 1..600");
     }
     let conf = ctx.load_conf();
-    let mode = ctx.x11_or_python(&conf, all);
+    let mode = ctx.capture_mode(&conf);
     let log = |m: &str| println!("{m}");
     match selftest::run(&conf, mode, seconds as u32, out.as_deref(), &ctx.env, &log) {
         Ok(ok) => exit(if ok { 0 } else { 1 }),

@@ -1,5 +1,6 @@
 # `rokast selftest` over the screen-sharing portal on headless GNOME and KDE sessions (tests/wayland_desktop.sh), in
-# fedora:43 containers. On demand and when the Wayland capture code changes; slow (installs two desktops).
+# fedora:43 containers, with the Rust rokast (ROKAST_NO_PY=1). On demand and when the Rust code changes; slow
+# (installs two desktops).
 # KDE is allowed to fail: the share dialog opens and is answered, but KWin screencasts only with OpenGL compositing,
 # and its virtual backend has no OpenGL without a GPU render node (/dev/dri), which hosted runners lack. The portal
 # then answers Start with code 2 ("Unsupported compositing type" in the backend log).
@@ -8,8 +9,8 @@ name: wayland
 on:
   workflow_dispatch:
   push:
-    paths: ["src/miracast/wayland.py", "src/miracast/selftest.py", "tests/wayland_desktop.sh", "tests/portal_click.py",
-            ".github/workflows/wayland.yml"]
+    paths: ["src/rokast/**", "src/rokast-core/**", "Cargo.lock", "scripts/rokast", "tests/wayland_desktop.sh",
+            "tests/portal_click.py", ".github/workflows/wayland.yml"]
 
 jobs:
   desktop:
@@ -30,7 +31,9 @@ jobs:
             gnome) extra="gnome-shell xdg-desktop-portal-gnome" ;;
             kde)   extra="kwin-wayland xdg-desktop-portal-kde /usr/lib64/qt6/qml/org/kde/kitemmodels/qmldir /usr/lib64/qt6/qml/org/kde/taskmanager/qmldir" ;;   # QML modules the share dialog imports
           esac
-          dnf install -y -q $common $extra libcap
+          dnf install -y -q $common $extra libcap cargo gcc
           # kwin_wayland has cap_sys_nice as a file capability, which the container may not grant: exec fails
           ! command -v kwin_wayland >/dev/null || setcap -r "$(command -v kwin_wayland)"
+      - name: build the Rust rokast
+        run: cargo build --release --locked -p rokast
       - run: bash tests/wayland_desktop.sh ${{ matrix.desktop }}
