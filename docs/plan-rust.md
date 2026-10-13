@@ -1,6 +1,6 @@
 # Plan: rokast in Rust
 
-Status: approved 2026-10-12 (all three recommendations). R1 done; R2 to R5 done on the `rust-port` branch (merged after v0.4.0 ships, so that release stays Python-only); R6 next. The user chose to port first (2026-10-12: "go with a"),
+Status: approved 2026-10-12 (all three recommendations). R1 done; R2 to R5 done on the `rust-port` branch (merged after v0.4.0 ships, so that release stays Python-only); R6 done there except the v0.5.0 release. The user chose to port first (2026-10-12: "go with a"),
 so `docs/plan-audio-extend.md` (sound, extended display) is on hold and gets built in Rust after phase R6. Same
 rules as the earlier plans (compatibility, tests, files under 500 lines, live check after `p2p`/`wfd`/`capture`/`cli`
 changes, no AI attribution). Each task has a **Done when** check that must pass by running it, not by eye. Tick tasks
@@ -180,7 +180,7 @@ Not a decision: prebuilt binaries are x86_64 only, as the app already is. aarch6
 
 ## Phase R6: Python out, release v0.5.0
 
-- [ ] Delete `src/miracast/`, the Python unit tests that have Rust counterparts, the Python parity side and
+- [x] Delete `src/miracast/`, the Python unit tests that have Rust counterparts, the Python parity side and
       `ROKAST_PY`. CI drops the Python jobs.
       How (decided 2026-10-12, before deleting): Python's answers are frozen first, so Rust stays checked against
       them: `tests/parity/expected.jsonl` (the 230 cases) and `tests/parity/cli/` (the no-hardware commands, run in a
@@ -194,9 +194,12 @@ Not a decision: prebuilt binaries are x86_64 only, as the app already is. aarch6
       **Done when:** `rg -il python packaging scripts .github` finds only `.github/workflows/wayland.yml`, for
       `python3-dbusmock` (Fedora's mock logind: gnome-shell needs logind and the test container has no systemd; it is
       the CI desktop, not rokast). `tests/test_pkg_deb.sh`, `test_pkg_rpm.sh` and `test_pkg_arch.sh rokast-git` pass
-      in CI in images without Python (CI gets an `arch` job for this). `gh api repos/papacasper/rokast/languages`
-      shows no Python after the push.
-- [ ] Docs: README (requirements, building from source), `docs/how-it-works.md`, CHANGELOG ("rokast is now one Rust
+      in CI (CI gets an `arch` job for this) and each shows rokast itself needs no Python: no installed rokast file
+      mentions it, and rpm: nothing installed it; deb: removing python3-minimal would not remove rokast (Ubuntu
+      22.04 installs Python anyway, for networkd-dispatcher); Arch: no python in rokast's own depends (Arch's ffmpeg
+      needs it through vapoursynth). Found 2026-10-13 in CI: an image without Python is not possible on those two.
+      `gh api repos/papacasper/rokast/languages` shows no Python once main has the port.
+- [x] Docs: README (requirements, building from source), `docs/how-it-works.md`, CHANGELOG ("rokast is now one Rust
       program; Python no longer needed").
 - [ ] Release v0.5.0 by `playbooks/release.md`, then the live check from the installed release.
 

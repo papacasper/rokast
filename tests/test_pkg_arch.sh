@@ -25,7 +25,7 @@ else
 fi
 
 docker run --rm -v "$t:/t" -v "$repo:/repo:ro" archlinux:base-devel bash -euc '
-    pacman -Syu --noconfirm --needed namcap git pacman-contrib >/dev/null
+    pacman -Syu --noconfirm --needed namcap git >/dev/null
     useradd -m b && cp -r /t/pkg /home/b/pkg && chown -R b /home/b/pkg && cd /home/b/pkg
     git config --system --add safe.directory "*"
     # shellcheck disable=SC1091
@@ -40,8 +40,9 @@ docker run --rm -v "$t:/t" -v "$repo:/repo:ro" archlinux:base-devel bash -euc '
     {
         echo "which=$(readlink -f "$(command -v rokast)")"
         echo "version=$(rokast version)"
-        # namcap itself needs Python, so look at what the package pulls in, not at what is installed
-        echo "python_deps=$(pactree -lu "$(pacman -Qqp "$p")" | grep -c "^python" || true)"
+        # namcap needs Python and so does ffmpeg (vapoursynth): look at the depends of the package and files
+        echo "python_deps=$(pacman -Qi "$(pacman -Qqp "$p")" | sed -n "s/^Depends On *: //p" | tr " " "\n" | grep -c "^python" || true)"
+        echo "python_files=$(grep -rIli python /usr/lib/rokast | wc -l)"
         rokast doctor 2>&1 || true
         echo "missing=$(ldd /usr/lib/rokast/wpa_supplicant /usr/lib/rokast/ui/target/release/rokast-ui | grep -c "not found")"
         sed -n "s/^Exec=//p" /usr/share/applications/io.github.papacasper.rokast.desktop
@@ -57,7 +58,8 @@ check "makepkg ran check() (cargo tests)" 'grep -q "Starting check()" "$t/makepk
 grep -E " (E|W): " "$t/namcap.log" | grep -vE "Dependency included, but may not be needed \('(ffmpeg|iw|dhcpcd|wpa_supplicant|sudo|openssh)'\)|Unused shared library '/usr/lib64/ld-linux-x86-64.so.2'|Referenced library 'bash' is an uninstalled dependency" > "$t/namcap.real" || true
 check "namcap: no errors, no warnings beyond the known false positives" '[ ! -s "$t/namcap.real" ]'
 check "rokast on PATH is the packaged one" 'grep -qx "which=/usr/lib/rokast/scripts/rokast" "$t/run.log"'
-check "no Python among its dependencies, direct or indirect" 'grep -qx "python_deps=0" "$t/run.log"'
+check "no Python in its depends" 'grep -qx "python_deps=0" "$t/run.log"'
+check "no installed rokast file mentions Python" 'grep -qx "python_files=0" "$t/run.log"'
 check "version $v" 'grep -qx "version=$v" "$t/run.log"'
 check "doctor: packaged supplicant found, stamp ok" 'grep -qx "ok    patched wpa_supplicant ok: /usr/lib/rokast/wpa_supplicant" "$t/run.log"'
 check "doctor: tools from depends" '[ "$(grep -cxE "ok    (ffmpeg|wpa_cli|dhcpcd|iw) installed" "$t/run.log")" = 4 ]'
