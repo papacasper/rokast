@@ -1,5 +1,6 @@
 //! `rokast start [name]`: find the TV, join its Wi-Fi Direct group, stream until stopped.
 use crate::{die, Ctx};
+use rokast_core::audio::{self, Router};
 use rokast_core::capture::{self, Monitor, Opts, Pipeline};
 use rokast_core::conf::Conf;
 use rokast_core::link::{self, Radio, Wpa};
@@ -30,6 +31,7 @@ struct RealLink<'a> {
     conf: &'a Conf,
     geometry: Option<Monitor>,
     cast: Option<&'a ScreenCast>,
+    router: Router, // its Drop restores the sound in any exit path
 }
 
 impl Link for RealLink<'_> {
@@ -71,14 +73,20 @@ impl Link for RealLink<'_> {
         };
         let mut ff: Option<Pipeline> = None;
         let (conf, geometry, env, cast) = (self.conf, self.geometry.clone(), &self.radio.env, self.cast);
+        let router = &mut self.router;
         let mut on_play = |n: &Negotiated, ip: &str, port: u16| -> Result<(), String> {
-            let audio = conf["AUDIO"] == "1";
+            // route only now: the laptop keeps its sound until the TV actually plays
+            let source = if n.audio == "AAC" { router.route()? } else { None };
+            if let Some(s) = &source {
+                say(&format!("audio: AUDIO={} recording {s}", router.kind));
+            }
+            let audio = source.is_some();
             let opts = Opts {
                 display: conf["DISPLAY"].clone(),
                 encoder: conf["ENCODER"].clone(),
                 bitrate: conf["BITRATE"].clone(),
-                audio: audio && n.audio == "AAC",
-                monitor: capture::default_monitor(),
+                audio,
+                monitor: source,
                 source: if cast.is_some() { "raw" } else { "x11" }.into(),
                 out: None,
                 seconds: None,
@@ -104,6 +112,7 @@ impl Link for RealLink<'_> {
         if let Some(mut p) = ff {
             p.terminate(Duration::from_secs(5));
         }
+        self.router.restore(); // before a retry joins again, and so the laptop has its sound back at once
         res
     }
 
@@ -132,6 +141,10 @@ fn steps(ctx: &Ctx, conf: &mut Conf, mode: &str, name: &str, dev: &mut Option<St
         .map(|g| format!(" monitor {} {}x{}+{}+{}", g.name, g.width, g.height, g.x, g.y))
         .unwrap_or_default();
     say(&format!("capture: {mode}{shown}, name on TV: {}", conf["NAME"]));
+    let router = Router::new(&conf["AUDIO"], &ctx.env)?; // a bad AUDIO= fails here, before joining
+    if audio::recover(&ctx.env) {
+        say("audio: put back the sound routing a previous session left behind");
+    }
     let mut cast = None;
     if mode == "wayland" {
         // the portal may ask the user to pick a screen: do it before joining
@@ -145,7 +158,7 @@ fn steps(ctx: &Ctx, conf: &mut Conf, mode: &str, name: &str, dev: &mut Option<St
     *dev = Some(d.clone());
     stop::check()?;
     let radio = Wpa { env: ctx.env.clone(), root: ctx.root.clone() };
-    let mut real = RealLink { radio, dev: d, target: target.clone(), conf, geometry, cast: cast.as_ref() };
+    let mut real = RealLink { radio, dev: d, target: target.clone(), conf, geometry, cast: cast.as_ref(), router };
     session::join_and_stream(&mut real, &target.name, &say, 2)
 }
 

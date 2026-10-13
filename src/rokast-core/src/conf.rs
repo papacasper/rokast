@@ -10,7 +10,7 @@ pub const DEFAULTS: [(&str, &str); 11] = [
     ("TARGET", ""),
     ("BITRATE", "8M"),
     ("ENCODER", "auto"),
-    ("AUDIO", "1"),
+    ("AUDIO", "tv"),
     ("DISPLAY", ":0"),
     ("RES", "1080p30,720p60,720p30"),
     ("NAME", ""),

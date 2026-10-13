@@ -309,7 +309,14 @@ impl Router {
                 std::thread::sleep(Duration::from_millis(100));
             }
         }
-        move_streams(&p, &self.env, &self.state, self.kind, &self.arg, idx);
+        for _ in 0..10 {
+            // PipeWire accepts a move to a sink it has only just created and then drops it: check, and again
+            move_streams(&p, &self.env, &self.state, self.kind, &self.arg, idx);
+            if to_move(&p.list("sink-inputs"), self.kind, &self.arg, idx).is_empty() {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(100));
+        }
         if self.kind == "app" {
             let mut child = p
                 .cmd(&["subscribe"])
@@ -344,6 +351,24 @@ impl Router {
         }
         self.source = None;
     }
+}
+
+impl Drop for Router {
+    /// An early return or a panic between route() and restore() still puts the sound back.
+    fn drop(&mut self) {
+        self.restore();
+    }
+}
+
+/// The source to record without moving anything (selftest): off -> None, device:<sink> -> its monitor, the rest ->
+/// the default output's monitor.
+pub fn plain_source(value: &str, env: &Env) -> Result<Option<String>, String> {
+    let (kind, arg) = parse_mode(value)?;
+    Ok(match kind {
+        "off" => None,
+        "device" => Some(format!("{arg}.monitor")),
+        _ => Some(Pactl { env: env.clone() }.default_sink()).filter(|s| !s.is_empty()).map(|s| s + ".monitor"),
+    })
 }
 
 fn save(env: &Env, st: &State) {

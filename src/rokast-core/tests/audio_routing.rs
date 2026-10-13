@@ -130,11 +130,38 @@ fn test_app_only_and_new_streams() {
 #[test]
 fn test_crash_then_recover() {
     let w = World::new();
-    Router::new("tv", &w.env).unwrap().route().unwrap(); // never restored
+    let mut r = Router::new("tv", &w.env).unwrap();
+    r.route().unwrap();
+    std::mem::forget(r); // a crash: neither restore() nor Drop runs
     assert_eq!(w.read()["default"], "rokast");
     assert!(audio::recover(&w.env));
     w.assert_restored();
     assert!(!audio::recover(&w.env));
+}
+
+#[test]
+fn test_drop_restores() {
+    let w = World::new();
+    {
+        let mut r = Router::new("tv", &w.env).unwrap();
+        r.route().unwrap();
+        assert_eq!(w.read()["default"], "rokast");
+    } // an early return or a panic in start drops it
+    w.assert_restored();
+    assert!(!audio::recover(&w.env));
+}
+
+#[test]
+fn test_plain_source() {
+    let w = World::new();
+    let src = |v: &str| audio::plain_source(v, &w.env).unwrap();
+    assert_eq!(src("off"), None);
+    assert_eq!(src(&format!("device:{HDMI}")), Some(format!("{HDMI}.monitor")));
+    for v in ["1", "tv", "both", "app:mpv"] {
+        assert_eq!(src(v), Some(format!("{SPEAKERS}.monitor")), "{v}");
+    }
+    assert!(audio::plain_source("loud", &w.env).is_err());
+    w.assert_restored(); // nothing moved
 }
 
 #[test]

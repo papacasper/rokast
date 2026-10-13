@@ -136,7 +136,7 @@ pub fn run(
     }
     let n = negotiated(&conf["RES"])?;
     let encoder = capture::pick_encoder(&conf["ENCODER"])?;
-    let monitor = if conf["AUDIO"] == "1" { capture::default_monitor() } else { None };
+    let monitor = crate::audio::plain_source(&conf["AUDIO"], env)?;
     let tmp = match out {
         Some(_) => None,
         None => Some(
