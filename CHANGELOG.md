@@ -2,7 +2,7 @@
 
 Each `## <version>` section becomes the GitHub release notes for that tag (see `playbooks/release.md`).
 
-## Unreleased
+## 0.5.0
 
 - **One Rust program, no Python:** `rokast` is now a single Rust binary (prebuilt in releases and packages; a
   git clone builds it with cargo). Python is no longer needed, and the packages no longer pull it in. Commands,
