@@ -6,6 +6,7 @@
 mod autostart;
 mod config;
 mod monitors;
+mod sound;
 mod tray;
 mod update;
 
@@ -57,7 +58,7 @@ struct Ui {
     refresh: gtk::Button,
     res_drop: gtk::DropDown,
     rate_drop: gtk::DropDown,
-    audio: gtk::Switch,
+    sound: sound::Picker,
     name: gtk::Entry,
     title: gtk::Label,
     detail: gtk::Label,
@@ -137,8 +138,6 @@ fn build(app: &gtk::Application) {
         "12" => "12 Mbit/s",
         _ => "20 Mbit/s (sharpest)",
     }));
-    let audio = gtk::Switch::new();
-    audio.set_valign(gtk::Align::Center);
     let name = gtk::Entry::new();
     name.set_max_length(32); // Wi-Fi Direct device-name limit (bytes; the CLI trims multi-byte names further)
     name.set_width_chars(18);
@@ -146,6 +145,7 @@ fn build(app: &gtk::Application) {
 
     let prefs = load_prefs();
     let monitor = monitors::Picker::new(|l, w| row(l, w), prefs.monitor.clone());
+    let sound = sound::Picker::new(sound::from_prefs(&prefs.sound, prefs.audio));
     let boot = gtk::Switch::new();
     boot.set_valign(gtk::Align::Center);
     boot.set_active(autostart::enabled());
@@ -162,7 +162,7 @@ fn build(app: &gtk::Application) {
     form.append(&row("Name on TV", &name));
     form.append(&row("Quality", &res_drop));
     form.append(&row("Bitrate", &rate_drop));
-    form.append(&row("Send audio", &audio));
+    form.append(&row("Sound", &sound.drop));
     form.append(&row("Start with my computer, in the tray", &boot));
     frame.set_child(Some(&form));
     root.append(&frame);
@@ -192,7 +192,6 @@ fn build(app: &gtk::Application) {
     expander.connect_expanded_notify(|e| update_prefs(|p| p.details = e.is_expanded()));
     res_drop.set_selected(prefs.res.min(RES.len() as u32 - 1));
     rate_drop.set_selected(prefs.bitrate.min(BITRATES.len() as u32 - 1));
-    audio.set_active(prefs.audio);
     name.set_text(&prefs.name);
 
     // Tray icon; None when the desktop has no StatusNotifier host (then closing the window quits, as before).
@@ -200,7 +199,7 @@ fn build(app: &gtk::Application) {
     update::spawn(&root, &status, tray.clone());
 
     let ui = Rc::new(Ui {
-        window, tv_model, tv_drop, monitor, refresh, res_drop, rate_drop, audio, name, title, detail, spinner, button, log, tray,
+        window, tv_model, tv_drop, monitor, refresh, res_drop, rate_drop, sound, name, title, detail, spinner, button, log, tray,
     });
     let st = Rc::new(RefCell::new(State::default()));
     let (tx, rx) = async_channel::unbounded::<Ev>();
@@ -313,7 +312,7 @@ fn set_status(ui: &Ui, title: &str, detail: &str, busy: bool) {
 fn set_running(ui: &Ui, running: bool) {
     for w in [ui.tv_drop.upcast_ref::<gtk::Widget>(), ui.monitor.drop.upcast_ref(), ui.res_drop.upcast_ref(),
               ui.rate_drop.upcast_ref(),
-              ui.audio.upcast_ref(), ui.name.upcast_ref(), ui.refresh.upcast_ref()] {
+              ui.sound.drop.upcast_ref(), ui.name.upcast_ref(), ui.refresh.upcast_ref()] {
         w.set_sensitive(!running);
     }
     ui.button.set_label(if running { "Stop mirroring" } else { "Start mirroring" });
@@ -331,6 +330,7 @@ fn scan(ui: &Ui, st: &Rc<RefCell<State>>, tx: &async_channel::Sender<Ev>) {
     if st.borrow().child.is_some() {
         return;
     }
+    ui.sound.reload(); // apps playing sound now
     set_status(ui, "Searching", "Looking for Roku TVs on your network…", true);
     ui.refresh.set_sensitive(false);
     ui.button.set_sensitive(false);
@@ -353,7 +353,8 @@ fn start(ui: &Ui, st: &Rc<RefCell<State>>, tx: &async_channel::Sender<Ev>) {
         target: tv.name.clone(),
         res: ui.res_drop.selected(),
         bitrate: ui.rate_drop.selected(),
-        audio: ui.audio.is_active(),
+        audio: ui.sound.selected() != "off",
+        sound: ui.sound.selected(),
         name: ui.name.text().trim().to_string(),
         monitor: ui.monitor.selected(),
         ..load_prefs()
@@ -361,7 +362,7 @@ fn start(ui: &Ui, st: &Rc<RefCell<State>>, tx: &async_channel::Sender<Ev>) {
     save_prefs(&prefs);
 
     let mut cmd = rokast_cmd(&["start", &tv.name]);
-    cmd.env("BITRATE", BITRATES[prefs.bitrate as usize]).env("AUDIO", if prefs.audio { "1" } else { "0" });
+    cmd.env("BITRATE", BITRATES[prefs.bitrate as usize]).env("AUDIO", &prefs.sound);
     if let Some(res) = RES[prefs.res as usize].1 {
         cmd.env("RES", res);
     }

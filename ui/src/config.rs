@@ -10,6 +10,9 @@ pub struct Prefs {
     pub res: u32,
     pub bitrate: u32,
     pub audio: bool,
+    /// AUDIO value (tv, both, off, app:<x>, device:<sink>); empty in pre-0.6 prefs: `audio` decides.
+    #[serde(default)]
+    pub sound: String,
     #[serde(default)]
     pub name: String,
     #[serde(default)]
