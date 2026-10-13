@@ -190,7 +190,7 @@ Not a decision: prebuilt binaries are x86_64 only, as the app already is. aarch6
       `scripts/rokast` builds the binary in a git clone when it is missing or older than the source (cargo), else
       says how. Shell tests may still use the CI host's `python3` for a throwaway HTTP server; nothing runs Python
       inside the package test containers.
-- [ ] Packaging: .deb/.rpm/AUR without `python3` and `python3-gi`; AUR builds both binaries with `cargo`.
+- [x] Packaging: .deb/.rpm/AUR without `python3` and `python3-gi`; AUR builds both binaries with `cargo`.
       **Done when:** `rg -il python packaging scripts .github` finds only `.github/workflows/wayland.yml`, for
       `python3-dbusmock` (Fedora's mock logind: gnome-shell needs logind and the test container has no systemd; it is
       the CI desktop, not rokast). `tests/test_pkg_deb.sh`, `test_pkg_rpm.sh` and `test_pkg_arch.sh rokast-git` pass
