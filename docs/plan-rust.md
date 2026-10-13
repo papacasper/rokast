@@ -195,8 +195,8 @@ Not a decision: prebuilt binaries are x86_64 only, as the app already is. aarch6
       `python3-dbusmock` (Fedora's mock logind: gnome-shell needs logind and the test container has no systemd; it is
       the CI desktop, not rokast). `tests/test_pkg_deb.sh`, `test_pkg_rpm.sh` and `test_pkg_arch.sh rokast-git` pass
       in CI (CI gets an `arch` job for this) and each shows rokast itself needs no Python: no installed rokast file
-      mentions it, and rpm: nothing installed it; deb: removing python3-minimal would not remove rokast (Ubuntu
-      22.04 installs Python anyway, for networkd-dispatcher); Arch: no python in rokast's own depends (Arch's ffmpeg
+      mentions it, and deb/rpm: removing Python would not remove rokast (Ubuntu 22.04 and Fedora 43 install Python
+      anyway, for networkd-dispatcher and others); Arch: no python in rokast's own depends (Arch's ffmpeg
       needs it through vapoursynth). Found 2026-10-13 in CI: an image without Python is not possible on those two.
       `gh api repos/papacasper/rokast/languages` shows no Python once main has the port.
 - [x] Docs: README (requirements, building from source), `docs/how-it-works.md`, CHANGELOG ("rokast is now one Rust

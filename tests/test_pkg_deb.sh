@@ -17,7 +17,9 @@ docker run --rm -v "$deb:/rokast.deb:ro" "$image" bash -c '
     echo "python=$(command -v python3 python 2>/dev/null | head -1)"   # before anything else is installed
     grep -i "python" /tmp/apt.log | grep -i "as \(Depends\|Recommends\|PreDepends\)" | sed "s/^ */pulled: /" | head -20
     # Ubuntu 22.04 itself brings Python (networkd-dispatcher): rokast must not be among what needs it
-    echo "python_needed_by_rokast=$(apt-get remove -s python3-minimal 2>/dev/null | grep -c "^Remv rokast ")"
+    apt-get remove -s python3-minimal > /tmp/rm.log 2>&1 || true
+    echo "python_removal_listed=$(grep -c "^Remv python3-minimal " /tmp/rm.log)"
+    echo "python_needed_by_rokast=$(grep -c "^Remv rokast " /tmp/rm.log)"
     echo "python_files=$(grep -rIli python /usr/lib/rokast | wc -l)"
     echo "which=$(readlink -f "$(command -v rokast)")"
     echo "version=$(rokast version)"
@@ -31,7 +33,8 @@ docker run --rm -v "$deb:/rokast.deb:ro" "$image" bash -c '
 fails=0
 check() { if eval "$2"; then echo "ok    $1"; else echo "FAIL  $1   [$2]"; fails=$((fails + 1)); fi; }
 check "apt installs it with its Depends" 'grep -q "^which=" "$t/run.log"'
-check "rokast needs no Python (removing it would not remove rokast)" 'grep -qx "python_needed_by_rokast=0" "$t/run.log"'
+check "rokast needs no Python (removing it would not remove rokast)" \
+    'grep -q "^python_removal_listed=[1-9]" "$t/run.log" && grep -qx "python_needed_by_rokast=0" "$t/run.log"'
 check "no installed rokast file mentions Python" 'grep -qx "python_files=0" "$t/run.log"'
 grep "^python=/" "$t/run.log" && grep "^pulled: " "$t/run.log" | head -3   # what else brought Python in
 check "rokast on PATH is the packaged one" 'grep -qx "which=/usr/lib/rokast/scripts/rokast" "$t/run.log"'
