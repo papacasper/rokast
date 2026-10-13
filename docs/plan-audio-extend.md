@@ -97,7 +97,7 @@ it.
 
 - [x] **Routing** (`rokast-core::audio`): `parse_mode`, `Router::route` -> the pulse source to record, `restore`,
       `recover`, state in `$XDG_RUNTIME_DIR/rokast/audio.json`; unit tests + `tests/audio_routing.rs`. Done in R1.
-- [ ] **Wiring** (`src/rokast/src/start.rs`): `recover()` at start (leftover from a crash, said in the log); route when
+- [x] **Wiring** (`src/rokast/src/start.rs`): `recover()` at start (leftover from a crash, said in the log); route when
       the TV starts playing (only when the negotiated audio is AAC and AUDIO != off), record the returned source
       instead of `capture::default_monitor()`, restore after ffmpeg stops, in every exit path (normal stop, SIGTERM,
       a failed join, the retry; a `Drop` guard so an early return can't skip it). A bad `AUDIO=` fails before joining.
@@ -109,19 +109,22 @@ it.
       SIGTERM, default output, stream sinks and module list match the snapshot from before. Then the live check:
       TV plays sound, laptop silent (`pactl list sink-inputs` shows the player on `rokast`), after SIGTERM the
       player is back on the speakers. The user confirms on the TV.
+      Done 2026-10-13: code, tests, parity green; `test_audio_live.sh` drives `audio_hold` (an example binary that
+      routes like a playing session until SIGTERM) instead of a full fake-TV `start` (none exists), and passed 3
+      runs in a row; found and fixed PipeWire dropping a move to a just-created sink. **Open: the TV check.**
 
 ## Phase 13 (v0.6.0): pick what goes to the TV, app, docs, release
 
-- [ ] **`rokast audio [--json]`** (outputs + apps playing now, from `audio::listing`), and `rokast doctor` reports
+- [x] **`rokast audio [--json]`** (outputs + apps playing now, from `audio::listing`), and `rokast doctor` reports
       leftover routing (`--fix` restores it).
       **Done when:** `tests/test_audio_live.sh` gains cases: two `paplay` streams with different
       `application.name`, `AUDIO=app:<one>`: only that one reaches `rokast.monitor`, the other stays on the
       speakers; a new stream from it started mid-session is moved within 1 s; `AUDIO=device:<sink>` records that
       sink's monitor and moves nothing.
-- [ ] **App:** "Sound" dropdown replacing the on/off switch: On the TV only / On the TV and the laptop / Not sent /
+- [x] **App:** "Sound" dropdown replacing the on/off switch: On the TV only / On the TV and the laptop / Not sent /
       One app (submenu from `rokast audio --json`) / One output. Old saved `audio: true/false` maps to tv/off. Rust
       unit tests for building the menu from that JSON and for the AUDIO value it sets. `test_ui_starts.sh` green.
-- [ ] **Docs:** README (Sound section, settings table `AUDIO` values), `docs/how-it-works.md` (the null sink),
+- [x] **Docs:** README (Sound section, settings table `AUDIO` values), `docs/how-it-works.md` (the null sink),
       `config/rokast.conf.example`, CHANGELOG (the `AUDIO=1` change: the laptop goes quiet while mirroring;
       `AUDIO=both` for the old behaviour).
 - [ ] **Release v0.6.0** by `playbooks/release.md`; the installed 0.5.0 updates itself (`rokast update`).
