@@ -205,7 +205,10 @@ Not a decision: prebuilt binaries are x86_64 only, as the app already is. aarch6
       `gh api repos/papacasper/rokast/languages` shows no Python once main has the port.
 - [x] Docs: README (requirements, building from source), `docs/how-it-works.md`, CHANGELOG ("rokast is now one Rust
       program; Python no longer needed").
-- [ ] Release v0.5.0 by `playbooks/release.md`, then the live check from the installed release.
+- [x] Release v0.5.0 by `playbooks/release.md`, then the live check from the installed release. Done 2026-10-13:
+      release run 38411292417 green, 6 assets, signature good, checksums OK, version 0.5.0, ldd clean, the
+      release UI starts; on this laptop `rokast update --yes` took 0.4.0 to 0.5.0, doctor all ok, tray restarted on
+      0.5.0. Mirroring to the TV from 0.5.0 not yet re-run (folded into the v0.6.0 TV check).
 
 ## After this
 
