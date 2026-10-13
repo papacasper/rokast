@@ -14,7 +14,7 @@ app or account is needed. The video goes from the laptop to the TV directly over
 - X11 and Wayland (GNOME, KDE, sway, Hyprland... through the standard screen-sharing portal)
 - ~20 s from `rokast start` to picture, Ctrl+C to stop and fully clean up
 - Your normal Wi-Fi connection stays up the whole time (routes and DNS untouched)
-- Python plus `ffmpeg`, `iw`, `dhcpcd` and a patched `wpa_supplicant` (and GStreamer on Wayland)
+- One Rust program plus `ffmpeg`, `iw`, `dhcpcd` and a patched `wpa_supplicant` (and GStreamer on Wayland); no Python
 
 ```
 $ scripts/rokast start "Living Room"
@@ -84,21 +84,23 @@ Then run `rokast doctor`. Update with your package manager (or a newer package).
 
    ```bash
    # Arch / Manjaro
-   sudo pacman -S --needed git base-devel ffmpeg iw dhcpcd wpa_supplicant libnl openssl python
+   sudo pacman -S --needed git base-devel ffmpeg iw dhcpcd wpa_supplicant libnl openssl
    # Debian / Ubuntu
-   sudo apt install git build-essential pkg-config ffmpeg iw dhcpcd wpasupplicant libnl-3-dev libnl-genl-3-dev libssl-dev python3
+   sudo apt install git build-essential pkg-config ffmpeg iw dhcpcd wpasupplicant libnl-3-dev libnl-genl-3-dev libssl-dev
    # (older releases: dhcpcd5; newer: dhcpcd-base)
    # Fedora
-   sudo dnf install git gcc make pkgconf ffmpeg iw dhcpcd wpa_supplicant libnl3-devel openssl-devel python3
-   # Wayland sessions additionally need GStreamer with PipeWire and PyGObject:
-   #   Arch/Manjaro:  sudo pacman -S --needed gstreamer gst-plugins-base gst-plugin-pipewire python-gobject
-   #   Debian/Ubuntu: sudo apt install gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-pipewire python3-gi
-   #   Fedora:        sudo dnf install gstreamer1 gstreamer1-plugins-base pipewire-gstreamer python3-gobject
+   sudo dnf install git gcc make pkgconf ffmpeg iw dhcpcd wpa_supplicant libnl3-devel openssl-devel
+   # Wayland sessions additionally need GStreamer with PipeWire:
+   #   Arch/Manjaro:  sudo pacman -S --needed gstreamer gst-plugins-base gst-plugin-pipewire
+   #   Debian/Ubuntu: sudo apt install gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-pipewire
+   #   Fedora:        sudo dnf install gstreamer1 gstreamer1-plugins-base pipewire-gstreamer
    # plus your desktop's portal backend (usually already installed: xdg-desktop-portal-gnome / -kde / -wlr / -hyprland)
+   # A git clone also needs Rust (cargo, from https://rustup.rs or your distro) and the GTK 4 dev files for the app
+   # (libgtk-4-dev / gtk4-devel / gtk4); a release tarball has both programs prebuilt.
    ```
 
 2. Get rokast, either the latest [release](https://github.com/papacasper/rokast/releases) tarball
-   (`tar xzf rokast-*-x86_64-linux.tar.gz && cd rokast-*`; it includes a prebuilt desktop app, so no Rust needed)
+   (`tar xzf rokast-*-x86_64-linux.tar.gz && cd rokast-*`; `rokast` and the desktop app are prebuilt, so no Rust needed)
    or a git clone as below. Then install it for your user. This puts `rokast` on your PATH (`~/.local/bin`), adds the
    desktop app to the app menu, and builds the patched `wpa_supplicant` (it is only used by this tool, in its own
    control directory; your system `wpa_supplicant` is not replaced):
@@ -262,7 +264,9 @@ The full write-up, including what did *not* work and why, is in
 ## Development
 
 ```bash
-python3 -I -m unittest discover -s tests   # RTSP handshake vs a fake Roku sink, IE bytes, command builders, allowlist, paths, selftest checks
+cargo test --workspace                     # RTSP handshake vs a fake Roku sink, IE bytes, command builders, allowlist, paths, selftest, update
+tests/parity/run.sh; tests/parity/cli.sh  # same answers and output as before the Rust port (frozen in tests/parity)
+(cd ui && cargo test)                      # the desktop app
 bash tests/test_install.sh                 # installer: upgrade, rollback, uninstall in a throwaway HOME
 bash tests/test_monitor_capture.sh         # MONITOR= captures the right monitor (Xvfb + ffmpeg + ImageMagick; not in CI)
 bash tests/test_pkg_deb.sh <deb>; bash tests/test_pkg_rpm.sh <rpm>   # packages in clean containers (docker; CI runs both)
@@ -272,7 +276,8 @@ bash tests/live_join_soak.sh 10 15         # 10 cold-start joins with the real T
 Releases: add a `## X.Y.Z` section to `CHANGELOG.md`, then `scripts/release X.Y.Z`; GitHub Actions builds and publishes
 the release (see `playbooks/release.md`).
 
-Layout: `src/miracast/{p2p,wfd,capture,wayland,paths,selftest,cli}.py`, `ui/` (Rust GTK 4 desktop app),
+Layout: `src/rokast-core/` (the library: p2p, link, wfd, rtsp, capture, wayland, audio, paths, selftest, update),
+`src/rokast/` (the `rokast` command), `ui/` (Rust GTK 4 desktop app),
 `patches/` (wpa_supplicant patch + build config), `scripts/` (entry points), `playbooks/` (operational runbook).
 
 `rokast start` prints machine-readable progress lines, `status: scanning|sharing|joining|waiting|streaming|stopped|error [detail]`,

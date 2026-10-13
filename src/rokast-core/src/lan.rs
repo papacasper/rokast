@@ -1,5 +1,4 @@
-//! Finding Rokus on our own LAN over ECP (:8060), and the shell helpers the p2p side uses (src/miracast/p2p.py:
-//! sh, p2p_dev_iface, wifi_iface, lan_rokus, tv_state).
+//! Finding Rokus on our own LAN over ECP (:8060), and the shell helpers the p2p side uses.
 use crate::p2p::{p2p_mac_of, Roku, CTRL};
 use crate::{proc, Env};
 use std::io::{Read, Write};
@@ -10,7 +9,7 @@ use std::time::Duration;
 
 const ECP_TIMEOUT: Duration = Duration::from_millis(1500);
 
-/// Run a command (at most 30 s, as p2p.py's sh); stdout trimmed. `sudo` gets -A when $SUDO_ASKPASS is set (the app:
+/// Run a command (at most 30 s); stdout trimmed. `sudo` gets -A when $SUDO_ASKPASS is set (the app:
 /// no terminal for a password).
 pub fn sh(argv: &[&str], check: bool, env: &Env) -> Result<String, String> {
     sh_t(argv, check, Duration::from_secs(30), env)

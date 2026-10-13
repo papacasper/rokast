@@ -81,7 +81,7 @@ pub fn update_prefs(f: impl FnOnce(&mut Prefs)) {
     save_prefs(&p);
 }
 
-/// rokast.conf as the CLI finds it (src/miracast/paths.py): $ROKAST_CONFIG, else ~/.config/rokast/rokast.conf,
+/// rokast.conf as the CLI finds it: $ROKAST_CONFIG, else ~/.config/rokast/rokast.conf,
 /// else the pre-0.2 in-tree config/rokast.conf (the CLI migrates it on its next run).
 fn conf_file() -> PathBuf {
     if let Some(p) = std::env::var_os("ROKAST_CONFIG") {

@@ -1,0 +1,1 @@
+rokast selftest --bogus

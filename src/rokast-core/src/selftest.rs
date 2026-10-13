@@ -1,4 +1,4 @@
-//! rokast selftest + hardware report (src/miracast/selftest.py): which mode to test, capture + encode to a file,
+//! rokast selftest + hardware report: which mode to test, capture + encode to a file,
 //! the ffprobe checks, the report helpers.
 use crate::capture::{self, Opts};
 use crate::conf::Conf;

@@ -1,4 +1,4 @@
-//! Update notice: is a newer rokast release out? Never downloads anything (src/miracast/update.py).
+//! Update notice: is a newer rokast release out? Never downloads anything.
 //!
 //! At most one request a day to GitHub's latest-release API; the answer is cached in $XDG_CACHE_HOME/rokast/update.json
 //! (the attempt time is stored even when offline, so a dead network is not retried on every start).

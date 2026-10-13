@@ -1,4 +1,4 @@
-//! Where rokast keeps things, independent of where it is installed (src/miracast/paths.py).
+//! Where rokast keeps things, independent of where it is installed.
 //!
 //!   config      $ROKAST_CONFIG, else $XDG_CONFIG_HOME/rokast/rokast.conf   (legacy: <install>/config/rokast.conf)
 //!   supplicant  $ROKAST_SUPPLICANT, else $XDG_DATA_HOME/rokast/supplicant/wpa_supplicant, else the packaged

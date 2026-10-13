@@ -1,4 +1,4 @@
-//! The `rokast` binary as a black box (tests/test_update.py's CLI cases): a fake GitHub on localhost counts requests.
+//! The `rokast` binary as a black box: a fake GitHub on localhost counts requests.
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::path::Path;

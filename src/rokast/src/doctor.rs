@@ -1,4 +1,4 @@
-//! `rokast doctor [--report]`: checks everything `start` needs (cmd_doctor in src/miracast/cli.py). --report: plus
+//! `rokast doctor [--report]`: checks everything `start` needs. --report: plus
 //! system info, the last join failure and a selftest, for a hardware report issue.
 use crate::Ctx;
 use rokast_core::pyfmt::repr;

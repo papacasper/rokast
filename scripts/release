@@ -16,7 +16,6 @@ git fetch -q origin main
 ! git rev-parse -q --verify "refs/tags/v$v" >/dev/null || die "tag v$v already exists"
 grep -qx "## $v" CHANGELOG.md || die "CHANGELOG.md has no '## $v' section"
 
-python3 -I -m unittest discover -s tests
 (cd ui && cargo test --release --locked)
 cargo test --workspace --release --locked
 

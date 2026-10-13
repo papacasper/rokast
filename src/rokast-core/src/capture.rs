@@ -1,5 +1,5 @@
 //! Screen capture -> H.264(+audio) -> RTP/MPEG-TS, parameterised by the negotiated WFD format
-//! (src/miracast/capture.py): monitor parsing, the encoder probe, the ffmpeg command line, starting it.
+//!: monitor parsing, the encoder probe, the ffmpeg command line, starting it.
 use crate::proc;
 use crate::pyfmt::repr;
 use crate::wfd::Negotiated;
@@ -150,7 +150,7 @@ impl Pipeline {
 
 /// Start ffmpeg; with `feeder` (gst argv and the PipeWire fd it reads) gst's stdout becomes ffmpeg's stdin.
 pub fn start(cmd: &[String], display: &str, env: &Env, feeder: Option<(&[String], i32)>) -> std::io::Result<Pipeline> {
-    let xauth = format!("{}/.Xauthority", home(env)); // as capture.py: the session's own cookie file
+    let xauth = format!("{}/.Xauthority", home(env)); // the session's own cookie file
     let mut ff = Command::new(&cmd[0]);
     ff.args(&cmd[1..]).env("DISPLAY", display).env("XAUTHORITY", xauth);
     let Some((gst_argv, fd)) = feeder else { return Ok(Pipeline { procs: vec![ff.spawn()?] }) };

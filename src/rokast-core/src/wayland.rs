@@ -1,4 +1,4 @@
-//! Wayland screen capture through the xdg-desktop-portal ScreenCast API + PipeWire (src/miracast/wayland.py).
+//! Wayland screen capture through the xdg-desktop-portal ScreenCast API + PipeWire.
 //!
 //! ffmpeg has no PipeWire input, so GStreamer's pipewiresrc delivers raw frames (already scaled to the negotiated
 //! mode, letterboxed, constant frame rate) to ffmpeg's stdin; the encode/RTP side is the same as on X11. Works on any

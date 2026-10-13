@@ -1,6 +1,4 @@
-//! `rokast`: the command line (src/miracast/cli.py). Phase R3 runs everything here except `update`,
-//! which goes to the Python cli.py (as does Wayland capture in start/doctor/selftest, until R4). `ROKAST_PY=1` sends every
-//! command to Python, an escape hatch until R6.
+//! `rokast`: the command line.
 mod doctor;
 mod start;
 
@@ -25,16 +23,6 @@ fn find_root(env: &Env) -> PathBuf {
     }
     let exe = std::env::current_exe().and_then(std::fs::canonicalize).unwrap_or_default();
     exe.ancestors().find(|d| d.join("VERSION").is_file()).map(Path::to_path_buf).unwrap_or_else(|| ".".into())
-}
-
-/// `python3 -I cli.py <args>`, replacing this process. ROKAST_NO_PY=1 refuses instead (CI proves a path is Rust-only).
-fn python(root: &Path, args: &[String]) -> ! {
-    if std::env::var_os("ROKAST_NO_PY").is_some_and(|v| v == "1") {
-        die(&format!("rokast: `{}` needs the Python rokast (ROKAST_NO_PY=1 is set)", args.join(" ")));
-    }
-    let cli = root.join("src/miracast/cli.py");
-    let err = Command::new("python3").arg("-I").arg(&cli).args(args).exec();
-    die(&format!("rokast: cannot run {}: {err}", cli.display()))
 }
 
 fn die(msg: &str) -> ! {
@@ -188,9 +176,6 @@ fn main() {
     let mut args: Vec<String> = std::env::args().skip(1).collect();
     if args.is_empty() {
         args.push("help".into());
-    }
-    if env.get("ROKAST_PY").is_some_and(|v| !v.is_empty() && v != "0") {
-        python(&root, &args);
     }
     let ctx = Ctx { root, env };
     let arg = args.get(1).map(String::as_str);

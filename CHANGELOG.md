@@ -4,6 +4,9 @@ Each `## <version>` section becomes the GitHub release notes for that tag (see `
 
 ## Unreleased
 
+- **One Rust program, no Python:** `rokast` is now a single Rust binary (prebuilt in releases and packages; a
+  git clone builds it with cargo). Python is no longer needed, and the packages no longer pull it in. Commands,
+  output and config are unchanged (checked against answers recorded from the Python version).
 - **Desktop app opens again:** the 0.3.0 app closed straight away at start (it set its icon before GTK was ready).
   CI now starts the app on a headless screen, so this can't ship again.
 - **Self-update:** `rokast update` installs the latest release: it downloads it, checks its signature and checksum,

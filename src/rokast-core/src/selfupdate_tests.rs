@@ -154,8 +154,7 @@ fn test_no_ssh_keygen_refuses_before_downloading() {
     fs::remove_dir_all(&d).unwrap();
 }
 
-// Release signing: scripts/sign-release (used by release.yml) and update::verify_signature, with a throwaway key
-// (tests/test_signing.py).
+// Release signing: scripts/sign-release (used by release.yml) and update::verify_signature, with a throwaway key.
 struct Keys {
     d: PathBuf,
 }

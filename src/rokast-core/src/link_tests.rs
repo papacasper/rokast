@@ -1,4 +1,4 @@
-//! Join-failure evidence (tests/test_joinlog.py's Connect): what `connect` keeps, where, and how many.
+//! Join-failure evidence: what `connect` keeps, where, and how many.
 use super::*;
 use crate::joinlog::{latest, summary_of};
 use std::cell::RefCell;

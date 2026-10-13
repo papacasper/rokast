@@ -56,8 +56,7 @@ v="$(cat "$src/VERSION")"
 [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "bad VERSION '$v'"
 dest="$base/versions/$v"
 
-# 1. Binaries: build a git checkout, use the prebuilt ones in a release tarball. Without the rokast binary
-#    scripts/rokast runs the Python version (until the Rust port is finished, docs/plan-rust.md).
+# 1. Binaries: build a git checkout, use the prebuilt ones in a release tarball.
 if [ -d "$src/.git" ] && command -v cargo >/dev/null; then
     cargo build --release --manifest-path "$src/ui/Cargo.toml"
     cargo build --release --locked --manifest-path "$src/Cargo.toml" -p rokast
@@ -65,10 +64,11 @@ else
     if [ ! -x "$src/$ui_rel" ] && command -v cargo >/dev/null; then
         cargo build --release --manifest-path "$src/ui/Cargo.toml"
     fi
-    if [ ! -x "$src/$cli_rel" ] && [ -f "$src/Cargo.toml" ] && command -v cargo >/dev/null; then
+    if [ ! -x "$src/$cli_rel" ] && command -v cargo >/dev/null; then
         cargo build --release --locked --manifest-path "$src/Cargo.toml" -p rokast
     fi
 fi
+[ -x "$src/$cli_rel" ] || die "no $cli_rel: install Rust (cargo) to build it, or use a release tarball"
 [ -x "$src/$ui_rel" ] || say "no desktop app binary (needs cargo or a release tarball): installing the command line only"
 
 # 2. Copy this release into versions/<v> (tracked files only for a git checkout: never local config or credentials).

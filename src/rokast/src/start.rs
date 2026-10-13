@@ -1,5 +1,4 @@
-//! `rokast start [name]`: find the TV, join its Wi-Fi Direct group, stream until stopped (cmd_start and stream in
-//! src/miracast/cli.py).
+//! `rokast start [name]`: find the TV, join its Wi-Fi Direct group, stream until stopped.
 use crate::{die, Ctx};
 use rokast_core::capture::{self, Monitor, Opts, Pipeline};
 use rokast_core::conf::Conf;

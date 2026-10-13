@@ -1,4 +1,4 @@
-//! Joining the TV's Wi-Fi Direct group: the part of src/miracast/p2p.py that talks to the two supplicants, iw, ip
+//! Joining the TV's Wi-Fi Direct group: the part that talks to the two supplicants, iw, ip
 //! and dhcpcd (see p2p.rs for the allowlist and playbooks/mirror-laptop-to-roku.md for why each step exists):
 //!   1. NetworkManager's wpa_supplicant (p2p-dev-<wifi>) finds the TV and sends a PBC provision discovery, which
 //!      opens a WPS push-button window on the TV's always-on group.
@@ -6,7 +6,7 @@
 //!      with a phone-like P2P IE + WFD IE in the assoc request; the Roku only opens RTSP to sources joining so.
 //!   3. dhcpcd on the group iface; the TV then connects to our :7236 within ~0.5 s.
 //!
-//! `Radio`'s provided methods are the real steps; tests override them (as tests/test_joinlog.py patches p2p.py).
+//! `Radio`'s provided methods are the real steps; tests override them.
 use crate::joinlog::{JoinLog, KEEP};
 use crate::p2p::{assoc_ies, iface_mac, parse_peer, Roku, CTRL, DEVICE_TYPE, OWN, WFD_SOURCE_IE};
 use crate::stop::{self, Fail};
@@ -218,7 +218,7 @@ impl Radio for Wpa {
 
 /// Make the WPS scan probe for the TV's group by name. Its beacons carry an empty SSID, which wpa_supplicant skips
 /// ("SSID not known"); only a probe response names it, and a wildcard probe is not always answered (the cause of the
-/// first-join-after-idle failures: tests/test_joinlog.py, playbooks/mirror-laptop-to-roku.md).
+/// first-join-after-idle failures: link_tests.rs, playbooks/mirror-laptop-to-roku.md).
 fn probe_for(r: &mut dyn Radio, iface: &str, ssid: &str) -> Result<(), String> {
     let nets = r.own(iface, &["list_networks"], true)?; // the network wps_pbc just added is the last
     let nid = nets.lines().last().and_then(|l| l.split('\t').next()).unwrap_or("0").to_string();

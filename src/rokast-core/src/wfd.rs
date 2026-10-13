@@ -1,5 +1,5 @@
-//! Wi-Fi Display (Miracast) negotiation, the pure parts of src/miracast/wfd.py: format parsing, the format choice,
-//! RTSP message parsing. The RTSP source itself (M1..M7, keepalive) comes in phase R3.
+//! Wi-Fi Display (Miracast) negotiation, the pure parts: format parsing, the format choice, RTSP message parsing.
+//! The RTSP source itself (M1..M7, keepalive) is rtsp.rs.
 use crate::pyfmt::repr;
 use std::collections::BTreeMap;
 use std::fmt;

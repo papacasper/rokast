@@ -7,15 +7,14 @@ pkgdesc='Mirror your Linux screen to a Roku TV over native Miracast, with nothin
 arch=(x86_64)
 url='https://github.com/papacasper/rokast'
 license=(MIT)
-# ffmpeg iw dhcpcd wpa_supplicant(wpa_cli) sudo are run as commands, so namcap calls them "may not be needed": they are.
-depends=(python ffmpeg iw dhcpcd wpa_supplicant sudo libnl openssl gtk4 glib2 libgcc glibc hicolor-icon-theme)
+# ffmpeg iw dhcpcd wpa_supplicant(wpa_cli) sudo openssh(ssh-keygen) are run as commands, so namcap calls them "may not be needed": they are.
+depends=(ffmpeg iw dhcpcd wpa_supplicant sudo openssh libnl openssl gtk4 glib2 libgcc glibc hicolor-icon-theme)
 makedepends=(cargo)
 optdepends=('xorg-xrandr: mirror one monitor on X11 instead of the whole X screen'
             'libpulse: send audio (pactl finds the audio output to capture)'
             'gstreamer: Wayland capture'
             'gst-plugins-base: Wayland capture'
             'gst-plugin-pipewire: Wayland capture'
-            'python-gobject: Wayland capture (screen-sharing portal)'
             'xdg-desktop-portal: Wayland capture')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/papacasper/rokast/archive/v$pkgver.tar.gz"
         'https://w1.fi/releases/wpa_supplicant-2.11.tar.gz')
@@ -26,23 +25,22 @@ prepare() {
   cd "$pkgname-$pkgver"
   export RUSTUP_TOOLCHAIN=stable
   cargo fetch --locked --manifest-path ui/Cargo.toml --target "$(rustc -vV | sed -n 's/host: //p')"
-  if [ -f Cargo.toml ]; then   # the rokast command (Rust from v0.5.0; older releases run the Python one)
-    cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
-  fi
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
 }
 
 build() {
   cd "$pkgname-$pkgver"
   export RUSTUP_TOOLCHAIN=stable CARGO_TARGET_DIR=ui/target
   cargo build --frozen --release --manifest-path ui/Cargo.toml
-  if [ -f Cargo.toml ]; then CARGO_TARGET_DIR=target cargo build --frozen --release -p rokast; fi
+  CARGO_TARGET_DIR=target cargo build --frozen --release -p rokast
   ROKAST_HOSTAP_SRC="$srcdir/wpa_supplicant-2.11" ROKAST_SUPPLICANT_DIR="$srcdir/supplicant" scripts/build-supplicant
 }
 
 check() {
   cd "$pkgname-$pkgver"
-  python -I -m unittest discover -s tests
-  RUSTUP_TOOLCHAIN=stable CARGO_TARGET_DIR=ui/target cargo test --frozen --release --manifest-path ui/Cargo.toml
+  export RUSTUP_TOOLCHAIN=stable
+  CARGO_TARGET_DIR=target cargo test --frozen --release --workspace
+  CARGO_TARGET_DIR=ui/target cargo test --frozen --release --manifest-path ui/Cargo.toml
 }
 
 package() {

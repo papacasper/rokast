@@ -182,9 +182,19 @@ Not a decision: prebuilt binaries are x86_64 only, as the app already is. aarch6
 
 - [ ] Delete `src/miracast/`, the Python unit tests that have Rust counterparts, the Python parity side and
       `ROKAST_PY`. CI drops the Python jobs.
+      How (decided 2026-10-12, before deleting): Python's answers are frozen first, so Rust stays checked against
+      them: `tests/parity/expected.jsonl` (the 230 cases) and `tests/parity/cli/` (the no-hardware commands, run in a
+      fixed environment). The parity example and `cli.sh` compare against those files. `coverage.sh` goes (no Python
+      tests left). The test helpers become Rust: `tests/fake_pactl.py` -> the `rokast-fake-pactl` test binary in
+      rokast-core, `tests/portal_click.py` -> `src/rokast-core/examples/portal_click.rs` (zbus on the AT-SPI bus).
+      `scripts/rokast` builds the binary in a git clone when it is missing or older than the source (cargo), else
+      says how. Shell tests may still use the CI host's `python3` for a throwaway HTTP server; nothing runs Python
+      inside the package test containers.
 - [ ] Packaging: .deb/.rpm/AUR without `python3` and `python3-gi`; AUR builds both binaries with `cargo`.
-      **Done when:** `rg -il python packaging scripts .github` finds nothing. `tests/test_pkg_deb.sh`, `test_pkg_rpm.sh`
-      and `test_pkg_arch.sh` pass in CI in images without Python. `gh api repos/papacasper/rokast/languages`
+      **Done when:** `rg -il python packaging scripts .github` finds only `.github/workflows/wayland.yml`, for
+      `python3-dbusmock` (Fedora's mock logind: gnome-shell needs logind and the test container has no systemd; it is
+      the CI desktop, not rokast). `tests/test_pkg_deb.sh`, `test_pkg_rpm.sh` and `test_pkg_arch.sh rokast-git` pass
+      in CI in images without Python (CI gets an `arch` job for this). `gh api repos/papacasper/rokast/languages`
       shows no Python after the push.
 - [ ] Docs: README (requirements, building from source), `docs/how-it-works.md`, CHANGELOG ("rokast is now one Rust
       program; Python no longer needed").

@@ -1,4 +1,4 @@
-//! WFD source vs a fake Roku sink (tests/test_wfd.py's Handshake): full M1..M7 handshake, no radio, no TV.
+//! WFD source vs a fake Roku sink: full M1..M7 handshake, no radio, no TV.
 use super::*;
 use std::cell::RefCell;
 

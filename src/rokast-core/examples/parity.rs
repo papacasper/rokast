@@ -1,4 +1,4 @@
-//! Runs tests/parity/cases.json through rokast-core; prints one JSON result per line, like tests/parity/py_side.py.
+//! Runs tests/parity/cases.json through rokast-core and compares each answer with tests/parity/expected.jsonl.
 use rokast_core::capture::{self, Monitor, Opts};
 use rokast_core::wfd::{self, Negotiated};
 use rokast_core::{audio, conf, p2p, selftest, update};
@@ -123,14 +123,42 @@ fn run(f: &str, a: &Value) -> Res {
     })
 }
 
+/// JSON equality with numbers compared by value (Python wrote 30 and 30.0 alike).
+fn same(a: &Value, b: &Value) -> bool {
+    match (a, b) {
+        (Value::Number(x), Value::Number(y)) => x.as_f64() == y.as_f64(),
+        (Value::Array(x), Value::Array(y)) => x.len() == y.len() && x.iter().zip(y).all(|(x, y)| same(x, y)),
+        (Value::Object(x), Value::Object(y)) => {
+            x.len() == y.len() && x.iter().all(|(k, v)| y.get(k).is_some_and(|w| same(v, w)))
+        }
+        _ => a == b,
+    }
+}
+
+/// parity <cases.json> <expected.jsonl>: every case must give the answer the Python version gave (expected.jsonl,
+/// frozen before Python was removed). An error's text only counts when the case says "exact_err".
 fn main() {
-    let path = std::env::args().nth(1).expect("usage: parity <cases.json>");
-    let cases: Vec<Value> = serde_json::from_slice(&std::fs::read(path).expect("read cases")).expect("cases json");
-    for c in cases {
-        let out = match run(s(&c, "fn"), &c["args"]) {
+    let a: Vec<String> = std::env::args().skip(1).collect();
+    let [cases, expected] = &a[..] else { panic!("usage: parity <cases.json> <expected.jsonl>") };
+    let cases: Vec<Value> = serde_json::from_slice(&std::fs::read(cases).expect("read cases")).expect("cases json");
+    let text = std::fs::read_to_string(expected).expect("read expected");
+    let want: Vec<Value> = text.lines().map(|l| serde_json::from_str(l).expect("expected json")).collect();
+    assert_eq!(cases.len(), want.len(), "parity: {} cases, {} expected answers", cases.len(), want.len());
+    let mut bad = 0;
+    for (i, (c, w)) in cases.iter().zip(&want).enumerate() {
+        let got = match run(s(c, "fn"), &c["args"]) {
             Ok(v) => json!({ "ok": v }),
             Err(e) => json!({ "err": e }),
         };
-        println!("{out}");
+        if got.get("err").is_some() && w.get("err").is_some() && c.get("exact_err") != Some(&json!(true)) {
+            continue;
+        }
+        if !same(&got, w) {
+            bad += 1;
+            let args = c["args"].to_string();
+            println!("#{i} {} {}\n  expected: {w}\n  rust:     {got}", s(c, "fn"), &args[..args.len().min(200)]);
+        }
     }
+    println!("parity: {}/{} cases match", cases.len() - bad, cases.len());
+    std::process::exit(i32::from(bad > 0));
 }

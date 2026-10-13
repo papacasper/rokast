@@ -1,5 +1,5 @@
-//! Wi-Fi Direct link to a Roku, the pure parts of src/miracast/p2p.py: addresses, the allowlist pick, peer parsing
-//! and the assoc-request IEs. Talking to the supplicants comes in phase R3.
+//! Wi-Fi Direct link to a Roku, the pure parts: addresses, the allowlist pick, peer parsing and the assoc-request
+//! IEs. Talking to the supplicants is link.rs.
 //!
 //! Safety: a P2P peer is only connectable if a Roku on *our own LAN* (ECP :8060) reports the same name AND a wifi
 //! MAC matching the peer's P2P address (first octet | 0x02). Neighbours' TVs merely in radio range never qualify.

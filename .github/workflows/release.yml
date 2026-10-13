@@ -22,13 +22,6 @@ jobs:
           grep -qx "version = \"$v\"" ui/Cargo.toml || { echo "ui/Cargo.toml version != $v"; exit 1; }
           grep -qx "## $v" CHANGELOG.md || { echo "CHANGELOG.md has no '## $v' section"; exit 1; }
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Python tests
-        run: python3 -I -m unittest discover -s tests
-
       - name: build deps (GTK 4, supplicant for the .deb)
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-4-dev libnl-3-dev libnl-genl-3-dev libssl-dev rpm
 

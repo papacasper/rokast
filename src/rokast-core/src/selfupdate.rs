@@ -1,5 +1,5 @@
 //! rokast update [--check] [--yes] [--rollback] [--auto]: replace this install with the latest signed release
-//! (src/miracast/selfupdate.py).
+//!.
 //!
 //! Installs made by scripts/install (update::kind() == "user") replace themselves. .deb/.rpm installs get the new
 //! package downloaded and checked the same way, then installed by apt-get/dnf through pkexec (the polkit password

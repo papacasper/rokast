@@ -4,7 +4,7 @@
 # `rokast start`, wait for streaming, stop it, and check the teardown (only the Wi-Fi interface left). Prints which
 # attempt joined each run. Passes when every run streamed and every join was on attempt 1. Needs the TV on and
 # rokast set up on this machine; not run by CI. Uses this checkout (scripts/rokast), not the installed copy.
-# Failed attempts are kept as evidence in ~/.cache/rokast/join-failures/ (src/miracast/joinlog.py).
+# Failed attempts are kept as evidence in ~/.cache/rokast/join-failures/ (src/rokast-core/src/joinlog.rs).
 set -uo pipefail
 repo="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 n="${1:-10}"; idle="${2:-15}"; tv=("${@:3}")

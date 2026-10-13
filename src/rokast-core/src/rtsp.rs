@@ -1,4 +1,4 @@
-//! Wi-Fi Display RTSP *source* (the Source class of src/miracast/wfd.py), M1..M7 + keepalive, on blocking sockets.
+//! Wi-Fi Display RTSP *source*, M1..M7 + keepalive, on blocking sockets.
 //!
 //! The SOURCE (us) listens on TCP 7236 (advertised in our WFD IE); the sink (TV) connects in. We send M1, answer the
 //! sink's M2, query its capabilities (M3), pick a format (M4), trigger SETUP (M5), answer SETUP/PLAY (M6/M7), then

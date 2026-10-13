@@ -1,4 +1,4 @@
-//! One `rokast start` session: join the TV's group, then stream (join_and_stream in src/miracast/cli.py).
+//! One `rokast start` session: join the TV's group, then stream.
 use crate::stop::Fail;
 
 /// The radio side of a session; start.rs has the real one, tests a fake.

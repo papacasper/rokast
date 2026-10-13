@@ -1,4 +1,4 @@
-//! Router/recover/listing against tests/fake_pactl.py (the same fake sound server tests/test_audio.py uses).
+//! Router/recover/listing against a fake sound server (the rokast-fake-pactl test binary, linked in as `pactl`).
 use rokast_core::audio::{self, Pactl, Router};
 use rokast_core::Env;
 use serde_json::{json, Value};
@@ -21,7 +21,7 @@ impl World {
         let t = tempfile::tempdir().unwrap();
         let bin = t.path().join("bin");
         fs::create_dir(&bin).unwrap();
-        let fake = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fake_pactl.py");
+        let fake = Path::new(env!("CARGO_BIN_EXE_rokast-fake-pactl"));
         std::os::unix::fs::symlink(fs::canonicalize(fake).unwrap(), bin.join("pactl")).unwrap();
         let state = t.path().join("pactl.json");
         let s = json!({"default": SPEAKERS, "sinks": {"1": SPEAKERS, "2": HDMI}, "modules": {}, "next": 10,

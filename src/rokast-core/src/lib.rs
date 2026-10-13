@@ -1,5 +1,5 @@
-//! rokast-core: everything `rokast` does that isn't the command line. Ported module by module from
-//! `src/miracast/*.py` (docs/plan-rust.md); each module says which Python file it mirrors.
+//! rokast-core: everything `rokast` does that isn't the command line. Ported module by module from the Python
+//! version (docs/plan-rust.md); tests/parity holds its answers.
 pub mod audio;
 pub mod capture;
 pub mod conf;
