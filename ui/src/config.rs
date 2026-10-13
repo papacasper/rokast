@@ -23,6 +23,9 @@ pub struct Prefs {
     /// SCREEN=extend ("TV as a second screen")
     #[serde(default)]
     pub extend: bool,
+    /// FPS=60 ("Smooth motion")
+    #[serde(default)]
+    pub smooth: bool,
     /// Window size and the Details pane, as the user left them (0 = default size).
     #[serde(default)]
     pub width: i32,

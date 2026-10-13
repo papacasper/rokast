@@ -91,6 +91,9 @@ pub fn run(ctx: &Ctx, args: &[String]) -> ! {
             c.chk("sound routing", false, "a crashed session left the sound on rokast: run rokast doctor --fix");
         }
     }
+    if let Err(e) = capture::parse_fps(&conf["FPS"]) {
+        c.chk("FPS setting", false, &e);
+    }
     if let Err(e) = fit::parse_mode(&conf["FIT"]) {
         c.chk("FIT setting", false, &e);
     }

@@ -20,8 +20,8 @@ fn main() {
             std::process::exit(2)
         });
     let mut f = Fitter::new("match", &display, &env).expect("match is valid");
-    match f.apply(&mon, w, h) {
-        Ok(Some(g)) => println!("switched: {} {}x{}+{}+{}", g.name, g.width, g.height, g.x, g.y),
+    match f.apply(&mon, w, h, false) {
+        Ok(Some((g, _))) => println!("switched: {} {}x{}+{}+{}", g.name, g.width, g.height, g.x, g.y),
         Ok(None) => println!("unchanged"),
         Err(e) => {
             eprintln!("{e}");

@@ -203,6 +203,7 @@ Environment variables with the same names override the file.
 | `CAPTURE` | `auto` | `auto` (Wayland session → `wayland`, else `x11`), `x11` or `wayland` |
 | `MONITOR` | primary monitor | Monitor to mirror, as `rokast monitors` names it (X11 only; on Wayland the screen-sharing dialog asks) |
 | `FIT` | `bars` | How the picture fits the TV (see [Picture size](#picture-size)): `bars` (scaled in, black bars when the shapes differ) or `match` (this computer's screen takes the TV's size while mirroring; X11 only) |
+| `FPS` | `tv` | Frames a second (see [Smooth motion](#smooth-motion)): `tv` (what the TV asks for, 30 at HD on Roku TVs) or `60` |
 | `SCREEN` | `mirror` | `mirror` (the TV shows this screen) or `extend` (the TV is a second screen; see [Second screen](#second-screen); X11 only) |
 | `EXTEND_SIDE` | `right` | Where the second screen sits: `right`, `left`, `above` or `below` |
 | `DISPLAY` | `:0` | X display to capture (X11 only) |
@@ -236,6 +237,15 @@ the TV exactly, with nothing cut off or stretched; the laptop itself shows the T
 mirroring stops it switches back; after a crash the next `rokast start` or `rokast doctor --fix` does. X11 only (on
 Wayland the bars stay), and only when the screen offers a mode of that size (`xrandr` lists them); otherwise rokast
 says so and keeps the bars.
+
+### Smooth motion
+
+Roku TVs ask for HD at 30 frames a second at most, so fast movement (scrolling, dragging, games) looks a little
+jerky. With `FPS=60` (the app's **Smooth motion** switch) rokast sends 60 frames a second anyway, labelled with the
+H.264 level that needs (4.2 at 1080p); the TVs tested play it. It works when mirroring, with **Fill the TV** and with
+**TV as a second screen**. On X11 the laptop screen also runs at 60 Hz while mirroring (switched back when you stop)
+so frames come at even intervals; a fast panel's 165 Hz doesn't divide into 60. It uses a bit more Wi-Fi and
+encoder time; if the picture stutters or freezes on your TV, set `FPS=tv`.
 
 ### Second screen
 

@@ -100,15 +100,25 @@ impl Link for RealLink<'_> {
                     Err(e) => say(&format!("extend: mirroring instead: {e}")),
                 }
             }
-            // FIT=match: the laptop takes the TV's size, so the picture fills it (never fatal: bars instead)
+            // FPS=60: 60 fps whatever was negotiated (the TVs offer HD at 30 at most, but play 60)
+            let fps = capture::parse_fps(&conf["FPS"]).ok().flatten();
+            let sent = fps.map_or_else(|| n.clone(), |f| capture::smooth(n, f));
+            if sent.fps != n.fps {
+                say(&format!("fps: sending {} fps, level {} (the TV offered {})", sent.fps, sent.level, n.fps));
+            }
+            // FIT=match: the laptop takes the TV's size, so the picture fills it; FPS=60 also puts it at 60 Hz so
+            // frames are evenly spaced (never fatal: as it was). A second screen is 60 Hz already.
             if let (None, false, Some(g)) = (cast, extended, &geometry) {
-                match fitter.apply(g, n.width, n.height) {
-                    Ok(Some(new)) => {
-                        say(&format!("fit: {} switched to {}x{} for the TV", new.name, new.width, new.height));
+                match fitter.apply(g, n.width, n.height, sent.fps == 60) {
+                    Ok(Some((new, hz))) => {
+                        say(&format!(
+                            "fit: {} switched to {}x{} at {hz} Hz for the TV",
+                            new.name, new.width, new.height
+                        ));
                         geometry = Some(new);
                     }
                     Ok(None) => {}
-                    Err(e) => say(&format!("fit: keeping black bars: {e}")),
+                    Err(e) => say(&format!("fit: leaving the screen as it is: {e}")),
                 }
             }
             let opts = Opts {
@@ -122,9 +132,9 @@ impl Link for RealLink<'_> {
                 seconds: None,
                 geometry,
             };
-            let cmd = capture::build_cmd(n, Some(ip), Some(port), &opts);
-            let feeder =
-                cast.map(|c| (rokast_core::wayland::gst_cmd(c.raw_fd(), c.node, n.width, n.height, n.fps), c.raw_fd()));
+            let cmd = capture::build_cmd(&sent, Some(ip), Some(port), &opts);
+            let feeder = cast
+                .map(|c| (rokast_core::wayland::gst_cmd(c.raw_fd(), c.node, n.width, n.height, sent.fps), c.raw_fd()));
             if let Some((argv, _)) = &feeder {
                 say(&format!("gst: {}", argv.join(" ")));
             }
@@ -133,7 +143,7 @@ impl Link for RealLink<'_> {
             let feeder = feeder.as_ref().map(|(argv, fd)| (argv.as_slice(), *fd));
             ff = Some(capture::start(&cmd, &conf["DISPLAY"], env, feeder).map_err(|e| format!("ffmpeg: {e}"))?);
             let a = if audio { n.audio.as_str() } else { "no audio" };
-            status("streaming", &format!("{}x{}@{} {a}", n.width, n.height, n.fps));
+            status("streaming", &format!("{}x{}@{} {a}", n.width, n.height, sent.fps));
             Ok(())
         };
         let prefs = conf["RES"].split(',').map(|p| p.trim().to_string()).collect();
@@ -163,16 +173,6 @@ fn steps(ctx: &Ctx, conf: &mut Conf, mode: &str, name: &str, dev: &mut Option<St
     conf.insert("ENCODER".into(), enc.clone());
     say(&format!("encoder: {enc}"));
     stop::check()?;
-    // unknown MONITOR fails here, before joining; on Wayland the portal picks
-    let geometry = match mode {
-        "x11" => capture::monitor_geometry(&capture::x11_monitors(&conf["DISPLAY"], &ctx.env), &conf["MONITOR"])?,
-        _ => None,
-    };
-    let shown = geometry
-        .as_ref()
-        .map(|g| format!(" monitor {} {}x{}+{}+{}", g.name, g.width, g.height, g.x, g.y))
-        .unwrap_or_default();
-    say(&format!("capture: {mode}{shown}, name on TV: {}", conf["NAME"]));
     let router = Router::new(&conf["AUDIO"], &ctx.env)?; // a bad AUDIO= fails here, before joining
     if audio::recover(&ctx.env) {
         say("audio: put back the sound routing a previous session left behind");
@@ -184,6 +184,7 @@ fn steps(ctx: &Ctx, conf: &mut Conf, mode: &str, name: &str, dev: &mut Option<St
     if fitter.mode == "match" && mode == "wayland" {
         say("fit: FIT=match works on X11 only; on Wayland the picture keeps black bars");
     }
+    capture::parse_fps(&conf["FPS"])?; // a bad FPS= fails before joining too
     let extender = Extender::new(&conf["SCREEN"], &conf["EXTEND_SIDE"], &conf["DISPLAY"], &ctx.env)?;
     if extend::recover(&ctx.env) {
         say("extend: removed the TV screen a previous session left behind");
@@ -191,6 +192,18 @@ fn steps(ctx: &Ctx, conf: &mut Conf, mode: &str, name: &str, dev: &mut Option<St
     if extender.screen == "extend" && mode == "wayland" {
         say("extend: SCREEN=extend works on X11 only for now; mirroring");
     }
+    // measured only after the recovers above: a screen mode or TV screen a crashed session left behind would
+    // otherwise give the wrong size (a cropped picture). Unknown MONITOR fails here, before joining; on Wayland the
+    // portal picks
+    let geometry = match mode {
+        "x11" => capture::monitor_geometry(&capture::x11_monitors(&conf["DISPLAY"], &ctx.env), &conf["MONITOR"])?,
+        _ => None,
+    };
+    let shown = geometry
+        .as_ref()
+        .map(|g| format!(" monitor {} {}x{}+{}+{}", g.name, g.width, g.height, g.x, g.y))
+        .unwrap_or_default();
+    say(&format!("capture: {mode}{shown}, name on TV: {}", conf["NAME"]));
     let mut cast = None;
     if mode == "wayland" {
         // the portal may ask the user to pick a screen: do it before joining

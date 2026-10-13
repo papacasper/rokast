@@ -12,6 +12,9 @@ Each `## <version>` section becomes the GitHub release notes for that tag (see `
   port is made to look connected with a screen description of the TV's size, so windows open and maximise on it;
   `rokast doctor` says whether that works here ("full") or only "basic" (drag windows over). Removed when you stop,
   after a crash on the next start or with `rokast doctor --fix`.
+- **Smooth motion:** `FPS=60` (the app's **Smooth motion** switch) sends 60 frames a second instead of the 30 the TV
+  asks for at HD, in mirror, Fill the TV and second-screen modes. On X11 the laptop screen runs at 60 Hz while
+  mirroring so frames are evenly spaced. `FPS=tv` (default) is unchanged.
 
 ## 0.6.0
 

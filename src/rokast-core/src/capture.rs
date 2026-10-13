@@ -206,6 +206,29 @@ impl Default for Opts {
     }
 }
 
+/// FPS: "tv" (empty too: the negotiated rate) -> None, or "60" -> Some(60).
+pub fn parse_fps(value: &str) -> Result<Option<u32>, String> {
+    match value.trim() {
+        "" | "tv" => Ok(None),
+        "60" => Ok(Some(60)),
+        other => Err(format!("FPS must be tv or 60 (got {})", crate::pyfmt::repr(other))),
+    }
+}
+
+/// FPS=60: encode at `fps` whatever was negotiated (the TVs offer HD at 30 at most, but play 60), with the H.264
+/// level raised to what the size needs at that rate (macroblocks per second, H.264 table A-1): 1080p60 4.2, 720p60 3.2.
+/// nvenc refuses a level that is too low. Unchanged when the negotiated rate is already that high.
+pub fn smooth(n: &Negotiated, fps: u32) -> Negotiated {
+    if n.fps >= fps {
+        return n.clone();
+    }
+    const LEVELS: [(&str, u64); 5] =
+        [("3.1", 108_000), ("3.2", 216_000), ("4.0", 245_760), ("4.1", 245_760), ("4.2", 522_240)];
+    let mbps = u64::from(n.width.div_ceil(16) * n.height.div_ceil(16)) * u64::from(fps);
+    let level = LEVELS.iter().find(|(l, max)| *l >= n.level.as_str() && *max >= mbps).map_or("4.2", |(l, _)| l);
+    Negotiated { fps, level: level.into(), ..n.clone() }
+}
+
 fn level_flag(level: &str) -> &str {
     match level {
         "3.1" | "3.2" | "4.0" | "4.1" | "4.2" => level,
@@ -327,6 +350,23 @@ pub fn build_cmd(n: &Negotiated, sink_ip: Option<&str>, server_port: Option<u16>
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn smooth_raises_rate_and_level() {
+        let n = Negotiated::new(1920, 1080, 30, "high", "4.0", "AAC", 19000);
+        let s = smooth(&n, 60);
+        assert_eq!((s.fps, s.level.as_str(), s.width), (60, "4.2", 1920));
+        let n = Negotiated::new(1280, 720, 30, "high", "3.1", "AAC", 19000);
+        assert_eq!((smooth(&n, 60).fps, smooth(&n, 60).level.as_str()), (60, "3.2"));
+        let n = Negotiated::new(1280, 720, 30, "high", "4.0", "AAC", 19000);
+        assert_eq!(smooth(&n, 60).level, "4.0", "never lowered");
+        let n = Negotiated::new(1280, 720, 60, "high", "3.2", "AAC", 19000);
+        assert_eq!(smooth(&n, 60), n);
+        assert_eq!(parse_fps(""), Ok(None));
+        assert_eq!(parse_fps("tv"), Ok(None));
+        assert_eq!(parse_fps(" 60"), Ok(Some(60)));
+        assert_eq!(parse_fps("120"), Err("FPS must be tv or 60 (got '120')".into()));
+    }
 
     fn neg(w: u32, h: u32, fps: u32, profile: &str) -> Negotiated {
         Negotiated::new(w, h, fps, profile, "4.0", "AAC", 19000)

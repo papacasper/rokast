@@ -8,6 +8,7 @@ cargo clippy -q --workspace --all-targets --locked -- -D warnings
 cargo test -q --workspace --locked
 bash tests/parity/run.sh
 bash tests/parity/cli.sh
+bash tests/test_start_order.sh
 (cd ui && cargo test -q --locked)
 for f in scripts/* packaging/stage packaging/supplicant packaging/deb/build-deb packaging/rpm/build-rpm packaging/aur/update; do
     bash -n "$f"

@@ -162,6 +162,34 @@ User, 2026-10-13: "Can we have the video size be the same size as the tv". The l
       after negotiation, streamed 25 s (the TV tolerates the mode switch between PLAY and the first frame), SIGTERM ->
       exit 0, 1920x1200@165 back, no fit.json left. Same picture the user confirmed by hand ("Its the correct size now").
 
+## Phase 13c (v0.7.0): smooth motion (`FPS=60`)
+
+User, 2026-10-13: "Can we have the refresh rate higher on the tv", then "Try higher hz". The TVs advertise HD at 30
+fps at most (Living Room's CEA bitmap 0x0001d4bf: 1080p/720p at 24/25/30, 60 only at 480p). Tried anyway: negotiate
+1080p30, send 1080p **60** fps from a 60 Hz laptop (`FIT=match`). nvenc refuses 1080p60 at level 4.0 ("Invalid
+Level"); labelled level 4.2 the TV played it (`state=play`, position kept pace with the wall clock). User: "its
+smoother, make it a setting, and make it work for the extended display".
+
+- `FPS=tv` (default: the negotiated rate) or `FPS=60`: capture and encode at 60 fps whatever was negotiated, with
+  the H.264 level raised to what the size needs at 60 (1080p: 4.2, 720p: 3.2). The laptop screen runs at 60 Hz while
+  mirroring so frames are evenly spaced (165 Hz / 60 is uneven): `FIT=match` already does; with `FIT=bars` the same
+  mode switches to its ~60 Hz rate (same restore paths as Phase 13b). The second screen is 60 Hz already.
+- [x] **Core:** `capture::smooth(n, fps)` (pure, unit-tested: level per size), `Fitter` learns "same mode, 60 Hz".
+- [x] **Wiring:** `start.rs` sends the smoothed mode to ffmpeg/gst for mirror, fill and extend; bad `FPS=` fails before
+      joining; `doctor` checks it.
+- [x] **App:** "Smooth motion (60 fps)" switch, remembered.
+- [x] **Docs:** README settings table + a note under Picture size, config example, CHANGELOG.
+      **Done when:** check.sh green; live on Living Room with `FPS=60` mirror (bars) and `FPS=60 SCREEN=extend`:
+      ffmpeg runs at `-framerate 60`, TV `state=play`, position keeps pace with the wall clock over 20 s, laptop back
+      at 1920x1200@165 after stop. The user confirms on the TV.
+
+Results (2026-10-13, Living Room): `FPS=60` mirror: laptop switched to 1920x1200@60.00, ffmpeg `-framerate 60 -level
+4.2`, TV `state=play`, 20.05 s in 20.03 s wall; `FPS=60 SCREEN=extend`: TV screen HDMI-1 1920x1080@60, 19.8 s in
+20.0 s; both back to 1920x1200@165, one monitor, wlo1 only. **Bug found:** start measured the screen before undoing a
+crashed session's leftover mode, so after a killed run it captured 1920x1080 of a 1920x1200 screen (cropped picture,
+TV dropped). Fixed: the recovers run first; `tests/test_start_order.sh` (in check.sh) keeps that order.
+User confirmation on the TV: pending.
+
 ## Phase 14 (v0.7.0): extended display on X11
 
 - [ ] **`src/rokast-core/src/extend.rs`:** EDID builder (pure, unit-tested against `edid-decode` when present), free-port

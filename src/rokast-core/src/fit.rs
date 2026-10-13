@@ -71,6 +71,13 @@ pub fn pick_rate(out: &Output, mode: &str) -> Option<String> {
     out.modes.iter().find(|(m, _)| m == mode).and_then(|(_, r)| r.first().cloned())
 }
 
+/// The rate of `mode` on `out` nearest `hz`, if one is within 1 Hz (60 Hz for FPS=60: 165/60 spaces frames unevenly).
+pub fn rate_near(out: &Output, mode: &str, hz: f64) -> Option<String> {
+    let (_, rates) = out.modes.iter().find(|(m, _)| m == mode)?;
+    let dist = |r: &String| r.parse::<f64>().map_or(f64::MAX, |v| (v - hz).abs());
+    rates.iter().min_by(|a, b| dist(a).total_cmp(&dist(b))).filter(|r| dist(r) <= 1.0).cloned()
+}
+
 /// What a Fitter changed, as saved in fit.json.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct State {
@@ -129,20 +136,27 @@ impl Fitter {
         Ok(Fitter { mode: parse_mode(value)?, display: display.into(), env: env.clone(), saved: None })
     }
 
-    /// Switch `mon`'s output to `w`x`h`. Ok(Some(geometry to capture)) when switched (or already switched), Ok(None)
-    /// when there is nothing to do (FIT=bars, already that size), Err(why) when it can't (the caller keeps bars).
-    pub fn apply(&mut self, mon: &Monitor, w: u32, h: u32) -> Result<Option<Monitor>, String> {
-        if self.mode != "match" || (mon.width, mon.height) == (w, h) {
+    /// FIT=match: switch `mon`'s output to `w`x`h`; `hz60` (FPS=60): at its ~60 Hz rate, which alone (FIT=bars, or
+    /// already that size) switches the current mode's rate. Ok(Some((geometry to capture, rate))) when switched,
+    /// Ok(None) when there is nothing to do, Err(why) when it can't (the caller keeps things as they are).
+    pub fn apply(&mut self, mon: &Monitor, w: u32, h: u32, hz60: bool) -> Result<Option<(Monitor, String)>, String> {
+        let resize = self.mode == "match" && (mon.width, mon.height) != (w, h);
+        if !resize && !hz60 {
             return Ok(None);
         }
-        let want = format!("{w}x{h}");
         let outs = parse_query(&xrandr(&self.display, &self.env, &["--query"])?);
         let out = outs
             .iter()
             .find(|o| o.name == mon.name)
             .ok_or_else(|| format!("{} is not an output (a --setmonitor area?)", mon.name))?;
         let (mode, rate) = out.current.clone().ok_or_else(|| format!("{} has no current mode", out.name))?;
-        let new_rate = pick_rate(out, &want).ok_or_else(|| format!("{} has no {want} mode", out.name))?;
+        let want = if resize { format!("{w}x{h}") } else { mode.clone() };
+        let (w, h) = if resize { (w, h) } else { (mon.width, mon.height) };
+        let new_rate = if hz60 { rate_near(out, &want, 60.0) } else { pick_rate(out, &want) }
+            .ok_or_else(|| format!("{} has no {want} mode{}", out.name, if hz60 { " at 60 Hz" } else { "" }))?;
+        if (want.as_str(), new_rate.as_str()) == (mode.as_str(), rate.as_str()) {
+            return Ok(None);
+        }
         let st = State { display: self.display.clone(), output: out.name.clone(), mode, rate };
         let path = state_file(&self.env);
         if let Some(dir) = path.parent() {
@@ -150,7 +164,7 @@ impl Fitter {
         }
         fs::write(&path, serde_json::to_string(&st).expect("state serializes")).map_err(|e| format!("{e}"))?;
         self.saved = Some(st.clone());
-        let to = State { mode: want, rate: new_rate, ..st };
+        let to = State { mode: want, rate: new_rate.clone(), ..st };
         if let Err(e) = set_mode(&to, &self.env) {
             self.restore();
             return Err(e);
@@ -160,7 +174,7 @@ impl Fitter {
         loop {
             let g = capture::monitor_geometry(&capture::x11_monitors(&self.display, &self.env), &mon.name)?;
             if let Some(g) = g.filter(|g| (g.width, g.height) == (w, h)) {
-                return Ok(Some(g));
+                return Ok(Some((g, new_rate)));
             }
             if Instant::now() >= deadline {
                 self.restore();
@@ -216,6 +230,10 @@ HDMI-1-0 disconnected (normal left inverted right x axis y axis)
         assert_eq!(pick_rate(e, "1920x1080").as_deref(), Some("60.01"));
         assert_eq!(pick_rate(e, "1280x720").as_deref(), Some("60.00"));
         assert_eq!(pick_rate(e, "3840x2160"), None);
+        assert_eq!(rate_near(e, "1920x1200", 60.0).as_deref(), Some("60.00"));
+        assert_eq!(rate_near(e, "1920x1080", 60.0).as_deref(), Some("60.01"));
+        assert_eq!(rate_near(e, "1600x1200", 60.0).as_deref(), Some("60.00"));
+        assert_eq!(rate_near(e, "1600x1200", 120.0), None);
         assert!(!outs[1].connected && outs[1].modes.is_empty() && outs[1].current.is_none());
     }
 
@@ -237,8 +255,8 @@ HDMI-1-0 disconnected (normal left inverted right x axis y axis)
     fn bars_and_same_size_do_nothing() {
         let env = Env::new();
         let mon = Monitor { name: "eDP-1".into(), width: 1920, height: 1080, x: 0, y: 0, primary: true };
-        assert_eq!(Fitter::new("bars", ":0", &env).unwrap().apply(&mon, 1280, 720), Ok(None));
-        assert_eq!(Fitter::new("match", ":0", &env).unwrap().apply(&mon, 1920, 1080), Ok(None));
+        assert_eq!(Fitter::new("bars", ":0", &env).unwrap().apply(&mon, 1280, 720, false), Ok(None));
+        assert_eq!(Fitter::new("match", ":0", &env).unwrap().apply(&mon, 1920, 1080, false), Ok(None));
     }
 
     #[test]

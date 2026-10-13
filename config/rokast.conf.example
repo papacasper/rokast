@@ -6,6 +6,7 @@ ENCODER=auto                # auto = first that works of h264_nvenc, h264_vaapi,
 AUDIO=tv                    # tv = sound only on the TV, both = TV and this computer, off, app:<name>, device:<output> (`rokast audio` lists them)
 CAPTURE=auto                # auto = wayland (screen-sharing portal + PipeWire) in a Wayland session, else x11
 FIT=bars                    # bars = picture scaled in (black bars if the shapes differ), match = screen takes the TV's size while mirroring (X11)
+FPS=tv                      # tv = the rate the TV asks for (30 at HD), 60 = smoother motion (laptop at 60 Hz while mirroring on X11)
 SCREEN=mirror               # mirror = the TV shows this screen, extend = the TV is a second screen (X11)
 EXTEND_SIDE=right           # where the second screen sits: right, left, above, below
 DISPLAY=:0
