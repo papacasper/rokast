@@ -81,7 +81,7 @@ publish badtar 0.9.1; printf x >> "$t/srv/badtar/rokast-0.9.1-x86_64-linux.tar.g
 upd badtar --yes
 check "tampered tarball: refused" '[ "$st" = 1 ] && grep -q "does not match SHA256SUMS" "$t/out" && unchanged 0.9.0'
 
-publish badsums 0.9.1; sed -i 's/^./0/' "$t/srv/badsums/SHA256SUMS"
+publish badsums 0.9.1; echo "0000000000000000000000000000000000000000000000000000000000000000  extra.tar.gz" >> "$t/srv/badsums/SHA256SUMS"   # always a change (sed s/^./0/ was a no-op when the hash began with 0)
 upd badsums --yes
 check "tampered SHA256SUMS: refused" '[ "$st" = 1 ] && grep -q "not a valid rokast release signature" "$t/out" && unchanged 0.9.0'
 

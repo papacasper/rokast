@@ -1,6 +1,6 @@
 # Plan: TV-only sound, picking the sound, extended display
 
-Status: draft 2026-10-12, waiting on the decisions below. Comes after the self-updater (`docs/plan-v0.5.md`) and ships
+Status: approved 2026-10-12 (all three recommendations). Phase 12 in progress. Comes after the self-updater (`docs/plan-v0.5.md`) and ships
 in the release after it. Same rules as the earlier plans (compatibility, tests, files under 500 lines, live check
 after `p2p`/`wfd`/`capture`/`cli` changes, no AI attribution). Each task has a **Done when** check that must pass by
 running it, not by eye. Tick tasks off here as they land.
@@ -59,7 +59,10 @@ make an unused video port act as connected with a chosen screen description (EDI
 
 Limits:
 - needs debugfs (blocked under kernel lockdown, e.g. some Secure Boot setups);
-- needs a free port on an Intel or AMD GPU (i915, xe, amdgpu). NVIDIA's driver has no such switch.
+- needs a free port on an Intel or AMD GPU (i915, xe, amdgpu). NVIDIA's proprietary driver has the same debugfs files
+  but ignores them: tested 2026-10-12 on this laptop's RTX 4060 (`HDMI-A-3` forced on, X's `HDMI-1-0` stayed
+  disconnected). Hybrid laptops like this one are fine: the Intel GPU drives the desktop and its free ports are
+  used, so the NVIDIA card neither helps nor gets in the way. Only NVIDIA-only machines get "basic".
 
 Fallback: when this is unavailable, `xrandr --setmonitor` declares a region beside the laptop screen. ffmpeg can
 capture it (tested), but GTK ignores monitors with no output, so windows don't open or maximise there; you drag
