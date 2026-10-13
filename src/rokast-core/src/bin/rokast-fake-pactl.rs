@@ -48,6 +48,11 @@ fn title(s: &str) -> String {
         .collect()
 }
 
+/// None while the file is being replaced (a reader can catch it half written).
+fn try_load(p: &str) -> Option<Value> {
+    serde_json::from_slice(&std::fs::read(p).ok()?).ok()
+}
+
 fn input_ids(s: &Value) -> BTreeSet<i64> {
     s["inputs"].as_object().map(|m| m.keys().filter_map(|k| k.parse().ok()).collect()).unwrap_or_default()
 }
@@ -165,7 +170,8 @@ fn main() {
             let mut seen = input_ids(&s);
             loop {
                 std::thread::sleep(Duration::from_millis(50));
-                let now = input_ids(&load(&p));
+                let Some(now) = try_load(&p) else { continue };
+                let now = input_ids(&now);
                 for i in now.difference(&seen) {
                     println!("Event 'new' on sink-input #{i}");
                 }

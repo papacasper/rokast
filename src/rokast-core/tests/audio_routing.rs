@@ -47,7 +47,10 @@ impl World {
     }
 
     fn write(&self, s: &Value) {
-        fs::write(&self.state, s.to_string()).unwrap();
+        // whole file at once, as a sound server's state changes: the fake's watcher polls it
+        let tmp = self.state.with_extension("new");
+        fs::write(&tmp, s.to_string()).unwrap();
+        fs::rename(tmp, &self.state).unwrap();
     }
 
     fn saved(&self) -> Value {
@@ -98,7 +101,13 @@ fn test_app_only_and_new_streams() {
     assert_eq!(s["default"], SPEAKERS);
     assert_eq!(World::sink_of(&s, "100"), SPEAKERS);
     assert_eq!((World::sink_of(&s, "101"), World::sink_of(&s, "102")), ("rokast".into(), "rokast".into()));
-    std::thread::sleep(Duration::from_millis(300)); // let the watcher start
+    // let the watcher start: it is running once it logged its call and took one look at the streams
+    let log = Path::new(&w.env["FAKE_PACTL_LOG"]).to_path_buf();
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while Instant::now() < deadline && !fs::read_to_string(&log).unwrap_or_default().lines().any(|l| l == "subscribe") {
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    std::thread::sleep(Duration::from_millis(300));
     s["inputs"]["103"] = json!({"sink": 1, "app": "Firefox", "pinned": false});
     s["inputs"]["104"] = json!({"sink": 1, "app": "mpv", "pinned": false});
     w.write(&s);
