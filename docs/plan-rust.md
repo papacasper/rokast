@@ -1,6 +1,6 @@
 # Plan: rokast in Rust
 
-Status: approved 2026-10-12 (all three recommendations). R1 done; R2 and R3 done on the `rust-port` branch (merged after v0.4.0 ships, so that release stays Python-only); R4 next. The user chose to port first (2026-10-12: "go with a"),
+Status: approved 2026-10-12 (all three recommendations). R1 done; R2, R3 and R4 done on the `rust-port` branch (merged after v0.4.0 ships, so that release stays Python-only); R5 next. The user chose to port first (2026-10-12: "go with a"),
 so `docs/plan-audio-extend.md` (sound, extended display) is on hold and gets built in Rust after phase R6. Same
 rules as the earlier plans (compatibility, tests, files under 500 lines, live check after `p2p`/`wfd`/`capture`/`cli`
 changes, no AI attribution). Each task has a **Done when** check that must pass by running it, not by eye. Tick tasks
@@ -153,21 +153,26 @@ Not a decision: prebuilt binaries are x86_64 only, as the app already is. aarch6
 
 ## Phase R4: Wayland in Rust
 
-- [ ] Portal ScreenCast over `zbus` (session, select sources, start, OpenPipeWireRemote fd), GStreamer feeder.
+- [x] Portal ScreenCast over `zbus` (session, select sources, start, OpenPipeWireRemote fd), GStreamer feeder.
       **Done when:** the `wayland` CI job (headless GNOME, `tests/portal_click.py` approving the dialog) passes with
       the Rust binary and `ROKAST_NO_PY=1` (the launcher and the binary refuse to fall back to Python).
       Changed from "no PyGObject installed in the job": the dialog clicker itself is PyGObject (AT-SPI), so the job
       keeps python3-gobject for the test harness only; ROKAST_NO_PY proves rokast never touches Python.
+      **Result (`a10efcc`):** wayland run 38340661589, GNOME: `selftest: ok h264 1280x720 89 frames` from the
+      Rust binary with ROKAST_NO_PY=1 (KDE: the known "refused Start (code 2)", allowed to fail). Not checked
+      against the TV, per the user: "skip acually connecting".
 
 ## Phase R5: update and rollback in Rust
 
-- [ ] `rokast update [--check|--yes|--auto]`, `rokast rollback`: same messages, checks and refusals as
-      `selfupdate.py`.
+- [ ] `rokast update [--check|--yes|--auto|--rollback]`: same messages, checks and refusals as `selfupdate.py`
+      (rollback stays `update --rollback`, Python's form, so the app and the docs don't change).
 - [ ] **Upgrade across the switch:** a Python v0.4.0 install updates to a Rust release. The old Python updater runs
-      the new tarball's `scripts/install`, which installs the prebuilt `rokast`.
-      **Done when:** `tests/test_self_update.sh` and `tests/test_pkg_update.sh` pass with the Rust binary, and a new
-      case passes: install real v0.4.0, update to a locally built Rust release, `rokast version` reports it, rollback
-      returns to 0.4.0.
+      the new tarball's `scripts/install`, which installs the prebuilt `rokast`. The binary ships from here on: the
+      release tarball (`target/release/rokast`), `packaging/stage` (.deb, .rpm, AUR) and both PKGBUILDs build it.
+      **Done when:** `tests/test_self_update.sh` and `tests/test_pkg_update.sh` pass with the Rust binary
+      (`ROKAST_NO_PY=1`), and a new case passes: install v0.4.0, update to a locally built Rust release,
+      `rokast version` reports it, rollback returns to 0.4.0. v0.4.0 is not tagged yet, so the test uses `main`
+      (Python-only releases: it ships no `rokast` binary) as the stand-in, and switches to the tag once it exists.
 
 ## Phase R6: Python out, release v0.5.0
 

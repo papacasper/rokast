@@ -6,7 +6,7 @@ mod start;
 
 use rokast_core::conf::{self, Conf};
 use rokast_core::pyfmt::dumps;
-use rokast_core::{capture, lan, paths, proc, selftest, update, Env};
+use rokast_core::{capture, lan, paths, proc, selftest, selfupdate, update, Env};
 use serde_json::json;
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
@@ -204,7 +204,9 @@ fn main() {
         "version" => cmd_version(&ctx, &args[1..]),
         "ui" => cmd_ui(&ctx, &args[1..]),
         "start" => start::run(&ctx, &args),
-        "update" => python(&ctx.root, &args),
+        "update" => {
+            std::process::exit(selfupdate::main(&ctx.root, &ctx.version(), &args[1..], &ctx.load_conf(), &ctx.env))
+        }
         _ => die(USAGE),
     }
 }

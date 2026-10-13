@@ -25,12 +25,16 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the self-update test installs v0.4.0 (or main) from git
       - name: bash -n + shellcheck
         run: |
           for f in scripts/* packaging/stage packaging/supplicant packaging/deb/build-deb packaging/rpm/build-rpm packaging/aur/update; do bash -n "$f"; done
           shellcheck scripts/* tests/*.sh tests/parity/*.sh packaging/stage packaging/supplicant packaging/deb/build-deb packaging/rpm/build-rpm packaging/aur/update
       - name: install script test
         run: if [ -f tests/test_install.sh ]; then bash tests/test_install.sh; fi
+      - name: the Rust rokast (the self-update test installs it)
+        run: cargo build --release --locked -p rokast
       - name: self-update test (rokast update against a local fake GitHub)
         run: bash tests/test_self_update.sh
       # The real release key (repo secret) must match config/release-signers, or the next release fails to sign.
@@ -84,8 +88,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: ui
+          workspaces: |
+            .
+            ui
       - run: cargo build --release --locked --manifest-path ui/Cargo.toml
+      - run: cargo build --release --locked -p rokast
       - run: packaging/deb/build-deb dist
       - run: bash tests/test_pkg_deb.sh dist/*.deb
       - run: packaging/rpm/build-rpm dist

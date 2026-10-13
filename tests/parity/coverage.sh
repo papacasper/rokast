@@ -5,16 +5,6 @@ root=$(cd "$(dirname "$0")/../.." && pwd)
 cd "$root"
 # name  phase   (ported with the code they drive)
 deferred=$(cat <<'LIST'
-test_allowed_hosts R5
-test_auto_update_decision R5
-test_good_tarball R5
-test_no_ssh_keygen_refuses_before_downloading R5
-test_unsafe_tarballs_are_refused R5
-test_missing_signature_or_key R5
-test_one_changed_byte_is_rejected R5
-test_shipped_signers_file_is_valid R5
-test_sign_and_verify R5
-test_unlisted_key_fails_to_sign_and_verify R5
 LIST
 )
 py=$(grep -ohE 'def test_\w+' tests/test_*.py | cut -c5- | sort -u)

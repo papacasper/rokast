@@ -33,12 +33,16 @@ prepare() {
   cd rokast
   export RUSTUP_TOOLCHAIN=stable
   cargo fetch --locked --manifest-path ui/Cargo.toml --target "$(rustc -vV | sed -n 's/host: //p')"
+  if [ -f Cargo.toml ]; then   # the rokast command (Rust from v0.5.0; older releases run the Python one)
+    cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+  fi
 }
 
 build() {
   cd rokast
   export RUSTUP_TOOLCHAIN=stable CARGO_TARGET_DIR=ui/target
   cargo build --frozen --release --manifest-path ui/Cargo.toml
+  if [ -f Cargo.toml ]; then CARGO_TARGET_DIR=target cargo build --frozen --release -p rokast; fi
   ROKAST_HOSTAP_SRC="$srcdir/wpa_supplicant-2.11" ROKAST_SUPPLICANT_DIR="$srcdir/supplicant" scripts/build-supplicant
 }
 

@@ -4,7 +4,7 @@
 # signed B from inside the container, then:
 #   as a normal user without pkexec -> refuses to guess: keeps the verified package and prints the sudo command
 #   as root                         -> installs B with apt-get/dnf
-# Needs docker, ui/target/release/rokast-ui built, and the supplicant build deps (built once, reused). Run by CI.
+# Needs docker, target/release/rokast and ui/target/release/rokast-ui built, and the supplicant build deps (built once, reused). Run by CI.
 # shellcheck disable=SC2016  # check strings are single-quoted on purpose: eval expands them
 set -euo pipefail
 repo="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
@@ -17,7 +17,9 @@ case "$fmt" in
          inst="dnf install -y -q /pkg/$a" ;;
     *) echo "usage: tests/test_pkg_update.sh deb|rpm" >&2; exit 2 ;;
 esac
-[ -x "$repo/ui/target/release/rokast-ui" ] || { echo "test_pkg_update: build the UI first" >&2; exit 1; }
+for f in ui/target/release/rokast-ui target/release/rokast; do
+    [ -x "$repo/$f" ] || { echo "test_pkg_update: build $f first" >&2; exit 1; }
+done
 t="$(mktemp -d)"; trap 'rm -rf "$t"' EXIT
 mkdir -p "$t/pkg" "$t/srv"
 ssh-keygen -q -t ed25519 -N "" -C test -f "$t/key"
@@ -29,6 +31,7 @@ for v in 0.9.0 0.9.1; do
     git -C "$repo" ls-files -z -co --exclude-standard | (cd "$repo" && xargs -0 cp --parents -a -t "$d" --)
     echo "$v" > "$d/VERSION"; cp "$t/signers" "$d/config/release-signers"
     install -Dm755 "$repo/ui/target/release/rokast-ui" "$d/ui/target/release/rokast-ui"
+    install -Dm755 "$repo/target/release/rokast" "$d/target/release/rokast"
     ROKAST_PREBUILT_SUPPLICANT="$t/sup" "$d/packaging/$fmt/build-$fmt" "$t/pkg" > /dev/null
 done
 mv "$t/pkg/$b" "$t/srv/"
@@ -44,6 +47,7 @@ EOF
 
 docker run --rm -v "$t/pkg:/pkg:ro" -v "$t/srv:/srv:ro" "$image" bash -c "
     $inst > /tmp/inst.log 2>&1 || { tail -20 /tmp/inst.log; exit 1; }"'
+    export ROKAST_NO_PY=1   # the Rust rokast does the update; Python is refused
     echo "before=$(rokast version)"
     python3 -I -m http.server -b 127.0.0.1 -d /srv 8000 > /dev/null 2>&1 &
     for _ in $(seq 50); do python3 -I -c "import urllib.request as u; u.urlopen(\"http://127.0.0.1:8000/latest.json\")" 2>/dev/null && break; sleep 0.2; done

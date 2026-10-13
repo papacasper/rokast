@@ -13,4 +13,7 @@ libc = "0.2"
 tempfile = "3"
 ureq = { version = "2", default-features = false, features = ["tls", "json"] }
 zbus = "5.19"
+tar = "0.4"
+flate2 = "1"
+url = "2"
 

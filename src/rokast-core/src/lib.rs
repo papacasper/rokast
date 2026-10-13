@@ -12,6 +12,7 @@ pub mod proc;
 pub mod pyfmt;
 pub mod rtsp;
 pub mod selftest;
+pub mod selfupdate;
 pub mod session;
 pub mod stop;
 pub mod update;
