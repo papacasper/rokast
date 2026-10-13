@@ -127,6 +127,9 @@ it.
 - [x] **Docs:** README (Sound section, settings table `AUDIO` values), `docs/how-it-works.md` (the null sink),
       `config/rokast.conf.example`, CHANGELOG (the `AUDIO=1` change: the laptop goes quiet while mirroring;
       `AUDIO=both` for the old behaviour).
+- [x] **TV check** (2026-10-13, Living Room): `tests/live_sound_tv.sh "Living Room" 6` -> ok: 6 chimes on `rokast`,
+      heard on the TV with the laptop silent; restored after SIGTERM. (The TV had stopped advertising Wi-Fi Direct after
+      3.7 days up; Home and ECP PowerOff/PowerOn did not help, a System restart did.)
 - [ ] **Release v0.6.0** by `playbooks/release.md`; the installed 0.5.0 updates itself (`rokast update`).
 
 ## Phase 14 (v0.7.0): extended display on X11

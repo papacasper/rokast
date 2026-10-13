@@ -2,7 +2,7 @@
 
 Each `## <version>` section becomes the GitHub release notes for that tag (see `playbooks/release.md`).
 
-## Unreleased
+## 0.6.0
 
 - **Sound plays only on the TV:** while mirroring, the laptop goes quiet and the TV gets no echo (`AUDIO=tv`, the
   new default; `AUDIO=1` now means this too). The sound goes back when you stop, and after a crash on the next

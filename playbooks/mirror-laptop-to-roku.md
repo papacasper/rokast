@@ -56,6 +56,11 @@ left click toggles the window; menu = status, Start/Stop, Show/Hide, Quit. With 
   again, read `~/.cache/rokast/join-failures/<newest>/` (`rokast doctor --report` prints the summary): each attempt's
   supplicant log, the peer entry and the TV's power mode. Check cold starts with `tests/live_join_soak.sh 10 15`.
 
+- `not visible over Wi-Fi Direct` with the TV on and answering ECP (2026-10-13): the TV has stopped advertising P2P
+  (`sudo wpa_cli -i p2p-dev-wlo1 p2p_find 30` then `p2p_peers` lacks its p2p MAC; other Rokus show). Seen after 3.7 days
+  up. ECP Home and PowerOff/PowerOn (standby only, `uptime` keeps counting) do NOT fix it; a real restart does
+  (Settings > System > Power > System restart, or unplug 30 s; check `uptime` in device-info dropped). Then it is visible in ~2 s.
+
 ## Why each piece exists (do not "simplify" these away)
 
 - NM's own `p2p_connect <mac> pbc join` joins and gets DHCP but the Roku NEVER opens RTSP (days of IE/name/type variants: no effect).
