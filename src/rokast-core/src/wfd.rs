@@ -133,7 +133,7 @@ pub fn choose_video<S: AsRef<str>>(caps: &Caps, prefs: &[S]) -> Result<(u32, Res
             let level = if lv >= need {
                 need
             } else if lv != 0 {
-                lv & lv.wrapping_neg() // lowest level the sink offers: never exceed what it said
+                1 << lv.trailing_zeros() // lowest level the sink offers: never exceed what it said
             } else {
                 0x01
             };
