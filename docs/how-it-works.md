@@ -21,7 +21,7 @@ Miracast (Wi-Fi Display, WFD) has three layers:
    sink's RTP port.
 
 Layers 2 and 3 are plain networking and straightforward. In this project they live in
-`src/miracast/wfd.py` and `capture.py` and are unit-tested against a fake sink. Layer 1 is where
+`src/rokast-core/src/{wfd,rtsp,capture}.rs` and are unit-tested against a fake sink. Layer 1 is where
 Roku compatibility is decided.
 
 ## 2. How a Roku behaves
@@ -81,7 +81,7 @@ the phone-style IEs in the association request on a P2P-client interface, and th
 
 ## 5. What works
 
-`src/miracast/p2p.py`, `connect()`:
+`src/rokast-core/src/link.rs`, `connect()` (with `p2p.rs` and `lan.rs`):
 
 1. **Allowlist** (`lan_rokus()`, `pick()`). Find Rokus on the LAN through Roku ECP
    (`http://<ip>:8060/query/device-info`). Only a TV whose name *and* derived P2P address match a
@@ -107,7 +107,7 @@ the phone-style IEs in the association request on a P2P-client interface, and th
 6. **RTSP + media.** The TV connects within about 0.5 s. The M1–M7 exchange negotiates (for a
    G512X) 1920x1080p30 H.264 High@4.0 with AAC, and `ffmpeg` streams `x11grab` + PulseAudio
    monitor → H.264 (NVENC/VAAPI/x264) + AAC → RTP/MPEG-TS to the TV's RTP port (1028 on Roku).
-   On Wayland, `src/miracast/wayland.py` opens an xdg-desktop-portal ScreenCast session before
+   On Wayland, `src/rokast-core/src/wayland.rs` opens an xdg-desktop-portal ScreenCast session before
    joining (the user may have to pick a screen, and the TV's RTSP window is too short to wait for
    that). It passes the PipeWire fd to GStreamer (`pipewiresrc ! videoconvert ! videoscale ! videorate`),
    which writes raw I420 frames at exactly the negotiated size and rate into ffmpeg's stdin. The
@@ -140,7 +140,7 @@ It doesn't replace or touch the system `wpa_supplicant`.
 - **Monitor capture on the group's channel with the same card.** Hopping monitors miss the 0.2 s
   join. Switching the Wi-Fi interface itself to monitor mode, pinned to the TV group's frequency,
   captured the phone's full probe/auth/assoc/EAPOL sequence for byte-level comparison.
-- **IE byte-equality test.** `tests/test_wfd.py` checks that `assoc_ies()` produces exactly the
+- **IE byte-equality test.** a unit test in `src/rokast-core/src/p2p.rs` checks that `assoc_ies()` produces exactly the
   phone's IE layout. It caught a wrong device-category encoding and a WFD subelement framing bug
   that the TV happened to tolerate.
 - **`addr2line` on the kernel segfault line** (`journalctl -k`) located the hostap NULL

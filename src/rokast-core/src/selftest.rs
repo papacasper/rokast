@@ -1,10 +1,14 @@
-//! rokast selftest + hardware report, the pure parts (src/miracast/selftest.py): which mode to test, the ffprobe
-//! checks, the report helpers. Running the pipeline comes with the `selftest` command (phase R2).
+//! rokast selftest + hardware report: which mode to test, capture + encode to a file,
+//! the ffprobe checks, the report helpers.
+use crate::capture::{self, Opts};
+use crate::conf::Conf;
 use crate::pyfmt::{py_str, repr};
 use crate::wfd::Negotiated;
+use crate::{proc, wayland, Env};
 use serde_json::Value;
 use std::fs;
 use std::path::Path;
+use std::time::Duration;
 
 pub const MODES: [(&str, (u32, u32, u32)); 5] = [
     ("1080p60", (1920, 1080, 60)),
@@ -116,6 +120,135 @@ pub fn wifi_chips(sys_net: &Path) -> Vec<(String, String)> {
             (n, name.unwrap_or_else(|| "?".into()))
         })
         .collect()
+}
+
+/// Capture + encode `seconds` into `out` (a temp file, deleted after, if None). Ok(true) on pass.
+pub fn run(
+    conf: &Conf,
+    mode: &str,
+    seconds: u32,
+    out: Option<&str>,
+    env: &Env,
+    log: &dyn Fn(&str),
+) -> Result<bool, String> {
+    if proc::which("ffprobe", env).is_none() {
+        return Err("ffprobe not found (it comes with ffmpeg)".into());
+    }
+    let n = negotiated(&conf["RES"])?;
+    let encoder = capture::pick_encoder(&conf["ENCODER"])?;
+    let monitor = if conf["AUDIO"] == "1" { capture::default_monitor() } else { None };
+    let tmp = match out {
+        Some(_) => None,
+        None => Some(
+            tempfile::Builder::new()
+                .prefix("rokast-selftest-")
+                .suffix(".ts")
+                .tempfile()
+                .map_err(|e| e.to_string())?
+                .into_temp_path(),
+        ),
+    };
+    let out = out
+        .map(String::from)
+        .unwrap_or_else(|| tmp.as_ref().map(|t| t.to_string_lossy().into_owned()).unwrap_or_default());
+    let of = if conf["MONITOR"].is_empty() { String::new() } else { format!(" of {}", conf["MONITOR"]) };
+    let sound = monitor.as_ref().map(|m| format!("from {m}")).unwrap_or("off".into());
+    log(&format!(
+        "selftest: {mode} capture{of}, {encoder}, {}x{}@{}, audio {sound}, {seconds}s -> {out}",
+        n.width, n.height, n.fps
+    ));
+    let mut cast = None;
+    if mode == "wayland" {
+        let mut c = wayland::ScreenCast::new()?;
+        c.open(env).map_err(|e| match e {
+            crate::stop::Fail::Err(m) => m,
+            crate::stop::Fail::Stop => "stopped".into(),
+        })?;
+        cast = Some(c);
+    }
+    let geometry = match cast {
+        Some(_) => None,
+        None => capture::monitor_geometry(&capture::x11_monitors(&conf["DISPLAY"], env), &conf["MONITOR"])?,
+    };
+    let opts = Opts {
+        display: conf["DISPLAY"].clone(),
+        encoder: encoder.clone(),
+        bitrate: conf["BITRATE"].clone(),
+        audio: monitor.is_some(),
+        monitor: monitor.clone(),
+        source: if cast.is_some() { "raw" } else { "x11" }.into(),
+        out: Some(out.clone()),
+        seconds: Some(seconds),
+        geometry,
+    };
+    let cmd = capture::build_cmd(&n, None, None, &opts);
+    let feeder = cast.as_ref().map(|c| (wayland::gst_cmd(c.raw_fd(), c.node, n.width, n.height, n.fps), c.raw_fd()));
+    let feeder = feeder.as_ref().map(|(argv, fd)| (argv.as_slice(), *fd));
+    let mut pipe = capture::start(&cmd, &conf["DISPLAY"], env, feeder).map_err(|e| format!("ffmpeg: {e}"))?;
+    let code = match proc::wait_for(pipe.ffmpeg(), Duration::from_secs(u64::from(seconds) + 30)) {
+        Some(st) => proc::returncode(&st).to_string(),
+        None => "timeout".into(),
+    };
+    pipe.terminate(Duration::from_secs(5));
+    drop(cast); // closes the portal session
+    if code != "0" {
+        log(&format!("selftest: FAIL ffmpeg exited with {code} (its messages are above)"));
+        if encoder == "h264_vaapi" {
+            log("selftest: hint: VAAPI needs your GPU's VA-API driver (intel-media-driver for recent Intel, \
+                 Mesa VA-API for AMD); ENCODER=libx264 works everywhere");
+        }
+        return Ok(false);
+    }
+    let pc = probe_cmd(&out);
+    let argv: Vec<&str> = pc.iter().map(String::as_str).collect();
+    let r = proc::run(&argv, &[], Duration::from_secs(60)).ok_or("ffprobe did not finish")?;
+    if !r.ok() {
+        log(&format!("selftest: FAIL ffprobe could not read the output: {}", r.stderr.trim()));
+        return Ok(false);
+    }
+    let probe: Value = serde_json::from_str(&r.stdout).map_err(|e| e.to_string())?;
+    let problems = check(&probe, &n, seconds, monitor.is_some());
+    for p in &problems {
+        log(&format!("selftest: FAIL {p}"));
+    }
+    if problems.is_empty() {
+        log(&format!("selftest: ok {}", summary(&probe)));
+    }
+    Ok(problems.is_empty())
+}
+
+fn first_line(argv: &[&str]) -> Option<String> {
+    proc::run(argv, &[], Duration::from_secs(10)).and_then(|o| o.stdout.lines().next().map(String::from))
+}
+
+/// [(label, value)] for a hardware report.
+pub fn system_info(env: &Env) -> Vec<(String, String)> {
+    let pci = proc::run(&["lspci"], &[], Duration::from_secs(10)).map(|o| o.stdout).unwrap_or_default();
+    let after = |ln: &str| ln.split_once(": ").map(|(_, r)| r).unwrap_or(ln).to_string();
+    let pick = |keys: &[&str]| -> String {
+        let v: Vec<String> = pci.lines().filter(|l| keys.iter().any(|k| l.contains(k))).map(after).collect();
+        v.join("; ")
+    };
+    let gpus = pick(&["VGA", "3D controller", "Display controller"]);
+    let nets = pick(&["Network controller"]);
+    let chips: Vec<String> = wifi_chips(Path::new("/sys/class/net")).iter().map(|(i, d)| format!("{i}: {d}")).collect();
+    let or = |s: String, d: &str| if s.is_empty() { d.to_string() } else { s };
+    let var = |k: &str| env.get(k).filter(|v| !v.is_empty()).cloned();
+    let session = var("XDG_SESSION_TYPE").unwrap_or(if wayland::is_wayland(env) { "wayland" } else { "x11?" }.into());
+    let kernel = fs::read_to_string("/proc/sys/kernel/osrelease").map(|s| s.trim().to_string()).unwrap_or_default();
+    [
+        ("distro", os_release(Path::new("/etc/os-release"))),
+        ("kernel", kernel),
+        ("desktop", var("XDG_CURRENT_DESKTOP").unwrap_or("unknown".into())),
+        ("session", session),
+        ("gpu", or(gpus, "unknown (lspci missing?)")),
+        ("wifi", or(nets, "unknown")),
+        ("wifi driver", or(chips.join(", "), "none")),
+        ("ffmpeg", first_line(&["ffmpeg", "-version"]).unwrap_or("missing".into())),
+    ]
+    .into_iter()
+    .map(|(k, v)| (k.to_string(), v))
+    .collect()
 }
 
 #[cfg(test)]

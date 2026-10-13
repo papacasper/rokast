@@ -1,6 +1,6 @@
 # Plan: rokast in Rust
 
-Status: approved 2026-10-12 (all three recommendations). R1 done; R2 next. The user chose to port first (2026-10-12: "go with a"),
+Status: approved 2026-10-12 (all three recommendations). R1 done; R2 to R5 done on the `rust-port` branch (merged after v0.4.0 ships, so that release stays Python-only); R6 done there except the v0.5.0 release. The user chose to port first (2026-10-12: "go with a"),
 so `docs/plan-audio-extend.md` (sound, extended display) is on hold and gets built in Rust after phase R6. Same
 rules as the earlier plans (compatibility, tests, files under 500 lines, live check after `p2p`/`wfd`/`capture`/`cli`
 changes, no AI attribution). Each task has a **Done when** check that must pass by running it, not by eye. Tick tasks
@@ -100,10 +100,13 @@ Not a decision: prebuilt binaries are x86_64 only, as the app already is. aarch6
 
 ## Phase R0: ship today's main as v0.4.0
 
-- [ ] The user's logout/login autostart check, then the release by `playbooks/release.md` (the self-updater phases
+- [x] The user's logout/login autostart check, then the release by `playbooks/release.md` (the self-updater phases
       8-10 ship in it, so v0.4.0 is the first version that can update itself).
       **Done when:** the release workflow is green, `rokast-ui` from the release starts (`tests/test_ui_starts.sh`
-      against the release binary), and `rokast update --check` from v0.3.0 sees 0.4.0.
+      against the release binary), and `rokast version --check` from v0.3.0 (it has no `update`) sees 0.4.0.
+      Done 2026-10-13: autostart confirmed by a reboot; release run 38408613519 green, six assets, signature and
+      checksums good; the release `rokast-ui` passes test_ui_starts; v0.3.0 reports "rokast 0.4.0 is available"
+      (with a fresh cache: it asks GitHub at most once a day).
 
 ## Phase R1: workspace, core, parity harness
 
@@ -122,48 +125,85 @@ Not a decision: prebuilt binaries are x86_64 only, as the app already is. aarch6
 
 ## Phase R2: Rust `rokast` for everything except start and update
 
-- [ ] `rokast` binary: `list [--json]`, `doctor [--report]`, `monitors [--json]`, `selftest`, `version [--check]`,
-      `ui`, `audio [--json]`; anything else is exec'd to `cli.py`. `scripts/rokast` runs the binary (built by
-      `cargo` in a clone, prebuilt in releases).
+- [x] `rokast` binary: `list [--json]`, `doctor [--report]`, `monitors [--json]`, `selftest`, `version [--check
+      [--json]]`, `name`, `config`, `ui`; `start` and `update` are exec'd to `cli.py`, and so are `doctor`/`selftest`
+      when capture is Wayland (the portal comes in R4). `scripts/rokast` runs `target/release/rokast` when it is built
+      (`scripts/install` builds it with cargo, like the app), else Python; in a clone whose Rust sources are newer than
+      the binary it says so and uses Python, so a stale build never hides a change. `--json` output is Python's
+      `json.dumps` byte for byte (`pyfmt::dumps`). `audio` is not here: Python has no such command yet, it comes with
+      sound in v0.6.0.
       **Done when:** the shell tests are green with the Rust binary, and `tests/parity/cli.sh` matches Python's
       output for each ported command on this laptop (`list --json` against the real TV, `doctor`, `monitors`,
       `selftest` file checks). `test_ui_starts.sh` is green.
+      Result 2026-10-12: `cli.sh --live` 22/22 (three TVs, doctor, doctor --report, selftest); CI runs the 17 that
+      need no hardware. `test_install`, `test_self_update`, `test_monitor_capture`, `test_ui_starts` green locally
+      with the binary built. `src/rokast/tests/cli.rs` ports the version-check CLI tests (fake GitHub, real fetch).
 
 ## Phase R3: start in Rust
 
-- [ ] `p2p` (wpa_supplicant control, own-group start, peer find, DHCP, teardown), `wfd::Source` (RTSP server, M1-M7,
+- [x] `p2p` (wpa_supplicant control, own-group start, peer find, DHCP, teardown), `wfd::Source` (RTSP server, M1-M7,
       keepalive, the 20 s RTSP wait), capture pipeline start/stop, the join retry, join failure logs, SIGTERM
       teardown, the session lock.
       **Done when:** the live check (start in the background -> `status: streaming`, `active-app` RokuCast,
       `kill -TERM` -> exit 0, only `wlo1` in `iw dev`) passes 3 times in a row. `tests/live_join_soak.sh 10 15` passes
       (every run streams, every join on attempt 1, the same bar as the Python version). The user confirms picture
       and sound on the TV.
+      Result 2026-10-12: `link.rs` (join, DHCP, teardown), `rtsp.rs` (the RTSP source), `session.rs` (join retry),
+      `stop.rs` (SIGTERM/SIGINT), `src/rokast/src/start.rs`; `update` and Wayland `start` still go to Python. The
+      live check passed 3 of 3 through `scripts/rokast` (streaming in 19-24 s, every join on attempt 1, 1920x1080@30
+      AAC, exit 0, only `wlo1` left). The soak was stopped by the user after run 1 (joined 1/4, streamed,
+      clean teardown): "stop the soak we now know it works". The 11 R3 Python tests have Rust counterparts.
+      Sound confirmed 2026-10-12 (after R5, `a668ec9`): Rust `rokast start` streamed 1920x1080@30 AAC in 24 s, a
+      4 s tone played 8 times, the user: "I hear the tone on the TV". Exit 0, only `wlo1` left.
 
 ## Phase R4: Wayland in Rust
 
-- [ ] Portal ScreenCast over `zbus` (session, select sources, start, OpenPipeWireRemote fd), GStreamer feeder.
+- [x] Portal ScreenCast over `zbus` (session, select sources, start, OpenPipeWireRemote fd), GStreamer feeder.
       **Done when:** the `wayland` CI job (headless GNOME, `tests/portal_click.py` approving the dialog) passes with
-      the Rust binary and no PyGObject installed in the job.
+      the Rust binary and `ROKAST_NO_PY=1` (the launcher and the binary refuse to fall back to Python).
+      Changed from "no PyGObject installed in the job": the dialog clicker itself is PyGObject (AT-SPI), so the job
+      keeps python3-gobject for the test harness only; ROKAST_NO_PY proves rokast never touches Python.
+      **Result (`a10efcc`):** wayland run 38340661589, GNOME: `selftest: ok h264 1280x720 89 frames` from the
+      Rust binary with ROKAST_NO_PY=1 (KDE: the known "refused Start (code 2)", allowed to fail). Not checked
+      against the TV, per the user: "skip acually connecting".
 
 ## Phase R5: update and rollback in Rust
 
-- [ ] `rokast update [--check|--yes|--auto]`, `rokast rollback`: same messages, checks and refusals as
-      `selfupdate.py`.
-- [ ] **Upgrade across the switch:** a Python v0.4.0 install updates to a Rust release. The old Python updater runs
-      the new tarball's `scripts/install`, which installs the prebuilt `rokast`.
-      **Done when:** `tests/test_self_update.sh` and `tests/test_pkg_update.sh` pass with the Rust binary, and a new
-      case passes: install real v0.4.0, update to a locally built Rust release, `rokast version` reports it, rollback
-      returns to 0.4.0.
+- [x] `rokast update [--check|--yes|--auto|--rollback]`: same messages, checks and refusals as `selfupdate.py`
+      (rollback stays `update --rollback`, Python's form, so the app and the docs don't change).
+- [x] **Upgrade across the switch:** a Python v0.4.0 install updates to a Rust release. The old Python updater runs
+      the new tarball's `scripts/install`, which installs the prebuilt `rokast`. The binary ships from here on: the
+      release tarball (`target/release/rokast`), `packaging/stage` (.deb, .rpm, AUR) and both PKGBUILDs build it.
+      **Done when:** `tests/test_self_update.sh` and `tests/test_pkg_update.sh` pass with the Rust binary
+      (`ROKAST_NO_PY=1`), and a new case passes: install v0.4.0, update to a locally built Rust release,
+      `rokast version` reports it, rollback returns to 0.4.0. v0.4.0 is not tagged yet, so the test uses `main`
+      (Python-only releases: it ships no `rokast` binary) as the stand-in, and switches to the tag once it exists.
+      **Result:** done (`284b0fb`, ci run 38341770805): `test_self_update: all ok` with all five switch checks,
+      `test_pkg_update: all ok` on deb (ubuntu:22.04) and rpm (fedora:43), coverage 81 tests / 0 problems.
 
 ## Phase R6: Python out, release v0.5.0
 
-- [ ] Delete `src/miracast/`, the Python unit tests that have Rust counterparts, the Python parity side and
+- [x] Delete `src/miracast/`, the Python unit tests that have Rust counterparts, the Python parity side and
       `ROKAST_PY`. CI drops the Python jobs.
-- [ ] Packaging: .deb/.rpm/AUR without `python3` and `python3-gi`; AUR builds both binaries with `cargo`.
-      **Done when:** `rg -il python packaging scripts .github` finds nothing. `tests/test_pkg_deb.sh`, `test_pkg_rpm.sh`
-      and `test_pkg_arch.sh` pass in CI in images without Python. `gh api repos/papacasper/rokast/languages`
-      shows no Python after the push.
-- [ ] Docs: README (requirements, building from source), `docs/how-it-works.md`, CHANGELOG ("rokast is now one Rust
+      How (decided 2026-10-12, before deleting): Python's answers are frozen first, so Rust stays checked against
+      them: `tests/parity/expected.jsonl` (the 230 cases) and `tests/parity/cli/` (the no-hardware commands, run in a
+      fixed environment). The parity example and `cli.sh` compare against those files. `coverage.sh` goes (no Python
+      tests left). The test helpers become Rust: `tests/fake_pactl.py` -> the `rokast-fake-pactl` test binary in
+      rokast-core, `tests/portal_click.py` -> `src/rokast-core/examples/portal_click.rs` (zbus on the AT-SPI bus).
+      `scripts/rokast` builds the binary in a git clone when it is missing or older than the source (cargo), else
+      says how. Shell tests may still use the CI host's `python3` for a throwaway HTTP server; nothing runs Python
+      inside the package test containers.
+- [x] Packaging: .deb/.rpm/AUR without `python3` and `python3-gi`; AUR builds both binaries with `cargo`.
+      **Done when:** `rg -il python packaging scripts .github` finds only `.github/workflows/wayland.yml`, for
+      `python3-dbusmock` (Fedora's mock logind: gnome-shell needs logind and the test container has no systemd; it is
+      the CI desktop, not rokast). `tests/test_pkg_deb.sh`, `test_pkg_rpm.sh` and `test_pkg_arch.sh rokast-git` pass
+      in CI (CI gets an `arch` job for this) and each shows rokast itself needs no Python: no installed rokast file
+      mentions it, and deb: removing Python would not remove rokast (Ubuntu 22.04 installs it anyway, for
+      networkd-dispatcher); rpm and Arch: no python in rokast's own Requires/depends (Fedora 43 needs it for gtk4's
+      dependencies, Arch for ffmpeg's: vapoursynth). Found 2026-10-13 in CI: an
+      image without Python is not possible on any of the three.
+      `gh api repos/papacasper/rokast/languages` shows no Python once main has the port.
+- [x] Docs: README (requirements, building from source), `docs/how-it-works.md`, CHANGELOG ("rokast is now one Rust
       program; Python no longer needed").
 - [ ] Release v0.5.0 by `playbooks/release.md`, then the live check from the installed release.
 

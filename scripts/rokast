@@ -1,3 +1,16 @@
 #!/usr/bin/env bash
-# rokast {list [--json]|start [name]|doctor|ui}  -- native Miracast to a Roku TV, no app on the TV.
-exec python3 -I "$(dirname "$(readlink -f "$0")")/../src/miracast/cli.py" "$@"
+# rokast {list [--json]|start [name]|doctor|ui|...}  -- native Miracast to a Roku TV, no app on the TV.
+# Runs target/release/rokast (prebuilt in releases and packages). In a git clone it is built first when it is missing
+# or older than the source (cargo), so a stale build never hides a change.
+root="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+bin="$root/target/release/rokast"
+# Only the crates' src/ (any change there relinks the binary; tests, examples and Cargo.lock may not).
+if [ -d "$root/.git" ] && { [ ! -x "$bin" ] || [ -n "$(find "$root/src/rokast/src" "$root/src/rokast-core/src" \
+        -newer "$bin" -print -quit 2>/dev/null)" ]; }; then
+    command -v cargo >/dev/null || { echo "rokast: $bin is missing or older than the source; install Rust (cargo) to build it" >&2; exit 1; }
+    echo "rokast: building $bin (cargo build --release -p rokast)" >&2
+    cargo build -q --release --locked --manifest-path "$root/Cargo.toml" -p rokast >&2 || exit 1
+    touch "$bin"   # cargo leaves an up-to-date binary's time alone
+fi
+[ -x "$bin" ] || { echo "rokast: $bin is missing; this copy of rokast is incomplete" >&2; exit 1; }
+ROKAST_ROOT="$root" exec "$bin" "$@"

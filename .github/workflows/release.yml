@@ -22,13 +22,6 @@ jobs:
           grep -qx "version = \"$v\"" ui/Cargo.toml || { echo "ui/Cargo.toml version != $v"; exit 1; }
           grep -qx "## $v" CHANGELOG.md || { echo "CHANGELOG.md has no '## $v' section"; exit 1; }
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Python tests
-        run: python3 -I -m unittest discover -s tests
-
       - name: build deps (GTK 4, supplicant for the .deb)
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-4-dev libnl-3-dev libnl-genl-3-dev libssl-dev rpm
 
@@ -39,6 +32,11 @@ jobs:
         run: |
           cargo build --release --locked
           cargo test --release --locked
+
+      - name: Build and test the rokast command
+        run: |
+          cargo build --release --locked -p rokast
+          cargo test --release --locked --workspace
 
       - name: .deb (built and installed in a clean ubuntu:22.04 container)
         run: |
@@ -56,6 +54,7 @@ jobs:
           mkdir -p dist
           git archive --prefix="$name/" HEAD | tar -x -C dist
           install -Dm755 ui/target/release/rokast-ui "dist/$name/ui/target/release/rokast-ui"
+          install -Dm755 target/release/rokast "dist/$name/target/release/rokast"
           tar -C dist -czf "$name-x86_64-linux.tar.gz" "$name"
           cp ui/target/release/rokast-ui rokast-ui-x86_64-linux
           sha256sum "$name-x86_64-linux.tar.gz" rokast-ui-x86_64-linux "rokast_${v}_amd64.deb" \

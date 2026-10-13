@@ -2,8 +2,9 @@
 # tests/wayland_desktop.sh gnome|kde
 # `rokast selftest` with CAPTURE=wayland on a headless GNOME (gnome-shell --headless, xdg-desktop-portal-gnome) or
 # KDE (kwin_wayland --virtual, xdg-desktop-portal-kde) session: the real portal ScreenCast + PipeWire + GStreamer
-# path. The share dialog is answered over accessibility (tests/portal_click.py). Runs as root inside a throwaway
-# fedora container (.github/workflows/wayland.yml installs the packages); never run it on your own desktop.
+# path. The share dialog is answered over accessibility (src/rokast-core/examples/portal_click.rs). Runs as root
+# inside a throwaway fedora container (.github/workflows/wayland.yml installs the packages and builds rokast and the
+# clicker); never run it on your own desktop.
 set -uo pipefail
 desk="${1:?usage: tests/wayland_desktop.sh gnome|kde}"
 repo="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
@@ -40,7 +41,7 @@ exec dbus-run-session -- bash -c '
     portal="/usr/libexec/xdg-desktop-portal-'"$desk"'"   # started here, not by D-Bus, so its log is ours
     QT_FORCE_STDERR_LOGGING=1 QT_LOGGING_RULES="*.debug=true;qt.*.debug=false" "$portal" > "$log/portal-backend.log" 2>&1 &
     sleep 2
-    python3 -I "$0/tests/portal_click.py" 90 > "$log/click.log" 2>&1 & click=$!
+    "$0/target/release/examples/portal_click" 90 > "$log/click.log" 2>&1 & click=$!
     "$0/scripts/rokast" selftest --seconds 3 > "$log/selftest.log" 2>&1; rc=$?
     kill "$click" 2>/dev/null; wait "$click" 2>/dev/null
     for f in selftest click compositor portal-backend; do echo "== $f"; tail -60 "$log/$f.log"; done

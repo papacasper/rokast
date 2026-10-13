@@ -9,7 +9,7 @@ then the AUR packages updated.
 1. Pick the version (semver: fix = patch, feature = minor). Add a `## X.Y.Z` section at the top of `CHANGELOG.md`
    (user-facing changes, short bullets; rename `## Unreleased` and drop its reminder line if there is one). Commit and push it to main.
 2. `scripts/release X.Y.Z`. It refuses unless on main, clean, in sync with origin, tag new, CHANGELOG section present;
-   runs the Python + Rust tests; writes `VERSION` and `ui/Cargo.toml`; commits "Release vX.Y.Z" if anything changed; tags; pushes.
+   runs the Rust tests (workspace + desktop app); writes `VERSION` and `ui/Cargo.toml`; commits "Release vX.Y.Z" if anything changed; tags; pushes.
 3. The tag push runs `.github/workflows/release.yml` (Ubuntu 22.04): re-checks tag == VERSION == Cargo.toml and the
    CHANGELOG section, tests, builds the UI, builds the .deb and install-tests it in a clean ubuntu:22.04 container
    (`tests/test_pkg_deb.sh`), the same for the .rpm in fedora:43, packages, signs `SHA256SUMS` with the release key

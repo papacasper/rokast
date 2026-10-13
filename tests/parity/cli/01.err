@@ -1,0 +1,1 @@
+usage: rokast {list [--json]|start [name]|name|config|doctor [--report]|selftest [--seconds N] [--out FILE]|monitors [--json]|ui [--tray]|version [--check [--json]]|update [--check] [--yes] [--rollback] [--auto]}

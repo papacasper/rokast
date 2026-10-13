@@ -1,4 +1,4 @@
-//! Where the desktop's sound goes while mirroring (AUDIO=), through pactl (src/miracast/audio.py).
+//! Where the desktop's sound goes while mirroring (AUDIO=), through pactl.
 //!
 //!   tv (= 1, default)  a null sink "rokast" becomes the default output: streams follow it, the TV gets the sound (we
 //!                      record rokast.monitor) and the laptop speakers go quiet

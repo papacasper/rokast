@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # tests/test_pkg_update.sh deb|rpm: `rokast update` on a package install, in a clean ubuntu:22.04 / fedora:43
-# container. Builds packages A (0.9.0) and B (0.9.1) from this tree with a throwaway release key, installs A, serves a
-# signed B from inside the container, then:
+# container (no Python in it). Builds packages A (0.9.0) and B (0.9.1) from this tree with a throwaway release key,
+# installs A, serves a signed B from this host (python3 http.server; the container shares the host network), then:
 #   as a normal user without pkexec -> refuses to guess: keeps the verified package and prints the sudo command
 #   as root                         -> installs B with apt-get/dnf
-# Needs docker, ui/target/release/rokast-ui built, and the supplicant build deps (built once, reused). Run by CI.
+# Needs docker, target/release/rokast and ui/target/release/rokast-ui built, and the supplicant build deps (built once, reused). Run by CI.
 # shellcheck disable=SC2016  # check strings are single-quoted on purpose: eval expands them
 set -euo pipefail
 repo="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
@@ -17,7 +17,9 @@ case "$fmt" in
          inst="dnf install -y -q /pkg/$a" ;;
     *) echo "usage: tests/test_pkg_update.sh deb|rpm" >&2; exit 2 ;;
 esac
-[ -x "$repo/ui/target/release/rokast-ui" ] || { echo "test_pkg_update: build the UI first" >&2; exit 1; }
+for f in ui/target/release/rokast-ui target/release/rokast; do
+    [ -x "$repo/$f" ] || { echo "test_pkg_update: build $f first" >&2; exit 1; }
+done
 t="$(mktemp -d)"; trap 'rm -rf "$t"' EXIT
 mkdir -p "$t/pkg" "$t/srv"
 ssh-keygen -q -t ed25519 -N "" -C test -f "$t/key"
@@ -29,28 +31,31 @@ for v in 0.9.0 0.9.1; do
     git -C "$repo" ls-files -z -co --exclude-standard | (cd "$repo" && xargs -0 cp --parents -a -t "$d" --)
     echo "$v" > "$d/VERSION"; cp "$t/signers" "$d/config/release-signers"
     install -Dm755 "$repo/ui/target/release/rokast-ui" "$d/ui/target/release/rokast-ui"
+    install -Dm755 "$repo/target/release/rokast" "$d/target/release/rokast"
     ROKAST_PREBUILT_SUPPLICANT="$t/sup" "$d/packaging/$fmt/build-$fmt" "$t/pkg" > /dev/null
 done
 mv "$t/pkg/$b" "$t/srv/"
 (cd "$t/srv" && sha256sum "$b" > SHA256SUMS)
 ROKAST_SIGNING_KEY="$(cat "$t/key")" ROKAST_SIGNERS="$t/signers" "$repo/scripts/sign-release" "$t/srv/SHA256SUMS" > /dev/null
-python3 -I - "$t/srv" <<'EOF'
+port="$(python3 -I -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')"
+url="http://127.0.0.1:$port"
+python3 -I - "$t/srv" "$url" <<'EOF'
 import json, os, sys
-s = sys.argv[1]
-json.dump({"tag_name": "v0.9.1", "html_url": "http://127.0.0.1:8000/", "draft": False, "prerelease": False,
-           "assets": [{"name": n, "browser_download_url": "http://127.0.0.1:8000/" + n} for n in sorted(os.listdir(s))]},
+s, url = sys.argv[1:]
+json.dump({"tag_name": "v0.9.1", "html_url": url + "/", "draft": False, "prerelease": False,
+           "assets": [{"name": n, "browser_download_url": url + "/" + n} for n in sorted(os.listdir(s))]},
           open(os.path.join(s, "latest.json"), "w"))
 EOF
+python3 -I -m http.server -b 127.0.0.1 -d "$t/srv" "$port" > /dev/null 2>&1 & srv=$!
+trap 'kill $srv 2>/dev/null; rm -rf "$t"' EXIT
+for _ in $(seq 50); do curl -fs "$url/latest.json" > /dev/null && break; sleep 0.2; done
 
-docker run --rm -v "$t/pkg:/pkg:ro" -v "$t/srv:/srv:ro" "$image" bash -c "
+docker run --rm --network host -e ROKAST_UPDATE_URL="$url/latest.json" -v "$t/pkg:/pkg:ro" "$image" bash -c "
     $inst > /tmp/inst.log 2>&1 || { tail -20 /tmp/inst.log; exit 1; }"'
     echo "before=$(rokast version)"
-    python3 -I -m http.server -b 127.0.0.1 -d /srv 8000 > /dev/null 2>&1 &
-    for _ in $(seq 50); do python3 -I -c "import urllib.request as u; u.urlopen(\"http://127.0.0.1:8000/latest.json\")" 2>/dev/null && break; sleep 0.2; done
-    export ROKAST_UPDATE_URL=http://127.0.0.1:8000/latest.json
     mkdir -p /tmp/u && chown 1000:1000 /tmp/u
     echo "u:x:1000:1000::/tmp/u:/bin/sh" >> /etc/passwd   # ssh-keygen refuses to run for a uid with no passwd entry
-    HOME=/tmp/u python3 -I -c "import os, sys; os.setgid(1000); os.setuid(1000); os.execvp(\"rokast\", [\"rokast\", \"update\", \"--yes\"])"
+    sudo -u u env -i PATH="$PATH" HOME=/tmp/u ROKAST_UPDATE_URL="$ROKAST_UPDATE_URL" rokast update --yes   # sudo: a Depends
     echo "user_exit=$?"
     ls /tmp/u/.cache/rokast/ | sed "s/^/kept=/"
     rokast update --yes

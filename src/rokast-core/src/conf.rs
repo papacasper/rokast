@@ -1,5 +1,5 @@
-//! rokast.conf: defaults, the KEY=value file, environment overrides (load_conf/clean_name/capture_mode in
-//! src/miracast/cli.py). The app reads the same file (ui/src/config.rs).
+//! rokast.conf: defaults, the KEY=value file, environment overrides.
+//! The app reads the same file (ui/src/config.rs).
 use crate::pyfmt::{is_printable, repr};
 use crate::{wayland, Env};
 use std::collections::BTreeMap;

@@ -2,7 +2,7 @@
 # Build the patched wpa_supplicant rokast needs and install it to $XDG_DATA_HOME/rokast/supplicant/ (outside the
 # install folder, so it survives upgrades). Stores patch.sha256 so `rokast doctor` can tell when the patch changed.
 # Stock wpa_supplicant cannot join a Roku's P2P group as a P2P *client* from a standalone instance; see patches/.
-# Path rules: src/miracast/paths.py.
+# Path rules: src/rokast-core/src/paths.rs.
 # Packages (packaging/): ROKAST_HOSTAP_SRC=<unpacked wpa_supplicant-2.11 release tarball> ROKAST_SUPPLICANT_DIR=<out>.
 set -euo pipefail
 root="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"

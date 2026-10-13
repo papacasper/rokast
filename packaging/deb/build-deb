@@ -22,10 +22,10 @@ Version: $v
 Architecture: amd64
 Maintainer: papacasper <chj1axr0@gmail.com>
 Installed-Size: $(du -sk "$d/usr" | cut -f1)
-Depends: python3 (>= 3.10), ffmpeg, iw, dhcpcd5 | dhcpcd-base | dhcpcd, wpasupplicant, sudo, iproute2, openssh-client,
+Depends: ffmpeg, iw, dhcpcd5 | dhcpcd-base | dhcpcd, wpasupplicant, sudo, iproute2, openssh-client,
  libnl-3-200, libnl-genl-3-200, libssl3 | libssl3t64, libgtk-4-1 (>= 4.6), libc6 (>= 2.35)
 Recommends: x11-xserver-utils, pulseaudio-utils
-Suggests: gstreamer1.0-tools, gstreamer1.0-plugins-base, gstreamer1.0-pipewire, python3-gi, xdg-desktop-portal
+Suggests: gstreamer1.0-tools, gstreamer1.0-plugins-base, gstreamer1.0-pipewire, xdg-desktop-portal
 Section: video
 Priority: optional
 Homepage: https://github.com/papacasper/rokast

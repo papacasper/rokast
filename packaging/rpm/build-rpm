@@ -21,10 +21,10 @@ Summary:        Mirror your Linux screen to a Roku TV over native Miracast
 License:        MIT
 URL:            https://github.com/papacasper/rokast
 BuildArch:      x86_64
-Requires:       python3 >= 3.10, (ffmpeg-free or ffmpeg), iw, dhcpcd, wpa_supplicant, sudo, iproute, openssh-clients
+Requires:       (ffmpeg-free or ffmpeg), iw, dhcpcd, wpa_supplicant, sudo, iproute, openssh-clients
 Recommends:     xrandr, pulseaudio-utils
-Suggests:       gstreamer1, gstreamer1-plugins-base, pipewire-gstreamer, python3-gobject, xdg-desktop-portal
-# prebuilt tree: no debuginfo split, no stripping or bytecode passes (the CLI runs with python3 -I from source)
+Suggests:       gstreamer1, gstreamer1-plugins-base, pipewire-gstreamer, xdg-desktop-portal
+# prebuilt tree: no debuginfo split, no stripping passes (the binaries are built and stripped by cargo)
 %global debug_package %{nil}
 %global __os_install_post %{nil}
 %global _build_id_links none

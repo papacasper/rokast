@@ -13,9 +13,18 @@ image="${ROKAST_RPM_IMAGE:-fedora:43}"
 t="$(mktemp -d)"; trap 'rm -rf "$t"' EXIT
 docker run --rm -v "$rpm:/rokast.rpm:ro" "$image" bash -c '
     dnf install -y -q /rokast.rpm > /tmp/dnf.log 2>&1 || { tail -20 /tmp/dnf.log; exit 1; }
+    echo "python=$(command -v python3 python 2>/dev/null | head -1)"   # before anything else is installed
+    # Fedora 43 brings Python for its own packages (through gtk4): rokast itself must not need it
+    echo "python_reqs=$(rpm -qR rokast | grep -ci python)"   # its own Requires, rpmbuild-generated ones too
+    # for the log: which of its Requires would go if Python went (where the chain starts)
+    dnf remove --assumeno --setopt=clean_requirements_on_remove=False python3 > /tmp/rm.log 2>&1 || true
+    rpm -qR rokast | grep -v "^rpmlib(" | while read -r cap _; do rpm -q --whatprovides "$cap" --qf "%{NAME}\n" 2>/dev/null; done |
+        sort -u | while read -r n; do grep -qE "^ *$n " /tmp/rm.log && echo "removal takes: $n"; done
+    echo "python_files=$(grep -rIli python /usr/lib/rokast | wc -l)"
+    rpm -q --whatrequires python3 python3-libs 2>/dev/null | grep -v "^no package" | sed "s/^/needs python: /" | head -5
     echo "which=$(readlink -f "$(command -v rokast)")"
     echo "version=$(rokast version)"
-    echo "kind=$(CHECK_UPDATES=0 rokast version --check --json | python3 -I -c "import json,sys; print(json.load(sys.stdin)[\"kind\"])")"
+    echo "kind=$(CHECK_UPDATES=0 rokast version --check --json | sed -n "s/.*\"kind\": \"\([a-z]*\)\".*/\1/p")"
     test -s /usr/lib/rokast/config/release-signers && echo signers=ok
     rokast doctor 2>&1
     echo "doctor_exit=$?"
@@ -31,6 +40,10 @@ docker run --rm -v "$rpm:/rokast.rpm:ro" "$image" bash -c '
 fails=0
 check() { if eval "$2"; then echo "ok    $1"; else echo "FAIL  $1   [$2]"; fails=$((fails + 1)); fi; }
 check "dnf installs it with its Requires" 'grep -q "^which=" "$t/run.log"'
+grep -E "^(python_|removal takes: )" "$t/run.log" || true
+check "no Python in its Requires" 'grep -qx "python_reqs=0" "$t/run.log"'
+check "no installed rokast file mentions Python" 'grep -qx "python_files=0" "$t/run.log"'
+grep "^python=/" "$t/run.log" && grep "^needs python: " "$t/run.log"   # what else brought Python in
 check "rokast on PATH is the packaged one" 'grep -qx "which=/usr/lib/rokast/scripts/rokast" "$t/run.log"'
 check "version $v" 'grep -qx "version=$v" "$t/run.log"'
 check "install kind is rpm (rokast update hands it to the package manager)" 'grep -qx "kind=rpm" "$t/run.log"'

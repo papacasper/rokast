@@ -2,7 +2,7 @@
 # tests/test_pkg_arch.sh [rokast|rokast-git] [outdir]
 # Build packaging/aur/<pkg>/PKGBUILD in a clean archlinux:base-devel container (the clean-chroot check), run its
 # check(), namcap, install it, then check /usr/bin/rokast. rokast: source = this working tree as the release archive;
-# rokast-git: source = this repo's committed HEAD. Copies the built package to [outdir]. Needs docker; not run by CI.
+# rokast-git: source = this repo's committed HEAD. Copies the built package to [outdir]. Needs docker; CI runs it for rokast-git.
 # shellcheck disable=SC2016  # check strings are single-quoted on purpose: eval expands them
 set -euo pipefail
 repo="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
@@ -40,6 +40,9 @@ docker run --rm -v "$t:/t" -v "$repo:/repo:ro" archlinux:base-devel bash -euc '
     {
         echo "which=$(readlink -f "$(command -v rokast)")"
         echo "version=$(rokast version)"
+        # namcap needs Python and so does ffmpeg (vapoursynth): look at the depends of the package and files
+        echo "python_deps=$(pacman -Qi "$(pacman -Qqp "$p")" | sed -n "s/^Depends On *: //p" | tr " " "\n" | grep -c "^python" || true)"
+        echo "python_files=$(grep -rIli python /usr/lib/rokast | wc -l)"
         rokast doctor 2>&1 || true
         echo "missing=$(ldd /usr/lib/rokast/wpa_supplicant /usr/lib/rokast/ui/target/release/rokast-ui | grep -c "not found")"
         sed -n "s/^Exec=//p" /usr/share/applications/io.github.papacasper.rokast.desktop
@@ -49,13 +52,14 @@ docker run --rm -v "$t:/t" -v "$repo:/repo:ro" archlinux:base-devel bash -euc '
 fails=0
 check() { if eval "$2"; then echo "ok    $1"; else echo "FAIL  $1   [$2]"; fails=$((fails + 1)); fi; }
 check "package built ($(cd "$t/out" && ls))" '[ -n "$(ls "$t/out")" ]'
-check "makepkg ran check() (python + cargo tests)" 'grep -q "Starting check()" "$t/makepkg.log" && grep -q "test result: ok" "$t/makepkg.log"'
-# namcap false positives: our sibling modules (cli.py puts src/miracast on sys.path), the optional gi (Wayland, in
-# optdepends), tools run as subprocesses (it only sees linked libraries), the dynamic loader itself, and bash (in
-# base, so not listed; namcap warns whether or not it is).
-grep -E " (E|W): " "$t/namcap.log" | grep -vE "Referenced python module '(wfd|wayland|paths|capture|selftest|p2p|update|joinlog|gi(\.repository\.(GLib|Gio))?)'|Dependency included, but may not be needed \('(ffmpeg|iw|dhcpcd|wpa_supplicant|sudo)'\)|Unused shared library '/usr/lib64/ld-linux-x86-64.so.2'|Referenced library 'bash' is an uninstalled dependency" > "$t/namcap.real" || true
+check "makepkg ran check() (cargo tests)" 'grep -q "Starting check()" "$t/makepkg.log" && grep -q "test result: ok" "$t/makepkg.log"'
+# namcap false positives: tools run as subprocesses (it only sees linked libraries), the dynamic loader itself, and
+# bash (in base, so not listed; namcap warns whether or not it is).
+grep -E " (E|W): " "$t/namcap.log" | grep -vE "Dependency included, but may not be needed \('(ffmpeg|iw|dhcpcd|wpa_supplicant|sudo|openssh)'\)|Unused shared library '/usr/lib64/ld-linux-x86-64.so.2'|Referenced library 'bash' is an uninstalled dependency" > "$t/namcap.real" || true
 check "namcap: no errors, no warnings beyond the known false positives" '[ ! -s "$t/namcap.real" ]'
 check "rokast on PATH is the packaged one" 'grep -qx "which=/usr/lib/rokast/scripts/rokast" "$t/run.log"'
+check "no Python in its depends" 'grep -qx "python_deps=0" "$t/run.log"'
+check "no installed rokast file mentions Python" 'grep -qx "python_files=0" "$t/run.log"'
 check "version $v" 'grep -qx "version=$v" "$t/run.log"'
 check "doctor: packaged supplicant found, stamp ok" 'grep -qx "ok    patched wpa_supplicant ok: /usr/lib/rokast/wpa_supplicant" "$t/run.log"'
 check "doctor: tools from depends" '[ "$(grep -cxE "ok    (ffmpeg|wpa_cli|dhcpcd|iw) installed" "$t/run.log")" = 4 ]'

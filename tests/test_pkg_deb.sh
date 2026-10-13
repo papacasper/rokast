@@ -12,10 +12,19 @@ image="${ROKAST_DEB_IMAGE:-ubuntu:22.04}"   # also tried: ubuntu:24.04, debian:1
 t="$(mktemp -d)"; trap 'rm -rf "$t"' EXIT
 docker run --rm -v "$deb:/rokast.deb:ro" "$image" bash -c '
     export DEBIAN_FRONTEND=noninteractive
-    apt-get update -qq && apt-get install -y -qq /rokast.deb > /tmp/apt.log 2>&1 || { tail -20 /tmp/apt.log; exit 1; }
+    apt-get update -qq && apt-get install -y -qq -o Debug::pkgDepCache::AutoInstall=1 /rokast.deb > /tmp/apt.log 2>&1 ||
+        { tail -20 /tmp/apt.log; exit 1; }
+    echo "python=$(command -v python3 python 2>/dev/null | head -1)"   # before anything else is installed
+    grep -i "python" /tmp/apt.log | grep -i "as \(Depends\|Recommends\|PreDepends\)" | sed "s/^ */pulled: /" | head -20
+    # Ubuntu 22.04 itself brings Python (networkd-dispatcher): rokast must not be among what needs it
+    apt-get remove -s python3-minimal > /tmp/rm.log 2>&1 || true
+    echo "python_removal_listed=$(grep -c "^Remv python3-minimal " /tmp/rm.log)"
+    echo "python_needed_by_rokast=$(grep -c "^Remv rokast " /tmp/rm.log)"
+    [ "$(grep -c "^Remv python3" /tmp/rm.log)" -gt 0 ] || sed "s/^/removal: /" /tmp/rm.log | head -15
+    echo "python_files=$(grep -rIli python /usr/lib/rokast | wc -l)"
     echo "which=$(readlink -f "$(command -v rokast)")"
     echo "version=$(rokast version)"
-    echo "kind=$(CHECK_UPDATES=0 rokast version --check --json | python3 -I -c "import json,sys; print(json.load(sys.stdin)[\"kind\"])")"
+    echo "kind=$(CHECK_UPDATES=0 rokast version --check --json | sed -n "s/.*\"kind\": \"\([a-z]*\)\".*/\1/p")"
     test -s /usr/lib/rokast/config/release-signers && echo signers=ok
     rokast doctor 2>&1
     echo "doctor_exit=$?"
@@ -25,6 +34,11 @@ docker run --rm -v "$deb:/rokast.deb:ro" "$image" bash -c '
 fails=0
 check() { if eval "$2"; then echo "ok    $1"; else echo "FAIL  $1   [$2]"; fails=$((fails + 1)); fi; }
 check "apt installs it with its Depends" 'grep -q "^which=" "$t/run.log"'
+grep -E "^(python_|removal: )" "$t/run.log" || true
+check "rokast needs no Python (removing it would not remove rokast)" \
+    'grep -q "^python_removal_listed=[1-9]" "$t/run.log" && grep -qx "python_needed_by_rokast=0" "$t/run.log"'
+check "no installed rokast file mentions Python" 'grep -qx "python_files=0" "$t/run.log"'
+grep "^python=/" "$t/run.log" && grep "^pulled: " "$t/run.log" | head -3   # what else brought Python in
 check "rokast on PATH is the packaged one" 'grep -qx "which=/usr/lib/rokast/scripts/rokast" "$t/run.log"'
 check "version $v" 'grep -qx "version=$v" "$t/run.log"'
 check "install kind is deb (rokast update hands it to the package manager)" 'grep -qx "kind=deb" "$t/run.log"'

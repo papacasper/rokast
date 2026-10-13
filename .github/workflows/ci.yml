@@ -1,6 +1,6 @@
-# Every push and pull request: Python tests on the oldest and newest supported Python, shell checks, the Rust
-# workspace (fmt, clippy, tests, Python parity), desktop app build,
-# and the .deb / .rpm built and installed in clean ubuntu:22.04 / fedora:43 containers.
+# Every push and pull request: shell checks, the Rust workspace (fmt, clippy, tests, the frozen answers in
+# tests/parity), desktop app build, and the .deb / .rpm / Arch package built and installed in clean ubuntu:22.04 /
+# fedora:43 / archlinux containers (each test checks the package pulls in no interpreter).
 name: ci
 
 on:
@@ -9,28 +9,20 @@ on:
   pull_request:
 
 jobs:
-  python:
-    runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        python: ["3.10", "3.12"]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python }}
-      - run: python3 -I -m unittest discover -s tests -v
-
   scripts:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the self-update test installs v0.4.0 (or main) from git
       - name: bash -n + shellcheck
         run: |
           for f in scripts/* packaging/stage packaging/supplicant packaging/deb/build-deb packaging/rpm/build-rpm packaging/aur/update; do bash -n "$f"; done
           shellcheck scripts/* tests/*.sh tests/parity/*.sh packaging/stage packaging/supplicant packaging/deb/build-deb packaging/rpm/build-rpm packaging/aur/update
+      - name: rokast (the install and self-update tests install it)
+        run: cargo build --release --locked -p rokast
       - name: install script test
-        run: if [ -f tests/test_install.sh ]; then bash tests/test_install.sh; fi
+        run: bash tests/test_install.sh
       - name: self-update test (rokast update against a local fake GitHub)
         run: bash tests/test_self_update.sh
       # The real release key (repo secret) must match config/release-signers, or the next release fails to sign.
@@ -61,10 +53,10 @@ jobs:
           cargo fmt --all -- --check
           cargo clippy --workspace --all-targets --locked -- -D warnings
           cargo test --workspace --locked
-      - name: Python and Rust give the same answers
+      - name: same answers as before the port (tests/parity/expected.jsonl)
         run: tests/parity/run.sh
-      - name: every Python test has a Rust twin (or a phase that ports it)
-        run: tests/parity/coverage.sh
+      - name: same output as before the port, command by command (tests/parity/cli, no TV needed)
+        run: tests/parity/cli.sh
       - name: app build + test
         working-directory: ui
         run: |
@@ -82,8 +74,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: ui
+          workspaces: |
+            .
+            ui
       - run: cargo build --release --locked --manifest-path ui/Cargo.toml
+      - run: cargo build --release --locked -p rokast
       - run: packaging/deb/build-deb dist
       - run: bash tests/test_pkg_deb.sh dist/*.deb
       - run: packaging/rpm/build-rpm dist
@@ -92,3 +87,12 @@ jobs:
         run: |
           bash tests/test_pkg_update.sh deb
           bash tests/test_pkg_update.sh rpm
+
+  arch:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # rokast-git's pkgver() runs git describe --tags
+      - name: rokast-git built (makepkg + check() + namcap) and installed in a clean archlinux container
+        run: bash tests/test_pkg_arch.sh rokast-git

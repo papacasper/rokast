@@ -41,6 +41,43 @@ pub fn py_str(v: Option<&serde_json::Value>) -> String {
     }
 }
 
+/// `json.dumps(v)` with Python's defaults: ", " and ": " separators, non-ASCII as \uXXXX. Keeps `v`'s key order.
+pub fn dumps(v: &serde_json::Value) -> String {
+    use serde_json::Value;
+    match v {
+        Value::String(s) => {
+            let mut out = String::from("\"");
+            for c in s.chars() {
+                match c {
+                    '"' => out.push_str("\\\""),
+                    '\\' => out.push_str("\\\\"),
+                    '\n' => out.push_str("\\n"),
+                    '\r' => out.push_str("\\r"),
+                    '\t' => out.push_str("\\t"),
+                    '\u{8}' => out.push_str("\\b"),
+                    '\u{c}' => out.push_str("\\f"),
+                    ' '..='~' | '\u{7f}' => out.push(c),
+                    c => {
+                        let mut buf = [0u16; 2];
+                        for u in c.encode_utf16(&mut buf) {
+                            out.push_str(&format!("\\u{u:04x}"));
+                        }
+                    }
+                }
+            }
+            out.push('"');
+            out
+        }
+        Value::Array(a) => format!("[{}]", a.iter().map(dumps).collect::<Vec<_>>().join(", ")),
+        Value::Object(o) => {
+            let items: Vec<String> =
+                o.iter().map(|(k, v)| format!("{}: {}", dumps(&Value::from(k.as_str())), dumps(v))).collect();
+            format!("{{{}}}", items.join(", "))
+        }
+        other => other.to_string(), // null, true/false, numbers print the same
+    }
+}
+
 /// Python's `str.isprintable()` for one character, close enough for device names: no control, format, separator
 /// (other than the ASCII space) or private-use characters.
 pub fn is_printable(c: char) -> bool {
@@ -68,5 +105,13 @@ mod tests {
         assert_eq!(repr("x\ny\\"), "'x\\ny\\\\'");
         assert_eq!(repr_list(&["A", "B"]), "['A', 'B']");
         assert_eq!(repr_list::<&str>(&[]), "[]");
+    }
+
+    #[test]
+    fn dumps_matches_python() {
+        // python3 -c 'import json; print(json.dumps({"b": [1, None, True], "a": "T\u00e9l\u00e9 \U0001f4fa \"q\"\\n\x01"}))'
+        let v = serde_json::json!({"b": [1, null, true], "a": "T\u{e9}l\u{e9} \u{1f4fa} \"q\"\n\u{1}"});
+        assert_eq!(dumps(&v), r#"{"b": [1, null, true], "a": "T\u00e9l\u00e9 \ud83d\udcfa \"q\"\n\u0001"}"#);
+        assert_eq!(dumps(&serde_json::json!([])), "[]");
     }
 }

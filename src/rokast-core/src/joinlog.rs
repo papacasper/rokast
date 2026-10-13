@@ -1,4 +1,4 @@
-//! Evidence from Wi-Fi Direct join attempts that failed (src/miracast/joinlog.py).
+//! Evidence from Wi-Fi Direct join attempts that failed.
 //!
 //! A run with any failed attempt is saved, whether it joined in the end or not, to
 //! $XDG_CACHE_HOME/rokast/join-failures/<UTC time>/ (the newest KEEP are kept):

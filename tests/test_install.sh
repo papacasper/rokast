@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # scripts/install end to end in a throwaway HOME: upgrade from a v0.1.0-style folder install, prune, rollback,
-# uninstall. Uses fake release folders with a stub desktop-app binary (no cargo, no network). Run by CI.
+# uninstall. Uses fake release folders with a stub desktop-app binary and this tree's rokast (no network). Needs
+# `cargo build --release -p rokast`. Run by CI.
 # shellcheck disable=SC2016  # check strings are single-quoted on purpose: eval expands them
 set -euo pipefail
 repo="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
@@ -13,13 +14,15 @@ export icon="$HOME/.local/share/icons/hicolor/scalable/apps/io.github.papacasper
 fails=0
 check() { if eval "$2"; then echo "ok    $1"; else echo "FAIL  $1   [$2]"; fails=$((fails + 1)); fi; }
 
-release() {   # release <version>: a tarball-like folder (no .git) with a stub prebuilt UI
+[ -x "$repo/target/release/rokast" ] || { echo "test_install: build it first: cargo build --release --locked -p rokast" >&2; exit 1; }
+release() {   # release <version>: a tarball-like folder (no .git) with a stub prebuilt UI and the prebuilt rokast
     local d="$t/rokast-$1"
     mkdir -p "$d"
     git -C "$repo" ls-files -z -co --exclude-standard | (cd "$repo" && xargs -0 cp --parents -a -t "$d" --)
     echo "$1" > "$d/VERSION"
     mkdir -p "$d/ui/target/release"
     printf '#!/bin/sh\necho stub-ui %s\n' "$1" > "$d/ui/target/release/rokast-ui"; chmod +x "$d/ui/target/release/rokast-ui"
+    install -Dm755 "$repo/target/release/rokast" "$d/target/release/rokast"
     echo "$d"
 }
 inst() { PATH="/usr/bin:/bin" "$1/scripts/install" "${@:2}" > "$t/out" 2>&1 || { cat "$t/out"; return 1; }; }
