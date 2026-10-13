@@ -14,14 +14,12 @@ t="$(mktemp -d)"; trap 'rm -rf "$t"' EXIT
 docker run --rm -v "$rpm:/rokast.rpm:ro" "$image" bash -c '
     dnf install -y -q /rokast.rpm > /tmp/dnf.log 2>&1 || { tail -20 /tmp/dnf.log; exit 1; }
     echo "python=$(command -v python3 python 2>/dev/null | head -1)"   # before anything else is installed
-    # Fedora may bring Python for other packages: rokast must not be among what needs it
+    # Fedora 43 brings Python for its own packages (through gtk4): rokast itself must not need it
+    echo "python_reqs=$(rpm -qR rokast | grep -ci python)"   # its own Requires, rpmbuild-generated ones too
+    # for the log: which of its Requires would go if Python went (where the chain starts)
     dnf remove --assumeno --setopt=clean_requirements_on_remove=False python3 > /tmp/rm.log 2>&1 || true
-    echo "python_removal_listed=$(grep -cE "^ *python3 " /tmp/rm.log)"
-    echo "python_needed_by_rokast=$(grep -cE "^ *rokast " /tmp/rm.log)"
-    # which of its own Requires would go with Python (the start of the chain, when there is one)
     rpm -qR rokast | grep -v "^rpmlib(" | while read -r cap _; do rpm -q --whatprovides "$cap" --qf "%{NAME}\n" 2>/dev/null; done |
         sort -u | while read -r n; do grep -qE "^ *$n " /tmp/rm.log && echo "removal takes: $n"; done
-    grep -E "^ +[a-z0-9]" /tmp/rm.log | awk "{print \$1}" | sort -u | tr "\n" " " | sed "s/^/removal list: /"; echo
     echo "python_files=$(grep -rIli python /usr/lib/rokast | wc -l)"
     rpm -q --whatrequires python3 python3-libs 2>/dev/null | grep -v "^no package" | sed "s/^/needs python: /" | head -5
     echo "which=$(readlink -f "$(command -v rokast)")"
@@ -42,9 +40,8 @@ docker run --rm -v "$rpm:/rokast.rpm:ro" "$image" bash -c '
 fails=0
 check() { if eval "$2"; then echo "ok    $1"; else echo "FAIL  $1   [$2]"; fails=$((fails + 1)); fi; }
 check "dnf installs it with its Requires" 'grep -q "^which=" "$t/run.log"'
-grep -E "^(python_|removal takes: |removal list: )" "$t/run.log" || true
-check "rokast needs no Python (removing it would not remove rokast)" \
-    'grep -q "^python_removal_listed=[1-9]" "$t/run.log" && grep -qx "python_needed_by_rokast=0" "$t/run.log"'
+grep -E "^(python_|removal takes: )" "$t/run.log" || true
+check "no Python in its Requires" 'grep -qx "python_reqs=0" "$t/run.log"'
 check "no installed rokast file mentions Python" 'grep -qx "python_files=0" "$t/run.log"'
 grep "^python=/" "$t/run.log" && grep "^needs python: " "$t/run.log"   # what else brought Python in
 check "rokast on PATH is the packaged one" 'grep -qx "which=/usr/lib/rokast/scripts/rokast" "$t/run.log"'
