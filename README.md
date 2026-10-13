@@ -202,6 +202,7 @@ Environment variables with the same names override the file.
 | `AUDIO` | `tv` | Where the sound goes (see [Sound](#sound)): `tv` (only the TV; `1` means the same), `both` (TV and this computer), `off`, `app:<name>` (one app only), `device:<output>` (what plays on that output) |
 | `CAPTURE` | `auto` | `auto` (Wayland session → `wayland`, else `x11`), `x11` or `wayland` |
 | `MONITOR` | primary monitor | Monitor to mirror, as `rokast monitors` names it (X11 only; on Wayland the screen-sharing dialog asks) |
+| `FIT` | `bars` | How the picture fits the TV (see [Picture size](#picture-size)): `bars` (scaled in, black bars when the shapes differ) or `match` (this computer's screen takes the TV's size while mirroring; X11 only) |
 | `DISPLAY` | `:0` | X display to capture (X11 only) |
 | `CHECK_UPDATES` | `1` | Once a day, ask GitHub for the latest release and show a notice if it is newer (`rokast version --check`); `0` turns it off. Only `rokast update` (or the app's **Update** button) downloads anything |
 | `AUTO_UPDATE` | `0` | `1`: the desktop app installs a new release by itself when it starts (`rokast update --auto`), only for installs made by `scripts/install` and never while mirroring |
@@ -223,6 +224,16 @@ quiet and the TV gets no echo. When mirroring stops, everything goes back where 
 - `AUDIO=off`: video only
 
 The app's **Sound** menu offers the same choices.
+
+### Picture size
+
+A laptop screen is often taller than a TV (16:10, e.g. 1920x1200, against the TV's 16:9 1920x1080). By default
+(`FIT=bars`) rokast scales the picture in, so the TV shows thin black bars at the sides. With `FIT=match` (the app's
+**Fill the TV** switch) the laptop screen switches to the TV's size once the TV starts playing, so the picture fills
+the TV exactly, with nothing cut off or stretched; the laptop itself shows the TV's shape while you mirror. When
+mirroring stops it switches back; after a crash the next `rokast start` or `rokast doctor --fix` does. X11 only (on
+Wayland the bars stay), and only when the screen offers a mode of that size (`xrandr` lists them); otherwise rokast
+says so and keeps the bars.
 
 ### Updating
 
@@ -286,6 +297,7 @@ tests/parity/run.sh; tests/parity/cli.sh  # same answers and output as before th
 (cd ui && cargo test)                      # the desktop app
 bash tests/test_install.sh                 # installer: upgrade, rollback, uninstall in a throwaway HOME
 bash tests/test_monitor_capture.sh         # MONITOR= captures the right monitor (Xvfb + ffmpeg + ImageMagick; not in CI)
+bash tests/test_fit_live.sh                # FIT=match on the real screen: switch, restore on stop and after a crash (not in CI)
 bash tests/test_pkg_deb.sh <deb>; bash tests/test_pkg_rpm.sh <rpm>   # packages in clean containers (docker; CI runs both)
 bash tests/live_join_soak.sh 10 15         # 10 cold-start joins with the real TV idle 15 min between (not in CI)
 ```
@@ -293,7 +305,7 @@ bash tests/live_join_soak.sh 10 15         # 10 cold-start joins with the real T
 Releases: add a `## X.Y.Z` section to `CHANGELOG.md`, then `scripts/release X.Y.Z`; GitHub Actions builds and publishes
 the release (see `playbooks/release.md`).
 
-Layout: `src/rokast-core/` (the library: p2p, link, wfd, rtsp, capture, wayland, audio, paths, selftest, update),
+Layout: `src/rokast-core/` (the library: p2p, link, wfd, rtsp, capture, wayland, audio, fit, paths, selftest, update),
 `src/rokast/` (the `rokast` command), `ui/` (Rust GTK 4 desktop app),
 `patches/` (wpa_supplicant patch + build config), `scripts/` (entry points), `playbooks/` (operational runbook).
 

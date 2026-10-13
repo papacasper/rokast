@@ -1,9 +1,9 @@
 //! `rokast doctor [--report] [--fix]`: checks everything `start` needs. --report: plus
-//! system info, the last join failure and a selftest, for a hardware report issue. --fix: put back sound routing a
-//! crashed session left behind.
+//! system info, the last join failure and a selftest, for a hardware report issue. --fix: put back the sound routing
+//! and screen mode a crashed session left behind.
 use crate::Ctx;
 use rokast_core::pyfmt::repr;
-use rokast_core::{audio, capture, joinlog, lan, paths, proc, selftest, update, wayland};
+use rokast_core::{audio, capture, fit, joinlog, lan, paths, proc, selftest, update, wayland};
 use std::path::Path;
 use std::time::Duration;
 
@@ -89,6 +89,16 @@ pub fn run(ctx: &Ctx, args: &[String]) -> ! {
             c.chk("sound routing a crashed session left behind: put back", true, "");
         } else {
             c.chk("sound routing", false, "a crashed session left the sound on rokast: run rokast doctor --fix");
+        }
+    }
+    if let Err(e) = fit::parse_mode(&conf["FIT"]) {
+        c.chk("FIT setting", false, &e);
+    }
+    if fit::state_file(env).exists() && !update::mirroring(env) {
+        if fix && fit::recover(env) {
+            c.chk("screen mode a crashed session left behind: put back", true, "");
+        } else {
+            c.chk("screen mode", false, "a crashed session left the screen at the TV's size: run rokast doctor --fix");
         }
     }
     match lan::p2p_dev_iface(env) {

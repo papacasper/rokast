@@ -2,6 +2,12 @@
 
 Each `## <version>` section becomes the GitHub release notes for that tag (see `playbooks/release.md`).
 
+## Unreleased
+
+- **Fill the TV:** `FIT=match` (the app's **Fill the TV** switch) makes the laptop screen take the TV's size while
+  mirroring, so a 16:10 laptop fills a 16:9 TV with no black bars and nothing cut off. It switches back when you
+  stop, and after a crash on the next start or with `rokast doctor --fix`. X11 only; `FIT=bars` (default) is unchanged.
+
 ## 0.6.0
 
 - **Sound plays only on the TV:** while mirroring, the laptop goes quiet and the TV gets no echo (`AUDIO=tv`, the

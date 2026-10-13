@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 
 pub type Conf = BTreeMap<String, String>;
 
-pub const DEFAULTS: [(&str, &str); 11] = [
+pub const DEFAULTS: [(&str, &str); 12] = [
     ("TARGET", ""),
     ("BITRATE", "8M"),
     ("ENCODER", "auto"),
@@ -16,6 +16,7 @@ pub const DEFAULTS: [(&str, &str); 11] = [
     ("NAME", ""),
     ("CAPTURE", "auto"),
     ("MONITOR", ""),
+    ("FIT", "bars"),
     ("CHECK_UPDATES", "1"),
     ("AUTO_UPDATE", "0"),
 ];

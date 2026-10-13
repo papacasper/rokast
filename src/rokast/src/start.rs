@@ -3,6 +3,7 @@ use crate::{die, Ctx};
 use rokast_core::audio::{self, Router};
 use rokast_core::capture::{self, Monitor, Opts, Pipeline};
 use rokast_core::conf::Conf;
+use rokast_core::fit::{self, Fitter};
 use rokast_core::link::{self, Radio, Wpa};
 use rokast_core::rtsp::{self, Source};
 use rokast_core::session::{self, Link};
@@ -32,6 +33,7 @@ struct RealLink<'a> {
     geometry: Option<Monitor>,
     cast: Option<&'a ScreenCast>,
     router: Router, // its Drop restores the sound in any exit path
+    fitter: Fitter, // and this one the screen mode
 }
 
 impl Link for RealLink<'_> {
@@ -73,7 +75,7 @@ impl Link for RealLink<'_> {
         };
         let mut ff: Option<Pipeline> = None;
         let (conf, geometry, env, cast) = (self.conf, self.geometry.clone(), &self.radio.env, self.cast);
-        let router = &mut self.router;
+        let (router, fitter) = (&mut self.router, &mut self.fitter);
         let mut on_play = |n: &Negotiated, ip: &str, port: u16| -> Result<(), String> {
             // route only now: the laptop keeps its sound until the TV actually plays
             let source = if n.audio == "AAC" { router.route()? } else { None };
@@ -81,6 +83,18 @@ impl Link for RealLink<'_> {
                 say(&format!("audio: AUDIO={} recording {s}", router.kind));
             }
             let audio = source.is_some();
+            // FIT=match: the laptop takes the TV's size, so the picture fills it (never fatal: bars instead)
+            let mut geometry = geometry.clone();
+            if let (None, Some(g)) = (cast, &geometry) {
+                match fitter.apply(g, n.width, n.height) {
+                    Ok(Some(new)) => {
+                        say(&format!("fit: {} switched to {}x{} for the TV", new.name, new.width, new.height));
+                        geometry = Some(new);
+                    }
+                    Ok(None) => {}
+                    Err(e) => say(&format!("fit: keeping black bars: {e}")),
+                }
+            }
             let opts = Opts {
                 display: conf["DISPLAY"].clone(),
                 encoder: conf["ENCODER"].clone(),
@@ -90,7 +104,7 @@ impl Link for RealLink<'_> {
                 source: if cast.is_some() { "raw" } else { "x11" }.into(),
                 out: None,
                 seconds: None,
-                geometry: geometry.clone(),
+                geometry,
             };
             let cmd = capture::build_cmd(n, Some(ip), Some(port), &opts);
             let feeder =
@@ -113,6 +127,7 @@ impl Link for RealLink<'_> {
             p.terminate(Duration::from_secs(5));
         }
         self.router.restore(); // before a retry joins again, and so the laptop has its sound back at once
+        self.fitter.restore();
         res
     }
 
@@ -145,6 +160,13 @@ fn steps(ctx: &Ctx, conf: &mut Conf, mode: &str, name: &str, dev: &mut Option<St
     if audio::recover(&ctx.env) {
         say("audio: put back the sound routing a previous session left behind");
     }
+    let fitter = Fitter::new(&conf["FIT"], &conf["DISPLAY"], &ctx.env)?; // so does a bad FIT=
+    if fit::recover(&ctx.env) {
+        say("fit: put back the screen mode a previous session left behind");
+    }
+    if fitter.mode == "match" && mode == "wayland" {
+        say("fit: FIT=match works on X11 only; on Wayland the picture keeps black bars");
+    }
     let mut cast = None;
     if mode == "wayland" {
         // the portal may ask the user to pick a screen: do it before joining
@@ -158,7 +180,8 @@ fn steps(ctx: &Ctx, conf: &mut Conf, mode: &str, name: &str, dev: &mut Option<St
     *dev = Some(d.clone());
     stop::check()?;
     let radio = Wpa { env: ctx.env.clone(), root: ctx.root.clone() };
-    let mut real = RealLink { radio, dev: d, target: target.clone(), conf, geometry, cast: cast.as_ref(), router };
+    let mut real =
+        RealLink { radio, dev: d, target: target.clone(), conf, geometry, cast: cast.as_ref(), router, fitter };
     session::join_and_stream(&mut real, &target.name, &say, 2)
 }
 

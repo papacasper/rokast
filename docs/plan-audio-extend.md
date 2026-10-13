@@ -13,6 +13,7 @@ running it, not by eye. Tick tasks off here as they land.
 |---|---|---|---|
 | 12 | v0.6.0 | Sound on the TV only (no echo), restored on stop or crash | Claude, user confirms on the TV |
 | 13 | v0.6.0 | Pick what goes to the TV: one output device, or one app; app menu; docs; release | Claude |
+| 13b | v0.7.0 | Fill the TV: switch the laptop to the TV's size while mirroring (`FIT=match`) | Claude, user confirms on the TV |
 | 14 | v0.7.0 | Extended display on X11 (a real second monitor the TV shows) | Claude, user confirms on the TV |
 | 15 | v0.7.0 | Extended display on Wayland (GNOME/KDE virtual monitor), app controls, docs, release | Claude, user confirms on the TV |
 
@@ -131,6 +132,35 @@ it.
       heard on the TV with the laptop silent; restored after SIGTERM. (The TV had stopped advertising Wi-Fi Direct after
       3.7 days up; Home and ECP PowerOff/PowerOn did not help, a System restart did.)
 - [x] **Release v0.6.0** by `playbooks/release.md`; the installed 0.5.0 updates itself (`rokast update`). Done 2026-10-13: run 38479760533 green, 6 assets, signature + sums OK; laptop updated 0.5.0 -> 0.6.0.
+
+## Phase 13b (v0.7.0): fill the TV (`FIT=match`)
+
+User, 2026-10-13: "Can we have the video size be the same size as the tv". The laptop is 1920x1200 (16:10), the TV
+1920x1080, so capture letterboxes (black side bars, ~5% each). Tried by hand the same day: `xrandr --output eDP-1
+--mode 1920x1080` before `rokast start` -> TV full screen, nothing cut or stretched; user: "Its the correct size now",
+"build it". Zoom (crops 60 px top and bottom) and stretch (11% wide) were offered and not chosen.
+
+- `FIT=bars` (default, today's letterbox) or `FIT=match`: once the TV plays (like the sound routing), switch the
+  captured X11 output to an xrandr mode of the negotiated size, re-read its geometry, capture that; put the old mode
+  (and rate) back when the stream ends, on SIGTERM, on the next start after a crash and with `rokast doctor --fix`
+  (state in `$XDG_RUNTIME_DIR/rokast/fit.json`, written before switching). No such mode on that output, a
+  `--setmonitor` monitor, or Wayland -> say so and keep bars (never fatal). Wayland would need each compositor's own
+  display API; not planned.
+- [x] **`src/rokast-core/src/fit.rs`:** parse `xrandr --query` (outputs, current mode and rate, modes with rates),
+      pick the mode, `Fitter::apply/restore` + `Drop`, `recover`. Unit tests on this laptop's recorded listing.
+- [x] **Wiring:** `start.rs` applies it in `on_play` for X11 and restores in `stream()`'s exit; a bad `FIT=` fails before
+      joining; `doctor` checks `FIT=` and the leftover state (`--fix` puts it back). Parity outputs unchanged.
+- [x] **App:** "Fill the TV" switch -> `FIT=match`/`bars`, remembered like the others.
+- [x] **Docs:** README settings table and a short "Picture size" note, `config/rokast.conf.example`, CHANGELOG.
+      **Done when:** `cargo test --workspace` green; `tests/test_fit_live.sh` (this laptop, no TV; it has to use the
+      real panel, Xvfb has no modes to switch): `examples/fit_hold` switches to 1920x1080 and `xrandr --listmonitors`
+      shows 1920x1080; SIGTERM -> the original mode and rate are back; SIGKILL -> `rokast doctor` FAILs, `--fix`
+      restores. Live: `FIT=match rokast start` on Living Room -> `capture: ... 1920x1080`, TV full screen (user
+      confirms), stop -> 1920x1200@165 again.
+      **Result 2026-10-13:** unit tests green; `tests/test_fit_live.sh` ok (switch, SIGTERM restore, SIGKILL -> doctor
+      FAIL -> `--fix` restore); live `FIT=match` on Living Room: `fit: eDP-1 switched to 1920x1080 for the TV` right
+      after negotiation, streamed 25 s (the TV tolerates the mode switch between PLAY and the first frame), SIGTERM ->
+      exit 0, 1920x1200@165 back, no fit.json left. Same picture the user confirmed by hand ("Its the correct size now").
 
 ## Phase 14 (v0.7.0): extended display on X11
 

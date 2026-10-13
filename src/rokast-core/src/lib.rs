@@ -3,6 +3,7 @@
 pub mod audio;
 pub mod capture;
 pub mod conf;
+pub mod fit;
 pub mod joinlog;
 pub mod lan;
 pub mod link;

@@ -17,6 +17,9 @@ pub struct Prefs {
     pub name: String,
     #[serde(default)]
     pub monitor: String,
+    /// FIT=match ("Fill the TV")
+    #[serde(default)]
+    pub fill: bool,
     /// Window size and the Details pane, as the user left them (0 = default size).
     #[serde(default)]
     pub width: i32,
