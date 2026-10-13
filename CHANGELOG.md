@@ -2,7 +2,7 @@
 
 Each `## <version>` section becomes the GitHub release notes for that tag (see `playbooks/release.md`).
 
-## Unreleased
+## 0.4.0
 
 - **Desktop app opens again:** the 0.3.0 app closed straight away at start (it set its icon before GTK was ready).
   CI now starts the app on a headless screen, so this can't ship again.
