@@ -5,8 +5,10 @@
 
 mod autostart;
 mod config;
+mod delay;
 mod monitors;
 mod fit;
+use fit::row;
 mod sound;
 mod tray;
 mod update;
@@ -77,16 +79,6 @@ struct State {
     stopping: bool,
     quit_after: bool,
     last_error: Option<String>,
-}
-
-fn row(label: &str, widget: &impl IsA<gtk::Widget>) -> gtk::Box {
-    let b = gtk::Box::new(gtk::Orientation::Horizontal, 12);
-    let l = gtk::Label::new(Some(label));
-    l.set_xalign(0.0);
-    l.set_hexpand(true);
-    b.append(&l);
-    b.append(widget);
-    b
 }
 
 fn build(app: &gtk::Application) {
@@ -190,7 +182,13 @@ fn build(app: &gtk::Application) {
         window.set_default_size(prefs.width, prefs.height);
     }
     expander.set_expanded(prefs.details);
-    expander.connect_expanded_notify(|e| update_prefs(|p| p.details = e.is_expanded()));
+    let win = window.clone();
+    expander.connect_expanded_notify(move |e| {
+        update_prefs(|p| p.details = e.is_expanded());
+        if !e.is_expanded() {
+            win.set_default_size(win.width(), -1); // closing Details gives the log's height back
+        }
+    });
     res_drop.set_selected(prefs.res.min(RES.len() as u32 - 1));
     rate_drop.set_selected(prefs.bitrate.min(BITRATES.len() as u32 - 1));
     name.set_text(&prefs.name);

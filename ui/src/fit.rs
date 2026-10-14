@@ -4,6 +4,7 @@
 //! Wayland (the portal's virtual monitor); elsewhere the CLI says so and mirrors.
 //! "Smooth motion" (FPS=60): 60 frames a second instead of the 30 the TV offers, in every mode.
 use crate::config::Prefs;
+use crate::delay::Delay;
 use gtk::prelude::*;
 
 pub const TOOLTIP: &str = "While mirroring, the laptop screen switches to the TV's size so the picture fills the TV \
@@ -13,6 +14,17 @@ pub const EXTEND_TOOLTIP: &str = "The TV becomes a second screen to the right of
                                   drag windows onto it. Gone when you stop.";
 pub const SMOOTH_TOOLTIP: &str = "Sends 60 frames a second instead of the 30 the TV asks for, so movement is \
                                   smoother. The laptop screen runs at 60 Hz while mirroring.";
+
+/// A form row: the label on the left, the control on the right.
+pub fn row(label: &str, widget: &impl IsA<gtk::Widget>) -> gtk::Box {
+    let b = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+    let l = gtk::Label::new(Some(label));
+    l.set_xalign(0.0);
+    l.set_hexpand(true);
+    b.append(&l);
+    b.append(widget);
+    b
+}
 
 /// A switch for a form row.
 pub fn switch(active: bool, tooltip: &str) -> gtk::Switch {
@@ -42,6 +54,7 @@ pub struct Screen {
     pub fill: gtk::Switch,
     pub extend: gtk::Switch,
     pub smooth: gtk::Switch,
+    pub delay: Delay,
 }
 
 impl Screen {
@@ -50,6 +63,7 @@ impl Screen {
             fill: switch(prefs.fill, TOOLTIP),
             extend: switch(prefs.extend, EXTEND_TOOLTIP),
             smooth: switch(prefs.smooth, SMOOTH_TOOLTIP),
+            delay: Delay::new(prefs),
         };
         s.fill.set_sensitive(!prefs.extend); // a second screen is the TV's size already
         let fill = s.fill.clone();
@@ -57,24 +71,28 @@ impl Screen {
         s
     }
 
-    pub fn rows(&self, form: &gtk::Box, row: impl Fn(&str, &gtk::Switch) -> gtk::Box) {
-        form.append(&row("Fill the TV (laptop takes its size)", &self.fill));
-        form.append(&row("TV as a second screen (extend)", &self.extend));
-        form.append(&row("Smooth motion (60 fps)", &self.smooth));
+    pub fn rows(&self, form: &gtk::Box, row: impl Fn(&str, &gtk::Widget) -> gtk::Box) {
+        form.append(&row("Sound timing", self.delay.widget.upcast_ref()));
+        form.append(&row("Fill the TV (laptop takes its size)", self.fill.upcast_ref()));
+        form.append(&row("TV as a second screen (extend)", self.extend.upcast_ref()));
+        form.append(&row("Smooth motion (60 fps)", self.smooth.upcast_ref()));
     }
 
     pub fn set_sensitive(&self, on: bool) {
         self.extend.set_sensitive(on);
         self.smooth.set_sensitive(on);
+        self.delay.scale.set_sensitive(on);
         self.fill.set_sensitive(on && !self.extend.is_active());
     }
 
     pub fn save(&self, p: &mut Prefs) {
         (p.fill, p.extend, p.smooth) = (self.fill.is_active(), self.extend.is_active(), self.smooth.is_active());
+        self.delay.save(p);
     }
 
     pub fn env(prefs: &Prefs, cmd: &mut std::process::Command) {
         cmd.env("FIT", value(prefs.fill)).env("SCREEN", screen(prefs.extend)).env("FPS", fps(prefs.smooth));
+        Delay::env(prefs, cmd);
     }
 }
 

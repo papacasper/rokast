@@ -5,7 +5,9 @@ Each `## <version>` section becomes the GitHub release notes for that tag (see `
 ## Unreleased
 
 - **Sound in step with the picture:** `AUDIO_DELAY` (milliseconds, as in mpv) shifts the TV's sound. Negative plays
-  it earlier, for TVs that show the picture before the sound; `rokast doctor` checks the value.
+  it earlier, for TVs that show the picture before the sound; `rokast doctor` checks the value. The app has a
+  **Sound timing** slider for it.
+- **App: closing Details shrinks the window again** instead of leaving the empty space the log took.
 
 ## 0.8.1
 

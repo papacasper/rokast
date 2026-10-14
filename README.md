@@ -232,6 +232,8 @@ The app's **Sound** menu offers the same choices.
 If the TV shows the picture before you hear the sound (or the other way round), set `AUDIO_DELAY` in milliseconds,
 as in mpv: `AUDIO_DELAY=-200` plays the sound 200 ms earlier, a positive number plays it later. TVs differ, so try
 steps of 50 to 100 and restart mirroring each time (`AUDIO_DELAY=-200 rokast start` tries one without editing the file).
+The app's **Sound timing** slider does the same from −500 to 500 ms (slide left when the picture comes first); until
+you move it, the app uses the file's value.
 
 ### Picture size
 

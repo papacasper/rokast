@@ -26,6 +26,9 @@ pub struct Prefs {
     /// FPS=60 ("Smooth motion")
     #[serde(default)]
     pub smooth: bool,
+    /// AUDIO_DELAY in ms ("Sound timing"); None until the slider is moved (rokast.conf's value applies).
+    #[serde(default)]
+    pub audio_delay: Option<i32>,
     /// Window size and the Details pane, as the user left them (0 = default size).
     #[serde(default)]
     pub width: i32,
@@ -108,11 +111,16 @@ fn conf_file() -> PathBuf {
 
 /// TARGET from rokast.conf, used until the UI has remembered a choice of its own.
 pub fn conf_target() -> String {
+    conf_value("TARGET")
+}
+
+/// A KEY=value from rokast.conf (the last one wins; `#` starts a comment), empty when unset.
+pub fn conf_value(key: &str) -> String {
     let conf = conf_file();
     std::fs::read_to_string(conf)
         .unwrap_or_default()
         .lines()
-        .filter_map(|l| l.split('#').next()?.trim().strip_prefix("TARGET")?.trim_start().strip_prefix('=').map(|v| v.trim().to_string()))
+        .filter_map(|l| l.split('#').next()?.trim().strip_prefix(key)?.trim_start().strip_prefix('=').map(|v| v.trim().to_string()))
         .last()
         .unwrap_or_default()
 }
