@@ -214,7 +214,7 @@ Decided 2026-10-13: v0.7.0 ships X11-only extend; the Wayland virtual monitor mo
 - [x] **App:** done in Phase 14 ("TV as a second screen" switch, remembered; Fill and Smooth motion beside it).
 - [x] **Docs:** README (Picture size, Smooth motion, Second screen, settings table), `docs/how-it-works.md` (picture
       options), CHANGELOG.
-- [ ] **Release** by `playbooks/release.md`.
+- [x] **Release** by `playbooks/release.md`: v0.7.0 tagged, release assets verified, AUR `rokast` and `rokast-git`.
 
 ## Phase 16 (v0.8.0): Wayland second screen (GNOME, KDE)
 
@@ -223,22 +223,26 @@ compositor can add a screen; the ScreenCast portal does it when asked for source
 whose portal lists it in `AvailableSourceTypes` (GNOME's and KDE's recent portals). The stream then *is* the new
 screen, so the existing pipewiresrc -> ffmpeg path carries it unchanged (FPS=60 included).
 
-- [ ] **Core (`wayland.rs`):** `ScreenCast::open(env, virt: Option<(w, h)>)`: with `virt` and VIRTUAL available,
+- [x] **Core (`wayland.rs`):** `ScreenCast::open(env, virt: Option<(w, h)>)`: with `virt` and VIRTUAL available,
       `types=4` and a restore token of its own (`portal-token-virtual`, a monitor token must not restore a virtual
-      session or the reverse); `self.virtual_screen` says which it got. Not available: MONITOR, and the caller says
+      session or the reverse); `self.virt` says which it got. Not available: MONITOR, and the caller says
       why. `gst_cmd(.., virt)` puts `video/x-raw,width=W,height=H` straight after pipewiresrc for a virtual stream,
       so the compositor makes the screen the TV's size (Mutter sizes a virtual monitor from the consumer's caps).
       Pure parts unit-tested (`source_type`, `virtual_size(RES)`, caps).
-- [ ] **Wiring:** `start` and `selftest` ask for a virtual screen when `SCREEN=extend` on Wayland, sized from the
+- [x] **Wiring:** `start` and `selftest` ask for a virtual screen when `SCREEN=extend` on Wayland, sized from the
       first `RES` preference (Rokus: 1920x1080); messages "extend: the TV is a new screen from the desktop" / "extend:
       this desktop's screen-sharing portal can't add a screen; mirroring". `doctor` (Wayland, SCREEN=extend) reports
       whether VIRTUAL is offered.
-- [ ] **CI:** `tests/wayland_desktop.sh <desk> extend` runs selftest with `SCREEN=extend`; GNOME: passes when the
+- [x] **CI:** `tests/wayland_desktop.sh <desk> extend` runs selftest with `SCREEN=extend`; GNOME: passes when the
       selftest log says it got a virtual screen, its frames encode, and Mutter's `DisplayConfig.GetCurrentState`
       showed 2 monitors during it. KDE stays allowed to fail (no OpenGL on runners, as for mirror).
-- [ ] **App + docs:** the extend tooltip and README/how-it-works/CHANGELOG say GNOME/KDE Wayland works, other
+- [x] **App + docs:** the extend tooltip and README/how-it-works/CHANGELOG say GNOME/KDE Wayland works, other
       Wayland desktops mirror. `FIT=match` stays X11 only.
       **Done when:** check.sh green, the wayland workflow's GNOME extend case green.
+      Result: green (run 38492528675): Mutter showed 2 monitors, the new one 1920x1080, 89 frames encoded. KDE's
+      dialog ("Create a new virtual display...", button "Share virtual screen") opens and the clicker presses it
+      (run 38493165375); KWin then refuses as for mirror ("Unsupported compositing type": no OpenGL on runners).
+      Still to do: a real GNOME/KDE laptop on a TV (the user is on X11).
 
 ## Not planned
 
