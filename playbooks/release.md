@@ -40,11 +40,15 @@ The PKGBUILDs live in `packaging/aur/<pkg>/`; this repo is their source of truth
    the AUR host key is in `~/.ssh/known_hosts`, compared with the fingerprints on https://aur.archlinux.org (bottom
    of the page) before adding; `ssh -o BatchMode=yes aur@aur.archlinux.org help` gets past `Permission denied
    (publickey)` (else the user adds `~/.ssh/id_ed25519.pub` under My Account > SSH Public Key at aur.archlinux.org).
-   The first push of a new package name creates it on the AUR.
+   The first push of a new package name creates it on the AUR. If ssh stalls at `expecting SSH2_MSG_KEX_ECDH_REPLY`
+   (the post-quantum key exchange's large packets get dropped on this network), use
+   `export GIT_SSH_COMMAND="ssh -o KexAlgorithms=curve25519-sha256 -o ServerAliveInterval=5"`; on "Connection reset
+   by peer" retry after 20 s.
    `git clone ssh://aur@aur.archlinux.org/rokast.git <scratch>/aur-rokast`, copy `PKGBUILD` and `.SRCINFO` in,
    `makepkg --verifysource` there (checks the sha256 against the published archive), commit "Update to X.Y.Z", push.
    `rokast-git` only needs a push when its PKGBUILD changes (its pkgver comes from git).
-5. Verify: `curl -s 'https://aur.archlinux.org/rpc/v5/info?arg[]=rokast' | python3 -I -m json.tool` shows Version X.Y.Z-1.
+5. Verify: `curl -s 'https://aur.archlinux.org/rpc/v5/info?arg[]=rokast' | python3 -I -m json.tool` shows Version X.Y.Z-1
+   (the RPC lags new packages by minutes; `https://aur.archlinux.org/packages/rokast` shows "Package Details: rokast X.Y.Z-1" at once).
 
 ## If the workflow fails
 
