@@ -22,6 +22,14 @@ pub type Peer = BTreeMap<String, String>;
 
 const SH: Duration = Duration::from_secs(30);
 const PEER_TIMEOUT: u64 = 30;
+/// Extra time for a join caught mid-way (2026-10-14: Living Room's WPS was ready only on the 2nd scan, ~15 s after
+/// the push, and the 4-way handshake finished 0.2 s after the old deadline, on every attempt).
+const JOIN_GRACE: Duration = Duration::from_secs(10);
+
+/// wpa_supplicant states between "found the TV's group" and COMPLETED (connected).
+pub fn joining(state: &str) -> bool {
+    matches!(state, "AUTHENTICATING" | "ASSOCIATING" | "ASSOCIATED" | "4WAY_HANDSHAKE" | "GROUP_HANDSHAKE")
+}
 
 /// Our group iface: `p2p-<wifi>-mir`, cut to the 15-character netdev limit.
 pub fn group_iface_of(wifi: &str) -> String {
@@ -170,13 +178,18 @@ pub trait Radio {
 
     fn wait_state(&mut self, iface: &str, want: &str, timeout: Duration) -> Result<bool, Fail> {
         let t0 = Instant::now();
-        while t0.elapsed() < timeout {
-            if parse_peer(&self.own(iface, &["status"], false)?).get("wpa_state").is_some_and(|s| s == want) {
+        loop {
+            let st = parse_peer(&self.own(iface, &["status"], false)?).get("wpa_state").cloned().unwrap_or_default();
+            if st == want {
                 return Ok(true);
+            }
+            // past the deadline: a join already associating gets JOIN_GRACE more, not torn down mid-handshake
+            let limit = if joining(&st) { timeout + JOIN_GRACE } else { timeout };
+            if t0.elapsed() >= limit {
+                return Ok(false);
             }
             stop::sleep(Duration::from_millis(500))?;
         }
-        Ok(false)
     }
 
     /// Stop our supplicant and remove every P2P group netdev. The chip allows ONE P2P-client/GO iface.

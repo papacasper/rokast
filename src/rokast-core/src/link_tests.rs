@@ -177,3 +177,13 @@ fn group_iface_name_fits_a_netdev() {
     assert_eq!(group_iface_of("wlo1"), "p2p-wlo1-mir");
     assert_eq!(group_iface_of("wlp0s20f3"), "p2p-wlp0s20f3-m");
 }
+
+#[test]
+fn mid_join_states_get_grace() {
+    for s in ["AUTHENTICATING", "ASSOCIATING", "ASSOCIATED", "4WAY_HANDSHAKE", "GROUP_HANDSHAKE"] {
+        assert!(joining(s), "{s}");
+    }
+    for s in ["SCANNING", "DISCONNECTED", "INACTIVE", "COMPLETED", ""] {
+        assert!(!joining(s), "{s}");
+    }
+}

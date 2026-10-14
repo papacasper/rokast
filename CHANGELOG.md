@@ -2,6 +2,12 @@
 
 Each `## <version>` section becomes the GitHub release notes for that tag (see `playbooks/release.md`).
 
+## Unreleased
+
+- **Fix: joining the TV failed on some tries.** When the TV took two Wi-Fi scans to open its pairing window, the join
+  completed a fraction of a second after rokast had given up, on every attempt. rokast now waits 25 s per attempt and
+  never cuts off a join that is already connecting.
+
 ## 0.8.0
 
 - **Second screen on Wayland (GNOME, KDE):** `SCREEN=extend` (the app's **TV as a second screen** switch) now works

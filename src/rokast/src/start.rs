@@ -40,7 +40,8 @@ struct RealLink<'a> {
 
 impl Link for RealLink<'_> {
     fn connect(&mut self) -> Result<String, Fail> {
-        let tries_timeout = Duration::from_secs(15);
+        // per attempt, from the WPS push: the TV's group shows WPS ready in a scan ~8 s apart, sometimes the 2nd one
+        let tries_timeout = Duration::from_secs(25);
         link::connect(&mut self.radio, &self.dev, &self.target, &self.conf["NAME"], 4, tries_timeout, &say)
     }
 
