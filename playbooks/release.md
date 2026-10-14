@@ -36,7 +36,11 @@ The PKGBUILDs live in `packaging/aur/<pkg>/`; this repo is their source of truth
    clean-container makepkg with check(), namcap, install, doctor from `/usr/bin`. It builds from the working tree, so
    step 1's sha256 is not exercised here; makepkg in step 4 checks it.
 3. Commit "AUR: rokast X.Y.Z" and push to main.
-4. Push to the AUR, **only with the user's go-ahead** (their AUR account and SSH key):
+4. Push to the AUR, **only with the user's go-ahead** (their AUR account and SSH key). Prerequisites, checked first:
+   the AUR host key is in `~/.ssh/known_hosts`, compared with the fingerprints on https://aur.archlinux.org (bottom
+   of the page) before adding; `ssh -o BatchMode=yes aur@aur.archlinux.org help` gets past `Permission denied
+   (publickey)` (else the user adds `~/.ssh/id_ed25519.pub` under My Account > SSH Public Key at aur.archlinux.org).
+   The first push of a new package name creates it on the AUR.
    `git clone ssh://aur@aur.archlinux.org/rokast.git <scratch>/aur-rokast`, copy `PKGBUILD` and `.SRCINFO` in,
    `makepkg --verifysource` there (checks the sha256 against the published archive), commit "Update to X.Y.Z", push.
    `rokast-git` only needs a push when its PKGBUILD changes (its pkgver comes from git).
