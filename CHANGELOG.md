@@ -7,6 +7,7 @@ Each `## <version>` section becomes the GitHub release notes for that tag (see `
 - **Second screen on Wayland (GNOME, KDE):** `SCREEN=extend` (the app's **TV as a second screen** switch) now works
   on GNOME and KDE Plasma Wayland too: the desktop adds a virtual screen of the TV's size through the screen-sharing
   portal and rokast streams it. Other Wayland desktops still mirror (and say so); `rokast doctor` tells which.
+  Untested on real GNOME/KDE hardware so far (passes CI on headless GNOME).
 
 ## 0.7.0
 

@@ -204,7 +204,7 @@ Environment variables with the same names override the file.
 | `MONITOR` | primary monitor | Monitor to mirror, as `rokast monitors` names it (X11 only; on Wayland the screen-sharing dialog asks) |
 | `FIT` | `bars` | How the picture fits the TV (see [Picture size](#picture-size)): `bars` (scaled in, black bars when the shapes differ) or `match` (this computer's screen takes the TV's size while mirroring; X11 only) |
 | `FPS` | `tv` | Frames a second (see [Smooth motion](#smooth-motion)): `tv` (what the TV asks for, 30 at HD on Roku TVs) or `60` |
-| `SCREEN` | `mirror` | `mirror` (the TV shows this screen) or `extend` (the TV is a second screen; see [Second screen](#second-screen); X11, GNOME and KDE) |
+| `SCREEN` | `mirror` | `mirror` (the TV shows this screen) or `extend` (the TV is a second screen; see [Second screen](#second-screen); X11, GNOME and KDE (untested)) |
 | `EXTEND_SIDE` | `right` | Where the second screen sits: `right`, `left`, `above` or `below` |
 | `DISPLAY` | `:0` | X display to capture (X11 only) |
 | `CHECK_UPDATES` | `1` | Once a day, ask GitHub for the latest release and show a notice if it is newer (`rokast version --check`); `0` turns it off. Only `rokast update` (or the app's **Update** button) downloads anything |
@@ -260,6 +260,9 @@ the desktop treats it like a real monitor. `rokast doctor` (with `SCREEN=extend`
 **full**, or **basic** when there is no free port (NVIDIA-only laptops) or the kernel blocks debug settings
 (lockdown under some Secure Boot setups). In basic mode the TV area exists and is shown, but windows don't open or
 maximise there by themselves; drag them over.
+
+> **Untested:** the Wayland second screen has not been tried on a real GNOME or KDE laptop with a TV yet. It passes
+> the automated test on a headless GNOME session; KDE could not be tested there. Please report how it goes.
 
 On Wayland, GNOME and KDE Plasma add the screen themselves: rokast asks the screen-sharing portal for a *virtual
 monitor* of the TV's size (1920x1080, or 1280x720 if `RES` starts with 720p) and streams it. The desktop decides
