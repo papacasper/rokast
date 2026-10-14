@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # packaging/aur/update X.Y.Z
 # After the vX.Y.Z release is published: point packaging/aur/rokast/PKGBUILD at it (pkgver, pkgrel=1, the release
-# archive's sha256) and regenerate both .SRCINFO files. Needs makepkg (Arch). Pushing to the AUR is a separate,
+# archive's sha256), set rokast-git's pkgver to what its pkgver() gives at that tag (makepkg recomputes it when
+# building; this is what the AUR page shows) and regenerate both .SRCINFO files. Needs makepkg (Arch). Pushing to the AUR is a separate,
 # manual step (playbooks/release.md, "AUR").
 set -euo pipefail
 root="$(cd "$(dirname "$(readlink -f "$0")")/../.." && pwd)"
@@ -13,5 +14,8 @@ sum="$(sha256sum "$t/a.tar.gz" | cut -d' ' -f1)"
 p="$root/packaging/aur/rokast/PKGBUILD"
 sed -i "s/^pkgver=.*/pkgver=$v/; s/^pkgrel=.*/pkgrel=1/; 0,/^sha256sums=('[^']*'/s//sha256sums=('$sum'/" "$p"
 grep -q "^sha256sums=('$sum'" "$p" || { echo "could not set the sha256 in $p" >&2; exit 1; }
+git -C "$root" fetch -q --tags origin
+gv="$(git -C "$root" describe --long --tags "v$v" | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g')"
+sed -i "s/^pkgver=.*/pkgver=$gv/; s/^pkgrel=.*/pkgrel=1/" "$root/packaging/aur/rokast-git/PKGBUILD"
 for d in rokast rokast-git; do (cd "$root/packaging/aur/$d" && makepkg --printsrcinfo > .SRCINFO); done
-echo "rokast $v: sha256 $sum; PKGBUILD and .SRCINFO updated. Review with git diff, commit, then push to the AUR."
+echo "rokast $v: sha256 $sum; rokast-git $gv; PKGBUILD and .SRCINFO updated. Review with git diff, commit, then push to the AUR."
