@@ -93,6 +93,10 @@ left click toggles the window; menu = status, Start/Stop, Show/Hide, Quit. With 
 - Do not derive the LAN from the default route (a VPN may own it). Use the Wi-Fi interface address.
 - P2P address of a Roku = its wifi MAC with first octet |= 0x02 (4c: -> 4e:). The allowlist relies on this. Group BSSID comes from `p2p_peer` `interface_addr`.
 - `$DISPLAY` is often `:0.0`; capture strips the screen suffix. The agent shell has no X auth env; cli sets DISPLAY/XAUTHORITY for ffmpeg.
+- Sound out of step with the picture by a fixed amount (2026-10-13, Living Room: picture first): TV-side latency, not
+  capture (x11grab and pulse start within ~35 ms of each other). Fix with `AUDIO_DELAY=<ms>` (negative = sound earlier),
+  which is `-itsoffset` on the pulse input; verified with a click at 1.0 s moving to 0.75 s at `-250`. If it grows
+  over time instead, that is clock drift: a different bug (aresample async=1 should be correcting it).
 - Audio is only sent when the TV offers AAC (WFD LPCM framing is not what ffmpeg's pcm muxing produces).
 - Debug: `sudo cat /run/rokast/supplicant.log` (WPS-CRED-RECEIVED, COMPLETED); kernel `segfault` lines in `journalctl -k` mean the patch is missing.
 - Backgrounded from a non-interactive shell, SIGINT is ignored; use SIGTERM to stop it in tests.

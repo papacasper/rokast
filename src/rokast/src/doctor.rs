@@ -3,7 +3,7 @@
 //! and screen mode a crashed session left behind.
 use crate::Ctx;
 use rokast_core::pyfmt::repr;
-use rokast_core::{audio, capture, extend, fit, joinlog, lan, paths, proc, selftest, update, wayland};
+use rokast_core::{audio, capture, conf, extend, fit, joinlog, lan, paths, proc, selftest, update, wayland};
 use std::path::Path;
 use std::time::Duration;
 
@@ -101,6 +101,9 @@ pub fn run(ctx: &Ctx, args: &[String]) -> ! {
     }
     if let Err(e) = capture::parse_fps(&conf["FPS"]) {
         c.chk("FPS setting", false, &e);
+    }
+    if let Err(e) = conf::audio_delay(&conf["AUDIO_DELAY"]) {
+        c.chk("AUDIO_DELAY setting", false, &e);
     }
     if let Err(e) = fit::parse_mode(&conf["FIT"]) {
         c.chk("FIT setting", false, &e);

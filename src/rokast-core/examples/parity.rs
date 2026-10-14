@@ -40,6 +40,7 @@ fn build_cmd(a: &Value) -> Vec<String> {
         bitrate: s(o, "bitrate").into(),
         audio: o["audio"].as_bool().expect("audio"),
         monitor: opt_str(&o["monitor"]),
+        audio_delay_ms: o["audio_delay_ms"].as_i64().unwrap_or(0) as i32,
         source: s(o, "source").into(),
         out: opt_str(&o["out"]),
         seconds: o["seconds"].as_u64().map(|x| x as u32),

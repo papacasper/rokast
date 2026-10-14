@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 
 pub type Conf = BTreeMap<String, String>;
 
-pub const DEFAULTS: [(&str, &str); 15] = [
+pub const DEFAULTS: [(&str, &str); 16] = [
     ("TARGET", ""),
     ("BITRATE", "8M"),
     ("ENCODER", "auto"),
@@ -18,6 +18,7 @@ pub const DEFAULTS: [(&str, &str); 15] = [
     ("MONITOR", ""),
     ("FIT", "bars"),
     ("FPS", "tv"),
+    ("AUDIO_DELAY", "0"),
     ("SCREEN", "mirror"),
     ("EXTEND_SIDE", "right"),
     ("CHECK_UPDATES", "1"),
@@ -71,6 +72,17 @@ pub fn capture_mode(conf: &Conf, env: &Env) -> Result<&'static str, String> {
     }
 }
 
+/// AUDIO_DELAY: milliseconds the TV's sound is shifted, as in mpv: negative plays it earlier (the TV shows the
+/// picture before the sound), positive later. Empty means 0.
+pub fn audio_delay(value: &str) -> Result<i32, String> {
+    let v = value.trim();
+    match v.parse::<i32>() {
+        _ if v.is_empty() => Ok(0),
+        Ok(ms) if (-2000..=2000).contains(&ms) => Ok(ms),
+        _ => Err(format!("AUDIO_DELAY must be milliseconds from -2000 to 2000 (got {})", repr(v))),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -91,6 +103,15 @@ mod tests {
         assert_eq!(c["NAME"], "Den PC");
         assert_eq!(c["RES"], "1080p30,720p60,720p30");
         assert!(!c.contains_key("OTHER"));
+    }
+
+    #[test]
+    fn audio_delays() {
+        assert_eq!(audio_delay(""), Ok(0));
+        assert_eq!(audio_delay(" -250 "), Ok(-250));
+        assert_eq!(audio_delay("2000"), Ok(2000));
+        assert_eq!(audio_delay("3000"), Err("AUDIO_DELAY must be milliseconds from -2000 to 2000 (got '3000')".into()));
+        assert!(audio_delay("0.2").is_err());
     }
 
     #[test]

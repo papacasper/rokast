@@ -1,7 +1,7 @@
 //! rokast selftest + hardware report: which mode to test, capture + encode to a file,
 //! the ffprobe checks, the report helpers.
 use crate::capture::{self, Opts};
-use crate::conf::Conf;
+use crate::conf::{self, Conf};
 use crate::pyfmt::{py_str, repr};
 use crate::wfd::Negotiated;
 use crate::{proc, wayland, Env};
@@ -180,6 +180,7 @@ pub fn run(
         bitrate: conf["BITRATE"].clone(),
         audio: monitor.is_some(),
         monitor: monitor.clone(),
+        audio_delay_ms: conf::audio_delay(&conf["AUDIO_DELAY"])?,
         source: if cast.is_some() { "raw" } else { "x11" }.into(),
         out: Some(out.clone()),
         seconds: Some(seconds),

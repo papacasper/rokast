@@ -204,6 +204,7 @@ Environment variables with the same names override the file.
 | `MONITOR` | primary monitor | Monitor to mirror, as `rokast monitors` names it (X11 only; on Wayland the screen-sharing dialog asks) |
 | `FIT` | `bars` | How the picture fits the TV (see [Picture size](#picture-size)): `bars` (scaled in, black bars when the shapes differ) or `match` (this computer's screen takes the TV's size while mirroring; X11 only) |
 | `FPS` | `tv` | Frames a second (see [Smooth motion](#smooth-motion)): `tv` (what the TV asks for, 30 at HD on Roku TVs) or `60` |
+| `AUDIO_DELAY` | `0` | Shift the TV's sound by this many milliseconds (see [Sound](#sound)): negative plays it earlier, e.g. `-200` when the picture comes before the sound |
 | `SCREEN` | `mirror` | `mirror` (the TV shows this screen) or `extend` (the TV is a second screen; see [Second screen](#second-screen); X11, GNOME and KDE (untested)) |
 | `EXTEND_SIDE` | `right` | Where the second screen sits: `right`, `left`, `above` or `below` |
 | `DISPLAY` | `:0` | X display to capture (X11 only) |
@@ -227,6 +228,10 @@ quiet and the TV gets no echo. When mirroring stops, everything goes back where 
 - `AUDIO=off`: video only
 
 The app's **Sound** menu offers the same choices.
+
+If the TV shows the picture before you hear the sound (or the other way round), set `AUDIO_DELAY` in milliseconds,
+as in mpv: `AUDIO_DELAY=-200` plays the sound 200 ms earlier, a positive number plays it later. TVs differ, so try
+steps of 50 to 100 and restart mirroring each time (`AUDIO_DELAY=-200 rokast start` tries one without editing the file).
 
 ### Picture size
 

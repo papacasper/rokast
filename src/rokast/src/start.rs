@@ -2,7 +2,7 @@
 use crate::{die, Ctx};
 use rokast_core::audio::{self, Router};
 use rokast_core::capture::{self, Monitor, Opts, Pipeline};
-use rokast_core::conf::Conf;
+use rokast_core::conf::{self, Conf};
 use rokast_core::extend::{self, Extender};
 use rokast_core::fit::{self, Fitter};
 use rokast_core::link::{self, Radio, Wpa};
@@ -128,6 +128,7 @@ impl Link for RealLink<'_> {
                 bitrate: conf["BITRATE"].clone(),
                 audio,
                 monitor: source,
+                audio_delay_ms: conf::audio_delay(&conf["AUDIO_DELAY"]).unwrap_or(0),
                 source: if cast.is_some() { "raw" } else { "x11" }.into(),
                 out: None,
                 seconds: None,
@@ -187,6 +188,7 @@ fn steps(ctx: &Ctx, conf: &mut Conf, mode: &str, name: &str, dev: &mut Option<St
         say("fit: FIT=match works on X11 only; on Wayland the picture keeps black bars");
     }
     capture::parse_fps(&conf["FPS"])?; // a bad FPS= fails before joining too
+    conf::audio_delay(&conf["AUDIO_DELAY"])?;
     let extender = Extender::new(&conf["SCREEN"], &conf["EXTEND_SIDE"], &conf["DISPLAY"], &ctx.env)?;
     if extend::recover(&ctx.env) {
         say("extend: removed the TV screen a previous session left behind");
