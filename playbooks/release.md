@@ -42,8 +42,9 @@ The PKGBUILDs live in `packaging/aur/<pkg>/`; this repo is their source of truth
    (publickey)` (else the user adds `~/.ssh/id_ed25519.pub` under My Account > SSH Public Key at aur.archlinux.org).
    The first push of a new package name creates it on the AUR. If ssh stalls at `expecting SSH2_MSG_KEX_ECDH_REPLY`
    (the post-quantum key exchange's large packets get dropped on this network), use
-   `export GIT_SSH_COMMAND="ssh -o KexAlgorithms=curve25519-sha256 -o ServerAliveInterval=5"`; on "Connection reset
-   by peer" retry after 20 s.
+   `export GIT_SSH_COMMAND="ssh -o KexAlgorithms=curve25519-sha256 -o IPQoS=none -o BatchMode=yes"`. `IPQoS=none` is
+   required here (2026-10-14): with SSH's default QoS marks the connection authenticates, then "Connection reset by
+   peer" on every clone/push (20 retries failed); without them it works first time. Still retry after 15 s if reset.
    `git clone ssh://aur@aur.archlinux.org/rokast.git <scratch>/aur-rokast`, copy `PKGBUILD` and `.SRCINFO` in,
    `makepkg --verifysource` there (checks the sha256 against the published archive), commit "Update to X.Y.Z", push.
    `rokast-git` only needs a push when its PKGBUILD changes (its pkgver comes from git).
