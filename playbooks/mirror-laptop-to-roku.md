@@ -56,6 +56,11 @@ left click toggles the window; menu = status, Start/Stop, Show/Hide, Quit. With 
   again, read `~/.cache/rokast/join-failures/<newest>/` (`rokast doctor --report` prints the summary): each attempt's
   supplicant log, the peer entry and the TV's power mode. Check cold starts with `tests/live_join_soak.sh 10 15`.
 
+- Every attempt fails ~15 s after `pbc` although the log shows `WPS-SUCCESS` and the link going UP right at the end
+  (fixed 2026-10-14): the TV's beacon showed "active PBC" only on the 2nd scan (~8 s apart), so the join finished
+  0.2 s after the deadline. Now 25 s per attempt (`start.rs`), plus `link::JOIN_GRACE` while wpa_state is mid-join.
+  Read it from `summary.json` (`pbc` vs `failed_at`) and the attempt log (`skip - WPS AP without active PBC
+  Registrar`, then `selected based on WPS IE (Active PBC)` just before the end).
 - `not visible over Wi-Fi Direct` with the TV on and answering ECP (2026-10-13): the TV has stopped advertising P2P
   (`sudo wpa_cli -i p2p-dev-wlo1 p2p_find 30` then `p2p_peers` lacks its p2p MAC; other Rokus show). Seen after 3.7 days
   up. ECP Home and PowerOff/PowerOn (standby only, `uptime` keeps counting) do NOT fix it; a real restart does
