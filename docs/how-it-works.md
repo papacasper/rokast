@@ -133,6 +133,12 @@ the phone-style IEs in the association request on a P2P-client interface, and th
      needs (1080p60: 4.2; nvenc refuses 60 at 4.0). When mirroring, the laptop goes to its ~60 Hz rate so frames are
      evenly spaced (165 Hz does not divide by 60).
 
+8. **Second screen on Wayland.** `SCREEN=extend` asks the ScreenCast portal for source type `VIRTUAL` (4) when its
+   `AvailableSourceTypes` has it (GNOME, KDE): the compositor adds a monitor and the PipeWire stream is that monitor.
+   A `video/x-raw,width=W,height=H` caps filter straight after `pipewiresrc` makes Mutter size it (it sizes virtual
+   monitors from the consumer's format). Closing the portal session removes it, so a crash cleans up by itself.
+   Its restore token is kept apart from the mirror one (`portal-token-virtual`).
+
 Stopping removes everything: the supplicant gets `terminate`, the DHCP client is released and the
 interface is deleted.
 
@@ -169,8 +175,8 @@ It doesn't replace or touch the system `wpa_supplicant`.
 
 ## 8. Known gaps / ideas
 
-- Wayland: tested on sway; GNOME/KDE portals untested. `FIT`, `SCREEN=extend` and the 60 Hz switch are X11 only
-  (planned: the portal's `VIRTUAL` source for a second screen).
+- Wayland: tested on sway and (CI) headless GNOME/KDE. `FIT` and the 60 Hz switch are X11 only; `SCREEN=extend` on
+  sway/Hyprland would need their headless outputs (`swaymsg create_output`, `hyprctl output create headless`).
 - Test VAAPI on real Intel/AMD hardware; test non-Roku sinks.
 - UIBC (remote input from the TV) is not implemented.
 - If a future Roku OS rejects these IEs, re-capture a working phone and update `assoc_ies()`.

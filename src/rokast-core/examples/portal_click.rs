@@ -2,8 +2,9 @@
 //!
 //! Waits for a window from the portal backend (xdg-desktop-portal-gnome / -kde). GNOME: selects the first screen it
 //! lists if nothing is selected, and presses Share. KDE (Plasma 6): presses the screen's tile, whose heading is
-//! 'Share "<name>"'. Prints the dialog's accessible tree when it cannot, so a CI log shows what to change. Exits 0
-//! once it pressed the button, 1 on timeout. Needs a live desktop:
+//! 'Share "<name>"', or for a virtual screen (SCREEN=extend) the "Share virtual screen" button. Prints the dialog's
+//! accessible tree when it cannot, so a CI log shows what to change. Exits 0 once it pressed the button, 1 on
+//! timeout. Needs a live desktop:
 //!   cargo run -p rokast-core --example portal_click -- [timeout seconds, default 90]
 use std::time::{Duration, Instant};
 use zbus::blocking::Connection;
@@ -23,6 +24,12 @@ const SENSITIVE: u32 = 24;
 const ON: [u32; 3] = [4, 20, 23]; // checked, pressed, selected
 
 type R<T> = Result<T, zbus::Error>;
+
+/// A dialog's confirm button: "Share", "OK"..., or KDE's virtual-screen "Share virtual screen".
+fn is_confirm(name: &str) -> bool {
+    let n = name.trim().to_lowercase();
+    BUTTONS.contains(&n.as_str()) || n.starts_with("share ")
+}
 
 #[derive(Clone)]
 struct Node {
@@ -149,9 +156,7 @@ impl Atspi {
         let mut nodes = vec![];
         self.walk(app, 0, &mut nodes)?;
         let nodes: Vec<Node> = nodes.into_iter().map(|(n, _)| n).collect();
-        let named = nodes
-            .iter()
-            .find(|n| self.role(n) == PUSH_BUTTON && BUTTONS.contains(&self.name(n).trim().to_lowercase().as_str()));
+        let named = nodes.iter().find(|n| self.role(n) == PUSH_BUTTON && is_confirm(&self.name(n)));
         let button = match named {
             Some(b) => {
                 if !self.usable(b) {

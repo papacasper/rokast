@@ -1,6 +1,7 @@
 //! The picture settings: "Fill the TV" (FIT=match: the laptop takes the TV's size while mirroring, so a 16:10 laptop
 //! fills a 16:9 TV) and "TV as a second screen" (SCREEN=extend: the TV is an extra screen beside the laptop instead
-//! of a copy; EXTEND_SIDE in rokast.conf picks the side). X11 only; the CLI says so on Wayland and mirrors.
+//! of a copy; EXTEND_SIDE in rokast.conf picks the side on X11). Fill is X11 only; extend works on X11 and on GNOME/KDE
+//! Wayland (the portal's virtual monitor); elsewhere the CLI says so and mirrors.
 //! "Smooth motion" (FPS=60): 60 frames a second instead of the 30 the TV offers, in every mode.
 use crate::config::Prefs;
 use gtk::prelude::*;
@@ -8,7 +9,8 @@ use gtk::prelude::*;
 pub const TOOLTIP: &str = "While mirroring, the laptop screen switches to the TV's size so the picture fills the TV \
                            with no black bars. It switches back when you stop.";
 pub const EXTEND_TOOLTIP: &str = "The TV becomes a second screen to the right of the laptop (EXTEND_SIDE in \
-                                  rokast.conf for left, above or below): drag windows onto it. Gone when you stop.";
+                                  rokast.conf for left, above or below; on GNOME/KDE Wayland the desktop places it): \
+                                  drag windows onto it. Gone when you stop.";
 pub const SMOOTH_TOOLTIP: &str = "Sends 60 frames a second instead of the 30 the TV asks for, so movement is \
                                   smoother. The laptop screen runs at 60 Hz while mirroring.";
 
