@@ -133,8 +133,9 @@ impl Link for RealLink<'_> {
                 geometry,
             };
             let cmd = capture::build_cmd(&sent, Some(ip), Some(port), &opts);
-            let feeder = cast
-                .map(|c| (rokast_core::wayland::gst_cmd(c.raw_fd(), c.node, n.width, n.height, sent.fps), c.raw_fd()));
+            let feeder = cast.map(|c| {
+                (rokast_core::wayland::gst_cmd(c.raw_fd(), c.node, n.width, n.height, sent.fps, c.virt), c.raw_fd())
+            });
             if let Some((argv, _)) = &feeder {
                 say(&format!("gst: {}", argv.join(" ")));
             }
@@ -189,9 +190,6 @@ fn steps(ctx: &Ctx, conf: &mut Conf, mode: &str, name: &str, dev: &mut Option<St
     if extend::recover(&ctx.env) {
         say("extend: removed the TV screen a previous session left behind");
     }
-    if extender.screen == "extend" && mode == "wayland" {
-        say("extend: SCREEN=extend works on X11 only for now; mirroring");
-    }
     // measured only after the recovers above: a screen mode or TV screen a crashed session left behind would
     // otherwise give the wrong size (a cropped picture). Unknown MONITOR fails here, before joining; on Wayland the
     // portal picks
@@ -209,7 +207,12 @@ fn steps(ctx: &Ctx, conf: &mut Conf, mode: &str, name: &str, dev: &mut Option<St
         // the portal may ask the user to pick a screen: do it before joining
         status("sharing", "");
         let mut c = ScreenCast::new()?;
-        c.open(&ctx.env)?;
+        // SCREEN=extend: a new screen from the compositor (GNOME, KDE), of the TV's likely size
+        let want = (extender.screen == "extend").then(|| rokast_core::wayland::virtual_size(&conf["RES"]));
+        c.open(&ctx.env, want)?;
+        if want.is_some() {
+            say(&rokast_core::wayland::extend_note(c.virt));
+        }
         say(&format!("pipewire: node {}", c.node));
         cast = Some(c);
     }

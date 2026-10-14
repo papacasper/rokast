@@ -160,10 +160,14 @@ pub fn run(
     let mut cast = None;
     if mode == "wayland" {
         let mut c = wayland::ScreenCast::new()?;
-        c.open(env).map_err(|e| match e {
+        let want = (conf["SCREEN"] == "extend").then(|| wayland::virtual_size(&conf["RES"]));
+        c.open(env, want).map_err(|e| match e {
             crate::stop::Fail::Err(m) => m,
             crate::stop::Fail::Stop => "stopped".into(),
         })?;
+        if want.is_some() {
+            log(&wayland::extend_note(c.virt));
+        }
         cast = Some(c);
     }
     let geometry = match cast {
@@ -182,7 +186,8 @@ pub fn run(
         geometry,
     };
     let cmd = capture::build_cmd(&n, None, None, &opts);
-    let feeder = cast.as_ref().map(|c| (wayland::gst_cmd(c.raw_fd(), c.node, n.width, n.height, n.fps), c.raw_fd()));
+    let feeder =
+        cast.as_ref().map(|c| (wayland::gst_cmd(c.raw_fd(), c.node, n.width, n.height, n.fps, c.virt), c.raw_fd()));
     let feeder = feeder.as_ref().map(|(argv, fd)| (argv.as_slice(), *fd));
     let mut pipe = capture::start(&cmd, &conf["DISPLAY"], env, feeder).map_err(|e| format!("ffmpeg: {e}"))?;
     let code = match proc::wait_for(pipe.ffmpeg(), Duration::from_secs(u64::from(seconds) + 30)) {

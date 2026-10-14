@@ -1,4 +1,5 @@
-# `rokast selftest` over the screen-sharing portal on headless GNOME and KDE sessions (tests/wayland_desktop.sh), in
+# `rokast selftest` over the screen-sharing portal on headless GNOME and KDE sessions (tests/wayland_desktop.sh), as
+# a copy of the screen and as a new screen (SCREEN=extend: the portal's virtual monitor), in
 # fedora:43 containers. On demand and when the Rust code changes; slow
 # (installs two desktops).
 # KDE is allowed to fail: the share dialog opens and is answered, but KWin screencasts only with OpenGL compositing,
@@ -22,6 +23,7 @@ jobs:
       fail-fast: false
       matrix:
         desktop: [gnome, kde]
+        screen: [mirror, extend]
     steps:
       - uses: actions/checkout@v4
       - name: packages
@@ -37,4 +39,4 @@ jobs:
           ! command -v kwin_wayland >/dev/null || setcap -r "$(command -v kwin_wayland)"
       - name: build rokast and the dialog clicker
         run: cargo build --release --locked -p rokast && cargo build --release --locked -p rokast-core --example portal_click
-      - run: bash tests/wayland_desktop.sh ${{ matrix.desktop }}
+      - run: bash tests/wayland_desktop.sh ${{ matrix.desktop }} ${{ matrix.screen }}

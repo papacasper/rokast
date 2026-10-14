@@ -48,6 +48,14 @@ pub fn run(ctx: &Ctx, args: &[String]) -> ! {
             Ok(v) => c.chk(&format!("screen-sharing portal v{v}"), true, ""),
             Err(e) => c.chk("screen-sharing portal", false, &e),
         }
+        if conf["SCREEN"] == "extend" {
+            let types = wayland::ScreenCast::new().and_then(|s| s.prop("AvailableSourceTypes")).unwrap_or(0);
+            if wayland::source_type(true, types) == 1 {
+                println!("note  extend: this desktop's portal can't add a screen (GNOME and KDE can); mirroring");
+            } else {
+                c.chk("extend: the desktop adds a virtual screen", true, "");
+            }
+        }
     }
     let file = &conf["_file"];
     let note = if Path::new(file).exists() { "" } else { " (not created yet: defaults)" };
