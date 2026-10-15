@@ -2,6 +2,13 @@
 
 Each `## <version>` section becomes the GitHub release notes for that tag (see `playbooks/release.md`).
 
+## Unreleased
+
+- **Fix: some TVs were never found.** A TV whose Wi-Fi Direct name differs from its network name (e.g. a TV named
+  `43" onn. Roku TV` that calls itself "onn Roku TV - SAL" when mirroring) failed with "not visible over Wi-Fi
+  Direct". rokast now recognises the TV by its address alone.
+- Join-failure details no longer include an older session's log when the TV was not found.
+
 ## 0.8.2
 
 - **Sound in step with the picture:** `AUDIO_DELAY` (milliseconds, as in mpv) shifts the TV's sound. Negative plays

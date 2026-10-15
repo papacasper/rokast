@@ -93,6 +93,13 @@ left click toggles the window; menu = status, Start/Stop, Show/Hide, Quit. With 
 - Do not derive the LAN from the default route (a VPN may own it). Use the Wi-Fi interface address.
 - P2P address of a Roku = its wifi MAC with first octet |= 0x02 (4c: -> 4e:). The allowlist relies on this. Group BSSID comes from `p2p_peer` `interface_addr`.
 - `$DISPLAY` is often `:0.0`; capture strips the screen suffix. The agent shell has no X auth env; cli sets DISPLAY/XAUTHORITY for ffmpeg.
+- "<TV> not visible over Wi-Fi Direct in 30s" (2026-10-15): run a scan yourself:
+  `sudo wpa_cli -i p2p-dev-wlo1 p2p_find`, wait ~25 s, `p2p_peers` + `p2p_peer <mac>`. If the TV's P2P address
+  (its `wifi-mac` from `:8060/query/device-info`, first octet |= 0x02) is missing while other Rokus show up, the TV's
+  Wi-Fi Direct is stuck (Living Room, 2 days up, ECP still answering): restart the TV (Settings > System > Power >
+  System restart). If it IS listed, compare its `device_name` with the LAN name: up to 0.8.2 rokast also required
+  them equal, and `43" onn. Roku TV` calls itself "onn Roku TV - SAL" over Wi-Fi Direct; now only the address counts.
+  An `attempt-N.log` from before the attempt is replaced by a note (older versions kept the last session's log).
 - Sound out of step with the picture by a fixed amount (2026-10-13, Living Room: picture first): TV-side latency, not
   capture (x11grab and pulse start within ~35 ms of each other). Fix with `AUDIO_DELAY=<ms>` (negative = sound earlier),
   which is `-itsoffset` on the pulse input; verified with a click at 1.0 s moving to 0.75 s at `-250`. If it grows

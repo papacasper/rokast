@@ -187,3 +187,21 @@ fn mid_join_states_get_grace() {
         assert!(!joining(s), "{s}");
     }
 }
+
+#[test]
+fn peer_ready_needs_a_group_address_not_the_lan_name() {
+    let tv = parse_peer("4e:50:dd:21:8b:c4\ndevice_name=onn Roku TV - SAL\ninterface_addr=46:50:dd:21:8b:c4\n");
+    assert!(peer_ready(&tv)); // LAN name: 43" onn. Roku TV
+    let no_group = parse_peer("4e:50:dd:21:8b:c4\ndevice_name=x\ninterface_addr=00:00:00:00:00:00\n");
+    assert!(!peer_ready(&no_group));
+    assert!(!peer_ready(&parse_peer("4e:50:dd:21:8b:c4\n")));
+}
+
+#[test]
+fn an_older_sessions_supplicant_log_is_not_kept() {
+    let old = "1791944034.094705: wpa_supplicant v2.11\n".to_string();
+    assert!(fresh(old.clone(), 1792000000.0).starts_with("(no supplicant log"));
+    assert_eq!(fresh(old.clone(), 1791944030.0), old);
+    assert_eq!(fresh("supplicant log 1".into(), 1792000000.0), "supplicant log 1");
+    // no time: kept
+}

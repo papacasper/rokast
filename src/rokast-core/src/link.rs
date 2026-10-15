@@ -31,6 +31,13 @@ pub fn joining(state: &str) -> bool {
     matches!(state, "AUTHENTICATING" | "ASSOCIATING" | "ASSOCIATED" | "4WAY_HANDSHAKE" | "GROUP_HANDSHAKE")
 }
 
+/// A found peer we can join: it has a group (interface) address. The peer is picked by its P2P address, which comes
+/// from the TV's own Wi-Fi MAC, so that is the identity; its Wi-Fi Direct name can differ from its LAN name
+/// (2026-10-15: `43" onn. Roku TV` calls itself "onn Roku TV - SAL"), so the name is not checked.
+pub fn peer_ready(info: &Peer) -> bool {
+    info.get("interface_addr").is_some_and(|a| a != "00:00:00:00:00:00")
+}
+
 /// Our group iface: `p2p-<wifi>-mir`, cut to the 15-character netdev limit.
 pub fn group_iface_of(wifi: &str) -> String {
     format!("p2p-{wifi}-mir").chars().take(15).collect()
@@ -120,7 +127,7 @@ pub trait Radio {
         Ok(())
     }
 
-    /// Wait until the allowlisted target is visible as a P2P peer with matching name; its peer info.
+    /// Wait until the allowlisted target is visible as a P2P peer with a group address; its peer info.
     fn find_peer(&mut self, dev: &str, target: &Roku) -> Result<Peer, Fail> {
         self.wpa(dev, &["p2p_find"], true)?;
         let t0 = Instant::now();
@@ -129,10 +136,7 @@ pub trait Radio {
                 let peers = self.wpa(dev, &["p2p_peers"], false)?.to_lowercase(); // empty list -> rc 255
                 if peers.split_whitespace().any(|p| p == target.p2p_mac) {
                     let info = parse_peer(&self.wpa(dev, &["p2p_peer", &target.p2p_mac], true)?);
-                    let named =
-                        info.get("device_name").is_some_and(|n| n.trim().to_lowercase() == target.name.to_lowercase());
-                    let addr = info.get("interface_addr").map(String::as_str).unwrap_or("00:00:00:00:00:00");
-                    if named && addr != "00:00:00:00:00:00" {
+                    if peer_ready(&info) {
                         return Ok(info);
                     }
                 }
@@ -241,12 +245,35 @@ fn probe_for(r: &mut dyn Radio, iface: &str, ssid: &str) -> Result<(), String> {
 }
 
 /// What a failed attempt left behind, read before the next attempt wipes it (see joinlog.rs).
-fn evidence(r: &mut dyn Radio, dev: &str, iface: &str, target: &Roku, a: &mut Map<String, Value>) -> String {
+fn evidence(
+    r: &mut dyn Radio,
+    dev: &str,
+    iface: &str,
+    target: &Roku,
+    a: &mut Map<String, Value>,
+    since: f64,
+) -> String {
     a.insert("own_status".into(), json!(parse_peer(&r.own(iface, &["status"], false).unwrap_or_default())));
     a.insert("dev_status".into(), json!(parse_peer(&r.wpa(dev, &["status"], false).unwrap_or_default())));
     let after = r.wpa(dev, &["p2p_peer", &target.p2p_mac], false).unwrap_or_default();
     a.insert("peer_after".into(), json!(parse_peer(&after)));
-    r.own_log()
+    fresh(r.own_log(), since)
+}
+
+fn epoch() -> f64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0.0, |d| d.as_secs_f64())
+}
+
+/// The supplicant log if this attempt wrote it (its lines start with an epoch time). An attempt that failed before
+/// our supplicant started (e.g. the TV was not visible) would otherwise keep an older session's log.
+pub fn fresh(log: String, since: f64) -> String {
+    let first = log.split(':').next().and_then(|t| t.trim().parse::<f64>().ok());
+    match first {
+        Some(t) if t < since - 1.0 => {
+            "(no supplicant log from this attempt: it failed before our supplicant started)\n".into()
+        }
+        _ => log,
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -306,6 +333,7 @@ pub fn connect(
     log.tv.insert("before".into(), json!(r.tv_state(&target.ip)));
     for n in 1..=tries {
         let mut a = Map::new();
+        let since = epoch();
         a.insert("start".into(), json!(log.t()));
         match attempt(r, dev, &iface, target, name, timeout, &log, &mut a) {
             Ok(true) => {
@@ -321,7 +349,7 @@ pub fn connect(
             Err(Fail::Stop) => return Err(Fail::Stop),
             Err(Fail::Err(e)) => {
                 a.insert("error".into(), json!(e));
-                let l = evidence(r, dev, &iface, target, &mut a);
+                let l = evidence(r, dev, &iface, target, &mut a, since);
                 log.failed(&a, &l);
                 r.disconnect(dev, Some(&iface));
                 log.tv.insert("after".into(), json!(r.tv_state(&target.ip)));
@@ -329,7 +357,7 @@ pub fn connect(
                 return Err(format!("{e}{}", details("details", at)).into());
             }
         }
-        let l = evidence(r, dev, &iface, target, &mut a);
+        let l = evidence(r, dev, &iface, target, &mut a, since);
         log.failed(&a, &l);
         say(&format!("p2p: join attempt {n}/{tries} failed, retrying"));
     }
