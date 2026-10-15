@@ -2,7 +2,7 @@
 
 Each `## <version>` section becomes the GitHub release notes for that tag (see `playbooks/release.md`).
 
-## Unreleased
+## 0.8.2
 
 - **Sound in step with the picture:** `AUDIO_DELAY` (milliseconds, as in mpv) shifts the TV's sound. Negative plays
   it earlier, for TVs that show the picture before the sound; `rokast doctor` checks the value. The app has a
