@@ -4,6 +4,12 @@ Each `## <version>` section becomes the GitHub release notes for that tag (see `
 
 ## Unreleased
 
+- **Smoother, less delayed picture on Wayland.** On a large or fast (e.g. 2560x1600, 120 Hz) screen the capture
+  repeated and skipped frames: every full-size frame was converted in one thread, and frames were then picked by
+  when that thread got to them. The desktop is now asked for no more than the TV's frame rate, conversion has its
+  own threads, and ffmpeg keeps the rate constant, repeating or dropping a frame only when it must.
+- **Sound and picture leave together.** ffmpeg read the sound 50 ms at a time and held the picture back for it;
+  it now reads 10 ms at a time (the sound also arrives ~70 ms earlier than before: check **Sound timing**).
 - **Fix: some TVs were never found.** A TV whose Wi-Fi Direct name differs from its network name (e.g. a TV named
   `43" onn. Roku TV` that calls itself "onn Roku TV - SAL" when mirroring) failed with "not visible over Wi-Fi
   Direct". rokast now recognises the TV by its address alone.

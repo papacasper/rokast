@@ -1,7 +1,7 @@
 //! Wayland screen capture through the xdg-desktop-portal ScreenCast API + PipeWire.
 //!
 //! ffmpeg has no PipeWire input, so GStreamer's pipewiresrc delivers raw frames (already scaled to the negotiated
-//! mode, letterboxed, constant frame rate) to ffmpeg's stdin; the encode/RTP side is the same as on X11. Works on any
+//! mode, letterboxed, one per screen update) to ffmpeg's stdin, which makes the frame rate constant; the encode/RTP side is the same as on X11. Works on any
 //! desktop with a ScreenCast portal backend (GNOME, KDE, wlroots: sway, Hyprland...).
 //!
 //! The portal asks the user to pick a screen, so `open` runs BEFORE joining the TV (its RTSP window is short). With
@@ -238,26 +238,42 @@ pub fn is_wayland(env: &Env) -> bool {
         || env.get("XDG_SESSION_TYPE").map(String::as_str) == Some("wayland")
 }
 
-/// PipeWire stream -> raw I420 frames of exactly width x height @ fps on stdout. `virt`: the stream is a virtual
-/// screen; asking for that size right at the source makes the compositor give the screen that size.
+/// PipeWire stream -> raw I420 frames of exactly width x height on stdout, at most `fps` of them a second: one per
+/// screen update, as it happens. ffmpeg stamps them on arrival and evens them out to `fps` (capture.rs), so nothing
+/// here retimes frames: a videorate here picked frames by arrival time in a thread that was also converting them,
+/// which repeated and skipped frames (judder) and held each frame until the next one came.
+/// - `max-framerate`: the compositor does the limiting, evenly (a 120 Hz screen would otherwise send 120 full-size
+///   frames a second to convert, more than one thread can do). Asked for as one value with the same caps without it
+///   as second choice: a screen slower than `fps` (59.95 Hz) cannot give that value and no stream would start, and
+///   of a range PipeWire takes the lowest (1 fps, seen with KWin 6.8).
+/// - the queues put capture, conversion and the pipe in a thread each; the first one drops the oldest frame rather
+///   than fall behind when conversion is slow.
+///
+/// `virt`: the stream is a virtual screen; asking for that size right at the source makes the compositor give the
+/// screen that size.
 pub fn gst_cmd(fd: i32, node: u32, width: u32, height: u32, fps: u32, virt: Option<(u32, u32)>) -> Vec<String> {
-    let caps =
-        format!("video/x-raw,format=I420,width={width},height={height},framerate={fps}/1,pixel-aspect-ratio=1/1");
+    let caps = format!("video/x-raw,format=I420,width={width},height={height},pixel-aspect-ratio=1/1");
+    let size = virt.map(|(w, h)| format!(",width={w},height={h}")).unwrap_or_default();
+    let queue = |leaky: bool| {
+        let mut q = vec!["queue", "max-size-buffers=2", "max-size-bytes=0", "max-size-time=0"];
+        if leaky {
+            q.push("leaky=downstream");
+        }
+        q.into_iter().map(String::from).collect::<Vec<_>>()
+    };
     #[rustfmt::skip]
     let mut v: Vec<String> = vec![
         "gst-launch-1.0".into(), "-q".into(),
         // keepalive: PipeWire only delivers frames on damage; resend the last one so a static screen keeps flowing
         "pipewiresrc".into(), format!("fd={fd}"), format!("path={node}"), "do-timestamp=true".into(),
         "keepalive-time=100".into(), "always-copy=true".into(),
+        "!".into(), format!("video/x-raw{size},max-framerate={fps}/1;video/x-raw{size}"), "!".into(),
     ];
-    if let Some((w, h)) = virt {
-        v.extend(["!".into(), format!("video/x-raw,width={w},height={h}")]);
-    }
-    #[rustfmt::skip]
-    v.extend([
-        "!".into(), "videoconvert".into(), "!".into(), "videoscale".into(), "add-borders=true".into(), "!".into(),
-        "videorate".into(), "!".into(), caps, "!".into(), "fdsink".into(), "fd=1".into(), "sync=false".into(),
-    ]);
+    v.extend(queue(true));
+    v.extend(["!", "videoconvertscale", "add-borders=true", "n-threads=4", "!"].map(String::from));
+    v.extend([caps, "!".into()]);
+    v.extend(queue(false));
+    v.extend(["!", "fdsink", "fd=1", "sync=false"].map(String::from));
     v
 }
 
@@ -274,16 +290,25 @@ mod tests {
         let cmd = gst_cmd(7, 42, 1920, 1080, 30, None);
         assert_eq!(cmd[..4], ["gst-launch-1.0", "-q", "pipewiresrc", "fd=7"]);
         assert!(cmd.iter().any(|a| a == "path=42"));
-        let caps = "video/x-raw,format=I420,width=1920,height=1080,framerate=30/1,pixel-aspect-ratio=1/1";
+        let caps = "video/x-raw,format=I420,width=1920,height=1080,pixel-aspect-ratio=1/1";
         assert!(cmd.iter().any(|a| a == caps));
         assert_eq!(cmd[cmd.len() - 3..], ["fdsink", "fd=1", "sync=false"]);
-        assert!(!cmd.iter().any(|a| a == "video/x-raw,width=1920,height=1080"));
+        // the compositor limits the rate; nothing here retimes frames (ffmpeg evens them out)
+        assert!(cmd.iter().any(|a| a == "video/x-raw,max-framerate=30/1;video/x-raw"));
+        assert!(!cmd.iter().any(|a| a == "videorate" || a.contains("width=1920,height=1080,max")));
+        let q = cmd.iter().position(|a| a == "queue").expect("a queue after the source");
+        assert!(cmd[q..q + 5].contains(&"leaky=downstream".to_string()));
     }
 
     #[test]
     fn virtual_screen() {
         let cmd = gst_cmd(7, 42, 1920, 1080, 60, Some((1920, 1080)));
-        let at = cmd.iter().position(|a| a == "video/x-raw,width=1920,height=1080").expect("size caps");
+        let at = cmd
+            .iter()
+            .position(|a| {
+                a == "video/x-raw,width=1920,height=1080,max-framerate=60/1;video/x-raw,width=1920,height=1080"
+            })
+            .expect("size caps");
         assert_eq!(cmd[at - 1], "!");
         assert!(cmd[at - 2].starts_with("always-copy"), "right after pipewiresrc");
         assert_eq!(cmd[cmd.len() - 3..], ["fdsink", "fd=1", "sync=false"]);
