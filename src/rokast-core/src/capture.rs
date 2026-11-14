@@ -167,6 +167,11 @@ pub fn start(cmd: &[String], display: &str, env: &Env, feeder: Option<(&[String]
     }
     let mut g = gst.spawn()?;
     let out = g.stdout.take().expect("piped"); // ffmpeg owns the read end; gst gets SIGPIPE if ffmpeg dies
+                                               // a frame is megabytes and a pipe holds 64 kB by default: the most an unprivileged pipe may be (never fatal)
+                                               // SAFETY: fcntl on a pipe fd this process owns.
+    unsafe {
+        libc::fcntl(std::os::fd::AsRawFd::as_raw_fd(&out), libc::F_SETPIPE_SZ, 1 << 20);
+    }
     match ff.stdin(Stdio::from(out)).spawn() {
         Ok(f) => Ok(Pipeline { procs: vec![g, f] }),
         Err(e) => {
@@ -251,6 +256,8 @@ pub fn build_cmd(n: &Negotiated, sink_ip: Option<&str>, server_port: Option<u16>
     }
     let (w, h, fps) = (n.width, n.height, n.fps.to_string());
     if o.source == "raw" {
+        // frames come as the screen updates (wayland.rs): stamp each on arrival; the output side makes that CFR
+        add(&["-use_wallclock_as_timestamps", "1"]);
         add(&["-f", "rawvideo", "-pix_fmt", "yuv420p", "-video_size", &format!("{w}x{h}")]);
         add(&["-framerate", &fps, "-i", "pipe:0"]);
     } else {
@@ -263,7 +270,9 @@ pub fn build_cmd(n: &Negotiated, sink_ip: Option<&str>, server_port: Option<u16>
     }
     let monitor = o.monitor.as_deref().filter(|m| o.audio && !m.is_empty());
     if let Some(m) = monitor {
-        add(&["-thread_queue_size", "512"]);
+        // 10 ms of 48 kHz s16 stereo. ffmpeg's default is 50 ms, and the muxer holds every video frame until the
+        // sound up to it has come: frames left three at a time every 50 ms, and the sound ran ~70 ms late.
+        add(&["-thread_queue_size", "512", "-fragment_size", "1920"]);
         if o.audio_delay_ms != 0 {
             add(&["-itsoffset", &format!("{:.3}", f64::from(o.audio_delay_ms) / 1000.0)]);
         }
@@ -272,6 +281,11 @@ pub fn build_cmd(n: &Negotiated, sink_ip: Option<&str>, server_port: Option<u16>
     let fmt = if vaapi { "format=nv12,hwupload" } else { "format=yuv420p" };
     let vf = format!("scale={w}:{h}:force_original_aspect_ratio=decrease,pad={w}:{h}:(ow-iw)/2:(oh-ih)/2,{fmt}");
     add(&["-map", "0:v", "-vf", &vf]);
+    if o.source == "raw" {
+        // constant frame rate from arrival times: ffmpeg repeats or drops a frame only once the stream is more than
+        // a frame off, so a steady 60 fps source passes through one to one and a static screen is filled in
+        add(&["-fps_mode:v", "cfr", "-r:v", &fps]);
+    }
     let b = o.bitrate.as_str();
     match o.encoder.as_str() {
         "h264_nvenc" => add(&[

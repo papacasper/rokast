@@ -115,9 +115,10 @@ the phone-style IEs in the association request on a P2P-client interface, and th
    created and then drops it, so moves are checked and retried for a second.
    On Wayland, `src/rokast-core/src/wayland.rs` opens an xdg-desktop-portal ScreenCast session before
    joining (the user may have to pick a screen, and the TV's RTSP window is too short to wait for
-   that). It passes the PipeWire fd to GStreamer (`pipewiresrc ! videoconvert ! videoscale ! videorate`),
-   which writes raw I420 frames at exactly the negotiated size and rate into ffmpeg's stdin. The
-   encode and RTP side is unchanged. `keepalive-time` makes PipeWire repeat the last frame on a static
+   that). It passes the PipeWire fd to GStreamer (`pipewiresrc ! queue ! videoconvertscale ! queue`),
+   which writes raw I420 frames of exactly the negotiated size into ffmpeg's stdin, one per screen update (the
+   compositor is asked for at most the negotiated rate). ffmpeg stamps them on arrival and makes the rate constant
+   (`-fps_mode cfr`). The encode and RTP side is unchanged. `keepalive-time` makes PipeWire repeat the last frame on a static
    screen, so the TV keeps getting a steady stream.
 7. **Picture options (X11).** All change the screen only once the TV plays, save what they changed in
    `$XDG_RUNTIME_DIR/rokast/` first (`fit.json`, `extend.json`) and undo it on stop, SIGTERM, the next start after a

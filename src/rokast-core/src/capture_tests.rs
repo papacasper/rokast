@@ -123,6 +123,20 @@ fn test_raw_stdin_input_for_wayland() {
     let i = idx(&cmd, "rawvideo");
     let want = ["rawvideo", "-pix_fmt", "yuv420p", "-video_size", "1280x720", "-framerate", "60", "-i", "pipe:0"];
     assert_eq!(&cmd[i..i + 9], want);
+    // frames arrive as the screen updates: stamped on arrival, made constant-rate on the way out
+    assert_eq!(cmd[i - 3..i], ["-use_wallclock_as_timestamps", "1", "-f"]);
+    assert_eq!(at(&cmd, "-fps_mode:v"), "cfr");
+    assert_eq!(at(&cmd, "-r:v"), "60");
+    let x11 = build_cmd(&neg(1280, 720, 60, "high"), Some("192.168.49.2"), Some(22222), &Opts::default());
+    assert!(!x11.iter().any(|a| a == "-fps_mode:v" || a == "-use_wallclock_as_timestamps"));
+}
+
+#[test]
+fn test_sound_in_small_fragments() {
+    let o = Opts { monitor: Some("rokast.monitor".into()), ..Opts::default() };
+    let cmd = build_cmd(&neg(1920, 1080, 30, "high"), Some("192.168.49.2"), Some(22222), &o);
+    assert_eq!(at(&cmd, "-fragment_size"), "1920");
+    assert!(idx(&cmd, "-fragment_size") < idx(&cmd, "pulse"));
 }
 
 #[test]
